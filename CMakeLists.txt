@@ -5,6 +5,15 @@ project(RoX
 )
 
 set(SOURCE
+    Src/Exceptions/DXException.cpp
+    Src/Exceptions/ThrowIfFailed.h
+
+    Src/Util/d3dx12.h
+    Src/Util/Logger.h
+    Src/Util/pch.h
+
+    Src/Renderer.cpp
+    Src/Timer.cpp
     Src/Window.cpp
 )
 

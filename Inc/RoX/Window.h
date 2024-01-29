@@ -1,36 +1,22 @@
 #pragma once
-#ifndef UNICODE
-#define UNICODE
-#endif
-#include <windows.h>
-#include <utility>
 
+#include "../Src/Util/pch.h"
 #include "Renderer.h"
 
 class Window {
     public:
-        struct MousePosition {
-            int X = 0;
-            int Y = 0;
-        };
-
-        struct MouseButtonState {
-            bool LBtnDown = false;
-            bool MBtnDown = false;
-            bool RBtnDown = false;
-        };
-
-    public:
-        Window(PCWSTR windowName, DWORD style, DWORD exStyle = 0,
+        Window(Renderer& renderer, PCWSTR windowName, HINSTANCE hInstance,
+                DWORD style, DWORD exStyle = 0,
                 int x = CW_USEDEFAULT, int y = CW_USEDEFAULT,
                 int width = 1024, int height = 640,
                 HWND parent = 0, HMENU menu = 0
               );
         ~Window();
 
-        HWND GetHWND() const;
-        UINT GetWidth() const;
-        UINT GetHeight() const;
+    public: // Properties.
+        HWND GetHwnd() const;
+        int GetWidth() const;
+        int GetHeight() const;
         float GetAspectRatio() const;
 
     private:
@@ -55,11 +41,11 @@ class Window {
         LRESULT HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam);
 
     private:
+        Renderer& m_renderer;
+
+    private:
         HWND m_hwnd = 0;
 
         int m_width = 0;
         int m_height = 0;
-
-    private:
-        Renderer& m_renderer;
 };
