@@ -35,7 +35,7 @@ Window::Window(Renderer& renderer, PCWSTR windowName, HINSTANCE hInstance,
 
     if (!m_hwnd)
         return;
-    
+
     Logger::Info("window initialized");
 }
 
@@ -66,14 +66,23 @@ LRESULT Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_PAINT:
             if (s_in_sizemove) {
-                // TODO 
-                //m_renderer.Tick();
+                m_renderer.Update();
+                m_renderer.Render();
             } else {
                 PAINTSTRUCT ps;
                 std::ignore = BeginPaint(m_hwnd, &ps);
                 EndPaint(m_hwnd, &ps);
             }
             break;
+
+        case WM_DISPLAYCHANGE:
+            m_renderer.OnDisplayChange();
+            break;
+
+        case WM_MOVE:
+            m_renderer.OnWindowMoved();
+            break;
+
         case WM_SIZE:
             if (wParam == SIZE_MINIMIZED) {
                 if (!s_minimized) {
@@ -91,15 +100,18 @@ LRESULT Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
                 m_renderer.OnWindowSizeChanged(LOWORD(lParam), HIWORD(lParam));
             }
             break;
+
         case WM_ENTERSIZEMOVE:
             s_in_sizemove = true;
             break;
+
         case WM_EXITSIZEMOVE:
             s_in_sizemove = false;
             RECT rc;
             GetClientRect(m_hwnd, &rc);
             m_renderer.OnWindowSizeChanged(rc.right - rc.left, rc.bottom - rc.top);
             break;
+
         case WM_GETMINMAXINFO:
             if (lParam) {
                 MINMAXINFO* info = reinterpret_cast<MINMAXINFO*>(lParam);
@@ -147,17 +159,14 @@ LRESULT Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
                     SetWindowLongPtr(m_hwnd, GWL_EXSTYLE, 0);
 
                     ShowWindow(m_hwnd, SW_SHOWNORMAL);
-
                     SetWindowPos(m_hwnd, HWND_TOP, 0, 0, m_width, m_height, SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
                 } else {
                     SetWindowLongPtr(m_hwnd, GWL_STYLE, WS_POPUP);
                     SetWindowLongPtr(m_hwnd, GWL_EXSTYLE, WS_EX_TOPMOST);
 
                     SetWindowPos(m_hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
-
                     ShowWindow(m_hwnd, SW_SHOWMAXIMIZED);
                 }
-
                 s_fullscreen = !s_fullscreen;
             }
             break;
@@ -166,6 +175,7 @@ LRESULT Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             // A menu is active and the user presses a key that does not correspond
             // to any mnemonic or accelerator key. Ignore so we don't produce an error beep.
             return MAKELRESULT(0, MNC_CLOSE);
+
         default:
             return DefWindowProc(m_hwnd, msg, wParam, lParam);
     }

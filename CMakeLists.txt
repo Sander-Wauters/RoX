@@ -12,6 +12,9 @@ set(SOURCE
     Src/Util/Logger.h
     Src/Util/pch.h
 
+    Src/DeviceResources.cpp
+    Src/DeviceResources.h
+    Src/IDeviceNotify.h
     Src/Renderer.cpp
     Src/Timer.cpp
     Src/Window.cpp
