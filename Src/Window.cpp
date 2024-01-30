@@ -2,6 +2,7 @@
 
 #include "../Inc/RoX/Window.h"
 #include "util/Logger.h"
+#include "Exceptions/ThrowIfFailed.h"
 
 Window::Window(Renderer& renderer, PCWSTR windowName, HINSTANCE hInstance,
         DWORD style, DWORD exStyle,
@@ -9,6 +10,11 @@ Window::Window(Renderer& renderer, PCWSTR windowName, HINSTANCE hInstance,
         int width, int height,
         HWND parent, HMENU menu
         ) : m_renderer(renderer), m_width(width), m_height(height) {
+    if (!DirectX::XMVerifyCPUSupport())
+        ThrowIfFailed(E_NOTIMPL);
+
+    ThrowIfFailed(CoInitializeEx(nullptr, COINITBASE_MULTITHREADED));
+
     WNDCLASSEXW wcex = {};
     wcex.cbSize = sizeof(WNDCLASSEXW);
     wcex.style = CS_HREDRAW | CS_VREDRAW;
@@ -32,6 +38,9 @@ Window::Window(Renderer& renderer, PCWSTR windowName, HINSTANCE hInstance,
             wr.bottom - wr.top,
             parent, menu,
             GetModuleHandle(NULL), this);
+
+    m_width = wr.right - wr.left;
+    m_height = wr.bottom - wr.top;
 
     if (!m_hwnd)
         return;

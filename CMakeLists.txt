@@ -16,6 +16,8 @@ set(SOURCE
     Src/DeviceResources.h
     Src/IDeviceNotify.h
     Src/Renderer.cpp
+    Src/SpriteData.h
+    Src/TextData.h
     Src/Timer.cpp
     Src/Window.cpp
 )

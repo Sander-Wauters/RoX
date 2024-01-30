@@ -1,9 +1,21 @@
 #pragma once
 
+#include <unordered_map>
+
+#include "../../DirectXTK12/Inc/GraphicsMemory.h"
+#include "../../DirectXTK12/Inc/DescriptorHeap.h"
+#include "../../DirectXTK12/Inc/SpriteBatch.h"
+#include "../../DirectXTK12/Inc/SpriteFont.h"
+#include "../../DirectXTK12/Inc/CommonStates.h"
+#include "../../DirectXTK12/Inc/SimpleMath.h"
+
 #include "../Src/Util/pch.h"
 #include "../Src/IDeviceNotify.h"
 #include "../Src/DeviceResources.h"
+#include "../Src/SpriteData.h"
 #include "Timer.h"
+#include "Sprite.h"
+#include "Text.h"
 
 class Renderer : public IDeviceNotify {
     public:
@@ -21,6 +33,9 @@ class Renderer : public IDeviceNotify {
         void Update();
         void Render();
 
+        void AddSprite(Sprite* pSprite);
+        void AddText(Text* pText);
+
     public: // Messages.
         void OnDeviceLost() override;
         void OnDeviceRestored() override;
@@ -35,10 +50,35 @@ class Renderer : public IDeviceNotify {
     private:
         void Clear();
 
+        void RenderSprites();
+        void RenderText();
+
         void CreateDeviceDependentResources();
+        void BuildSpriteDataResources();
+        void BuildTextDataResources();
+
         void CreateWindowSizeDependentResources();
+        void BuildSpriteDataSize();
 
     private: // Application state.
         Timer& m_timer;
         std::unique_ptr<DeviceResources> m_pDeviceResources = nullptr;
+        std::unique_ptr<DirectX::GraphicsMemory> m_pGraphicsMemory = nullptr;
+
+        std::unique_ptr<DirectX::DescriptorHeap> m_pResourceDescriptors = nullptr;
+        std::unique_ptr<DirectX::CommonStates> m_pStates = nullptr;
+
+        std::unique_ptr<DirectX::SpriteBatch> m_pSpriteBatch = nullptr;
+
+        UINT m_nextSpriteDescriptorHeapIndex = 0;
+        std::unordered_map<Sprite*, UINT> m_pSprite = {};
+        std::unordered_map<UINT, std::unique_ptr<SpriteData>> m_pSpriteData = {};
+
+        std::unordered_map<Text*, UINT> m_pText = {};
+        std::unordered_map<UINT, std::unique_ptr<DirectX::SpriteFont>> m_pTextData = {};
+
+    private: // TEMP: font test.
+        std::unique_ptr<DirectX::SpriteFont> m_pFont;
+        DirectX::SimpleMath::Vector2 m_fontPos;
+
 };
