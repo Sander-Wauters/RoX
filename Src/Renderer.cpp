@@ -52,7 +52,6 @@ void Renderer::Render() {
     RenderSprites();
     RenderText();
 
-
     m_pSpriteBatch->End();
 
     // Show the new frame.
@@ -151,14 +150,30 @@ void Renderer::RenderSprites() {
         if (!sprite.first->Visible)
             continue;
 
+        DirectX::SimpleMath::Vector2 origin = sprite.second->Origin;
+        origin.x -= sprite.first->OriginOffsetX;
+        origin.y -= sprite.first->OriginOffsetY;
+
+        RECT stretchRect = sprite.second->StretchRect;
+        stretchRect.right  += sprite.first->WidthStretch / 2;
+        stretchRect.bottom += sprite.first->HeightStretch / 2;
+
+        stretchRect.right  *= sprite.first->Scale;
+        stretchRect.bottom *= sprite.first->Scale;
+
+        stretchRect.left   += sprite.first->PositionX;
+        stretchRect.top    += sprite.first->PositionY;
+        stretchRect.right  += sprite.first->PositionX;
+        stretchRect.bottom += sprite.first->PositionY;
+
         m_pSpriteBatch->Draw(
                 m_pResourceDescriptors->GetGpuHandle(sprite.second->DescriptorHeapIndex),
                 DirectX::GetTextureSize(sprite.second->pTexture.Get()),
-                sprite.second->StretchRect,
-                &sprite.second->TileRect,
+                stretchRect,
+                nullptr,
                 sprite.second->Tint,
                 sprite.first->Angle,
-                sprite.second->Origin,
+                origin,
                 DirectX::SpriteEffects_None,
                 sprite.first->Layer);
     }
@@ -223,8 +238,7 @@ void Renderer::CreateDeviceDependentResources() {
     BuildSpriteDataResources(resourceUploadBatch);
     BuildTextDataResources(resourceUploadBatch);
     
-    D3D12_GPU_DESCRIPTOR_HANDLE sampler = m_pStates->LinearWrap();
-    DirectX::SpriteBatchPipelineStateDescription pd(rtState, nullptr, nullptr, nullptr, &sampler);
+    DirectX::SpriteBatchPipelineStateDescription pd(rtState);
     m_pSpriteBatch = std::make_unique<DirectX::SpriteBatch>(pDevice, resourceUploadBatch, pd);
         
     std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_pDeviceResources->GetCommandQueue());
@@ -252,16 +266,17 @@ void Renderer::BuildSpriteDataResources(DirectX::ResourceUploadBatch& resourceUp
                 m_pResourceDescriptors->GetCpuHandle(sprite.second->DescriptorHeapIndex));
 
         DirectX::XMUINT2 textureSize = DirectX::GetTextureSize(sprite.second->pTexture.Get());
+        DirectX::XMUINT2 textureSizeHalf = textureSize;
+        textureSizeHalf.x /= 2;
+        textureSizeHalf.y /= 2;
 
-        // TODO: make the user set the origin.
-        sprite.second->Origin.x = float(textureSize.x / 2.0f);
-        sprite.second->Origin.y = float(textureSize.y / 2.0f);
+        sprite.second->Origin.x = textureSizeHalf.x;
+        sprite.second->Origin.y = textureSizeHalf.y;
 
-        // TODO: figure out tiling.
-        sprite.second->TileRect.left = textureSize.x;
-        sprite.second->TileRect.right = textureSize.x * 2;
-        sprite.second->TileRect.top = textureSize.y;
-        sprite.second->TileRect.bottom = textureSize.y * 2;
+        sprite.second->StretchRect.left   = textureSizeHalf.x; 
+        sprite.second->StretchRect.top    = textureSizeHalf.y;
+        sprite.second->StretchRect.right  = textureSizeHalf.x + textureSize.x;
+        sprite.second->StretchRect.bottom = textureSizeHalf.y + textureSize.y;
     }
 }
 
@@ -286,16 +301,5 @@ void Renderer::CreateWindowSizeDependentResources() {
 
 void Renderer::BuildSpriteDataSize() {
     D3D12_VIEWPORT viewport = m_pDeviceResources->GetScreenViewport();
-    D3D12_RECT size = m_pDeviceResources->GetOutputSize();
     m_pSpriteBatch->SetViewport(viewport);
-
-    for (std::pair<Sprite* const, std::unique_ptr<SpriteData>>& sprite : m_spriteData) {
-        DirectX::XMUINT2 textureSize = DirectX::GetTextureSize(sprite.second->pTexture.Get());
-
-        // TODO: figure out the link between stretch and screen position.
-        sprite.second->StretchRect.left   = (size.right / 2); 
-        sprite.second->StretchRect.top    = (size.bottom / 2);
-        sprite.second->StretchRect.right  = (size.right / 2) + textureSize.x;
-        sprite.second->StretchRect.bottom = (size.bottom / 2) + textureSize.y;
-    }
 }
