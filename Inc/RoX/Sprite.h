@@ -10,15 +10,15 @@ struct Sprite {
     float Angle = 0.0f; // In radians.
     float Layer = 0.0f;
 
-    int PositionX = 0;
-    int PositionY = 0;
+    float PositionX = 0;
+    float PositionY = 0;
 
-    int OriginOffsetX = 0;
-    int OriginOffsetY = 0;
+    float OriginOffsetX = 0;
+    float OriginOffsetY = 0;
 
-    int Width = 0;
-    int Height = 0;
+    float Width = 0;
+    float Height = 0;
 
-    int WidthStretch = 0;
-    int HeightStretch = 0;
+    float WidthStretch = 0;
+    float HeightStretch = 0;
 };

@@ -85,7 +85,7 @@ void Renderer::OnDeviceLost() {
         sprite.second->pTexture.Reset();
     }
     for (std::pair<Text* const, std::unique_ptr<TextData>>& text : m_textData) {
-        text.second.reset();
+        text.second->pSpriteFont.reset();
     }
 
 }
@@ -148,6 +148,9 @@ void Renderer::Clear() {
 
 void Renderer::RenderSprites() {
     for (std::pair<Sprite* const, std::unique_ptr<SpriteData>>& sprite : m_spriteData) {
+        if (!sprite.first->Visible)
+            continue;
+
         m_pSpriteBatch->Draw(
                 m_pResourceDescriptors->GetGpuHandle(sprite.second->DescriptorHeapIndex),
                 DirectX::GetTextureSize(sprite.second->pTexture.Get()),
@@ -163,15 +166,24 @@ void Renderer::RenderSprites() {
 
 void Renderer::RenderText() {
     for (std::pair<Text* const, std::unique_ptr<TextData>>& text : m_textData) {
+        if (!text.first->Visible)
+            continue;
+
         DirectX::SpriteFont* pFont = text.second->pSpriteFont.get();
 
         DirectX::SimpleMath::Vector2 origin = pFont->MeasureString(text.first->Content.c_str());
         origin /= 2.0f;
+        origin.x += text.first->OriginOffsetX;
+        origin.y += text.first->OriginOffsetY;
+
+        DirectX::SimpleMath::Vector2 position = origin;
+        position.x += text.first->PositionX;
+        position.y += text.first->PositionY;
 
         pFont->DrawString(
                 m_pSpriteBatch.get(), 
                 text.first->Content.c_str(),
-                m_fontPos, 
+                position, 
                 DirectX::Colors::Black, 
                 text.first->Angle, 
                 origin, 
@@ -276,10 +288,6 @@ void Renderer::BuildSpriteDataSize() {
     D3D12_VIEWPORT viewport = m_pDeviceResources->GetScreenViewport();
     D3D12_RECT size = m_pDeviceResources->GetOutputSize();
     m_pSpriteBatch->SetViewport(viewport);
-
-    // TEMP
-    m_fontPos.x = (float)size.right / 2;
-    m_fontPos.y = (float)size.bottom / 2;
 
     for (std::pair<Sprite* const, std::unique_ptr<SpriteData>>& sprite : m_spriteData) {
         DirectX::XMUINT2 textureSize = DirectX::GetTextureSize(sprite.second->pTexture.Get());

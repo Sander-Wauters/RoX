@@ -13,10 +13,10 @@ struct Text {
     float Layer = 0.0f;
     float Scale = 1.0f;
 
-    int PositionX = 0;
-    int PositionY = 0;
+    float PositionX = 0;
+    float PositionY = 0;
 
-    int OriginOffsetX = 0;
-    int OriginOffsetY = 0;
+    float OriginOffsetX = 0;
+    float OriginOffsetY = 0;
 
 };

@@ -73,9 +73,4 @@ class Renderer : public IDeviceNotify {
         UINT m_nextSpriteDescriptorHeapIndex = 0;
         std::unordered_map<Sprite*, std::unique_ptr<SpriteData>> m_spriteData = {};
         std::unordered_map<Text*, std::unique_ptr<TextData>> m_textData = {};
-
-    private: // TEMP: font test.
-        std::unique_ptr<DirectX::SpriteFont> m_pFont;
-        DirectX::SimpleMath::Vector2 m_fontPos;
-
 };
