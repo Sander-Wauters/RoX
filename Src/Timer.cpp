@@ -22,9 +22,7 @@ Timer::Timer() :
 
 void Timer::ResetElapsedTime() {
     if (!QueryPerformanceCounter(&m_qpcLastTime))
-    {
         throw std::exception();
-    }
 
     m_leftOverTicks = 0;
     m_framesPerSecond = 0;

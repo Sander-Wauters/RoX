@@ -3,6 +3,7 @@
 #include "Util/pch.h"
 
 struct SpriteData {   
+    UINT DescriptorHeapIndex = -1;
     Microsoft::WRL::ComPtr<ID3D12Resource> pTexture = nullptr;
 
     RECT TileRect = { 0, 0, 1, 1 };

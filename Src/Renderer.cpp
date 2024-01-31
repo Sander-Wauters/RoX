@@ -49,20 +49,6 @@ void Renderer::Render() {
 
     m_pSpriteBatch->Begin(pCommandList, DirectX::SpriteSortMode_FrontToBack);
 
-    // TEMP: font test.
-    //const wchar_t* output = L"Hello World";
-    /*
-    std::string output = 
-        "FPS: " + std::to_string(m_timer.GetFramesPerSecond()) + 
-        "\nMS:  " + std::to_string(m_timer.GetElapsedSeconds() / 1000.0f);
-
-    DirectX::SimpleMath::Vector2 origin = m_pFont->MeasureString(output.c_str());
-    origin /= 2.0f;
-
-    m_pFont->DrawString(m_pSpriteBatch.get(), output.c_str(),
-            m_fontPos, DirectX::Colors::Black, 0.0f, origin, 2, DirectX::SpriteEffects_None, 0.3f);
-    */
-
     RenderSprites();
     RenderText();
 
@@ -75,11 +61,15 @@ void Renderer::Render() {
 }
 
 void Renderer::AddSprite(Sprite* pSprite) {
-    m_pSprite[pSprite] = m_nextSpriteDescriptorHeapIndex++;
+    std::unique_ptr<SpriteData> pSpriteData = std::make_unique<SpriteData>();
+    pSpriteData->DescriptorHeapIndex = m_nextSpriteDescriptorHeapIndex++;
+    m_spriteData[pSprite] = std::move(pSpriteData);
 }
 
 void Renderer::AddText(Text* pText) {
-    m_pText[pText] = m_nextSpriteDescriptorHeapIndex++;
+    std::unique_ptr<TextData> pTextData = std::make_unique<TextData>();
+    pTextData->DescriptorHeapIndex = m_nextSpriteDescriptorHeapIndex++;
+    m_textData[pText] = std::move(pTextData);
 }
 
 void Renderer::OnDeviceLost() {
@@ -91,11 +81,11 @@ void Renderer::OnDeviceLost() {
     m_pStates.reset();
     m_pSpriteBatch.reset();
 
-    for (std::pair<const UINT, std::unique_ptr<SpriteData>>& pSprite : m_pSpriteData) {
-        pSprite.second->pTexture.Reset();
+    for (std::pair<Sprite* const, std::unique_ptr<SpriteData>>& sprite : m_spriteData) {
+        sprite.second->pTexture.Reset();
     }
-    for (std::pair<const UINT, std::unique_ptr<DirectX::SpriteFont>>& pFont : m_pTextData) {
-        pFont.second.reset();
+    for (std::pair<Text* const, std::unique_ptr<TextData>>& text : m_textData) {
+        text.second.reset();
     }
 
 }
@@ -157,40 +147,38 @@ void Renderer::Clear() {
 }
 
 void Renderer::RenderSprites() {
-    for (std::pair<Sprite* const, UINT>& pSprite : m_pSprite) {
-        SpriteData* pSpriteData = m_pSpriteData.at(pSprite.second).get();
-
+    for (std::pair<Sprite* const, std::unique_ptr<SpriteData>>& sprite : m_spriteData) {
         m_pSpriteBatch->Draw(
-                m_pResourceDescriptors->GetGpuHandle(pSprite.second),
-                DirectX::GetTextureSize(pSpriteData->pTexture.Get()),
-                pSpriteData->StretchRect,
-                &pSpriteData->TileRect,
-                pSpriteData->Tint,
-                pSprite.first->Angle,
-                pSpriteData->Origin,
+                m_pResourceDescriptors->GetGpuHandle(sprite.second->DescriptorHeapIndex),
+                DirectX::GetTextureSize(sprite.second->pTexture.Get()),
+                sprite.second->StretchRect,
+                &sprite.second->TileRect,
+                sprite.second->Tint,
+                sprite.first->Angle,
+                sprite.second->Origin,
                 DirectX::SpriteEffects_None,
-                pSprite.first->Layer);
+                sprite.first->Layer);
     }
 }
 
 void Renderer::RenderText() {
-    for (std::pair<Text* const, UINT>& pText : m_pText) {
-        DirectX::SpriteFont* pFont = m_pTextData.at(pText.second).get(); 
+    for (std::pair<Text* const, std::unique_ptr<TextData>>& text : m_textData) {
+        DirectX::SpriteFont* pFont = text.second->pSpriteFont.get();
 
-        DirectX::SimpleMath::Vector2 origin = pFont->MeasureString(pText.first->Content.c_str());
+        DirectX::SimpleMath::Vector2 origin = pFont->MeasureString(text.first->Content.c_str());
         origin /= 2.0f;
 
         pFont->DrawString(
                 m_pSpriteBatch.get(), 
-                pText.first->Content.c_str(),
+                text.first->Content.c_str(),
                 m_fontPos, 
                 DirectX::Colors::Black, 
-                pText.first->Angle, 
+                text.first->Angle, 
                 origin, 
-                pText.first->Scale, 
+                text.first->Scale, 
                 DirectX::SpriteEffects_None, 
-                pText.first->Layer);
-    } 
+                text.first->Layer);
+    }
 }
 
 void Renderer::CreateDeviceDependentResources() {
@@ -213,127 +201,75 @@ void Renderer::CreateDeviceDependentResources() {
             pDevice,
             D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
             D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-            m_pSprite.size() + m_pText.size());
+            m_spriteData.size() + m_textData.size());
     m_pStates = std::make_unique<DirectX::CommonStates>(pDevice);
 
-    BuildSpriteDataResources();
-    BuildTextDataResources();
+    DirectX::RenderTargetState rtState(m_pDeviceResources->GetBackBufferFormat(), m_pDeviceResources->GetDepthBufferFormat());
+    DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
 
-    // TEMP: font test.
-    /*
-    DirectX::ResourceUploadBatch resourceUpload(pDevice);
-
-    resourceUpload.Begin();
-
-    m_pFont = std::make_unique<DirectX::SpriteFont>(pDevice, resourceUpload,
-            L"assets/courierNew12.spritefont",
-            m_pResourceDescriptors->GetCpuHandle(m_nextSpriteDescriptorHeapIndex),
-            m_pResourceDescriptors->GetGpuHandle(m_nextSpriteDescriptorHeapIndex));
-
-    std::future<void> uploadResourcesFinished = resourceUpload.End(
-            m_pDeviceResources->GetCommandQueue());
-
-    DirectX::RenderTargetState rtState(m_pDeviceResources->GetBackBufferFormat(),
-            m_pDeviceResources->GetDepthBufferFormat());
-
-    DirectX::SpriteBatchPipelineStateDescription pd(rtState);
-    m_pSpriteBatch = std::make_unique<DirectX::SpriteBatch>(pDevice, resourceUpload, pd);
-
-    uploadResourcesFinished.wait();
-    */
+    resourceUploadBatch.Begin();
+    BuildSpriteDataResources(resourceUploadBatch);
+    BuildTextDataResources(resourceUploadBatch);
+    
+    D3D12_GPU_DESCRIPTOR_HANDLE sampler = m_pStates->LinearWrap();
+    DirectX::SpriteBatchPipelineStateDescription pd(rtState, nullptr, nullptr, nullptr, &sampler);
+    m_pSpriteBatch = std::make_unique<DirectX::SpriteBatch>(pDevice, resourceUploadBatch, pd);
+        
+    std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_pDeviceResources->GetCommandQueue());
+    uploadResourceFinished.wait();
 }
 
-void Renderer::BuildSpriteDataResources() {
+void Renderer::BuildSpriteDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
     ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
 
-    DirectX::RenderTargetState rtState(
-            m_pDeviceResources->GetBackBufferFormat(),
-            m_pDeviceResources->GetDepthBufferFormat());
-
-    for (std::pair<Sprite* const, UINT>& pSprite : m_pSprite) {
-        DirectX::ResourceUploadBatch resourceUpload(pDevice);
-        resourceUpload.Begin();
-
-        D3D12_GPU_DESCRIPTOR_HANDLE sampler = m_pStates->LinearWrap();
-        DirectX::SpriteBatchPipelineStateDescription pd(rtState, nullptr, nullptr, nullptr, &sampler);
-        m_pSpriteBatch = std::make_unique<DirectX::SpriteBatch>(pDevice, resourceUpload, pd);
-
-        std::unique_ptr<SpriteData> pSpriteData = std::make_unique<SpriteData>();
-
-        if (pSprite.first->FilePath.size() < 5)
+    for (std::pair<Sprite* const, std::unique_ptr<SpriteData>>& sprite : m_spriteData) {
+        if (sprite.first->FilePath.size() < 5)
             throw std::system_error(std::error_code(static_cast<int>(GetLastError()), std::system_category()), "BuildSpriteDataResources");
 
-        std::wstring fileExtension = pSprite.first->FilePath.substr(pSprite.first->FilePath.size() - 4);
+        std::wstring fileExtension = sprite.first->FilePath.substr(sprite.first->FilePath.size() - 4);
         if (fileExtension == L".png") {
             ThrowIfFailed(DirectX::CreateWICTextureFromFile(
-                        pDevice, resourceUpload, pSprite.first->FilePath.c_str(), pSpriteData->pTexture.ReleaseAndGetAddressOf()));  
+                        pDevice, resourceUploadBatch, sprite.first->FilePath.c_str(), sprite.second->pTexture.ReleaseAndGetAddressOf()));  
         } else if (fileExtension == L".dds") {
             ThrowIfFailed(DirectX::CreateDDSTextureFromFile(
-                        pDevice, resourceUpload, pSprite.first->FilePath.c_str(), pSpriteData->pTexture.ReleaseAndGetAddressOf()));
+                        pDevice, resourceUploadBatch, sprite.first->FilePath.c_str(), sprite.second->pTexture.ReleaseAndGetAddressOf()));
         } else
             throw std::system_error(std::error_code(static_cast<int>(GetLastError()), std::system_category()), "BuildSpriteDataResources");
 
-        DirectX::CreateShaderResourceView(pDevice, pSpriteData->pTexture.Get(),
-                m_pResourceDescriptors->GetCpuHandle(pSprite.second));
+        DirectX::CreateShaderResourceView(pDevice, sprite.second->pTexture.Get(),
+                m_pResourceDescriptors->GetCpuHandle(sprite.second->DescriptorHeapIndex));
 
-        DirectX::RenderTargetState rtState(m_pDeviceResources->GetBackBufferFormat(), m_pDeviceResources->GetDepthBufferFormat());
-
-        DirectX::XMUINT2 textureSize = DirectX::GetTextureSize(pSpriteData->pTexture.Get());
+        DirectX::XMUINT2 textureSize = DirectX::GetTextureSize(sprite.second->pTexture.Get());
 
         // TODO: make the user set the origin.
-        pSpriteData->Origin.x = float(textureSize.x / 2.0f);
-        pSpriteData->Origin.y = float(textureSize.y / 2.0f);
+        sprite.second->Origin.x = float(textureSize.x / 2.0f);
+        sprite.second->Origin.y = float(textureSize.y / 2.0f);
 
         // TODO: figure out tiling.
-        pSpriteData->TileRect.left = textureSize.x;
-        pSpriteData->TileRect.right = textureSize.x * 2;
-        pSpriteData->TileRect.top = textureSize.y;
-        pSpriteData->TileRect.bottom = textureSize.y * 2;
-
-        m_pSpriteData[pSprite.second] = std::move(pSpriteData);
-
-        std::future<void> uploadResourceFinished = resourceUpload.End(m_pDeviceResources->GetCommandQueue());
-        uploadResourceFinished.wait();
+        sprite.second->TileRect.left = textureSize.x;
+        sprite.second->TileRect.right = textureSize.x * 2;
+        sprite.second->TileRect.top = textureSize.y;
+        sprite.second->TileRect.bottom = textureSize.y * 2;
     }
 }
 
-void Renderer::BuildTextDataResources() {
+void Renderer::BuildTextDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
     ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
 
-    for (std::pair<Text* const, UINT> pText : m_pText) {
-        DirectX::ResourceUploadBatch resourceUpload(pDevice);
-        resourceUpload.Begin();
+    for (std::pair<Text* const, std::unique_ptr<TextData>>& text : m_textData) {
+        std::unique_ptr<DirectX::SpriteFont> pFont = std::make_unique<DirectX::SpriteFont>(
+                pDevice, 
+                resourceUploadBatch,
+                text.first->FilePath.c_str(),
+                m_pResourceDescriptors->GetCpuHandle(text.second->DescriptorHeapIndex),
+                m_pResourceDescriptors->GetGpuHandle(text.second->DescriptorHeapIndex));
 
-        std::unique_ptr<DirectX::SpriteFont> pFont = std::make_unique<DirectX::SpriteFont>(pDevice, resourceUpload,
-                pText.first->FilePath.c_str(),
-                m_pResourceDescriptors->GetCpuHandle(pText.second),
-                m_pResourceDescriptors->GetGpuHandle(pText.second));
-
-        std::future<void> uploadResourcesFinished = resourceUpload.End(
-                m_pDeviceResources->GetCommandQueue());
-
-        DirectX::RenderTargetState rtState(m_pDeviceResources->GetBackBufferFormat(),
-                m_pDeviceResources->GetDepthBufferFormat());
-
-        DirectX::SpriteBatchPipelineStateDescription pd(rtState);
-        m_pSpriteBatch = std::make_unique<DirectX::SpriteBatch>(pDevice, resourceUpload, pd);
-
-        m_pTextData[pText.second] = std::move(pFont);
-
-        uploadResourcesFinished.wait();
+        text.second->pSpriteFont = std::move(pFont);
     }
 }
 
 void Renderer::CreateWindowSizeDependentResources() {
     BuildSpriteDataSize();
-
-    // TEMP: font test.
-    auto viewport = m_pDeviceResources->GetScreenViewport();
-    m_pSpriteBatch->SetViewport(viewport);
-
-    auto size = m_pDeviceResources->GetOutputSize();
-    m_fontPos.x = float(size.right) / 2.f;
-    m_fontPos.y = float(size.bottom) / 2.f;
 }
 
 void Renderer::BuildSpriteDataSize() {
@@ -341,13 +277,17 @@ void Renderer::BuildSpriteDataSize() {
     D3D12_RECT size = m_pDeviceResources->GetOutputSize();
     m_pSpriteBatch->SetViewport(viewport);
 
-    for (std::pair<const UINT, std::unique_ptr<SpriteData>>& pSpriteData : m_pSpriteData) {
-        DirectX::XMUINT2 textureSize = DirectX::GetTextureSize(pSpriteData.second->pTexture.Get());
+    // TEMP
+    m_fontPos.x = (float)size.right / 2;
+    m_fontPos.y = (float)size.bottom / 2;
+
+    for (std::pair<Sprite* const, std::unique_ptr<SpriteData>>& sprite : m_spriteData) {
+        DirectX::XMUINT2 textureSize = DirectX::GetTextureSize(sprite.second->pTexture.Get());
 
         // TODO: figure out the link between stretch and screen position.
-        pSpriteData.second->StretchRect.left   = (size.right / 2); 
-        pSpriteData.second->StretchRect.top    = (size.bottom / 2);
-        pSpriteData.second->StretchRect.right  = (size.right / 2) + textureSize.x;
-        pSpriteData.second->StretchRect.bottom = (size.bottom / 2) + textureSize.y;
+        sprite.second->StretchRect.left   = (size.right / 2); 
+        sprite.second->StretchRect.top    = (size.bottom / 2);
+        sprite.second->StretchRect.right  = (size.right / 2) + textureSize.x;
+        sprite.second->StretchRect.bottom = (size.bottom / 2) + textureSize.y;
     }
 }

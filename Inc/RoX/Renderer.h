@@ -5,7 +5,6 @@
 #include "../../DirectXTK12/Inc/GraphicsMemory.h"
 #include "../../DirectXTK12/Inc/DescriptorHeap.h"
 #include "../../DirectXTK12/Inc/SpriteBatch.h"
-#include "../../DirectXTK12/Inc/SpriteFont.h"
 #include "../../DirectXTK12/Inc/CommonStates.h"
 #include "../../DirectXTK12/Inc/SimpleMath.h"
 
@@ -13,6 +12,7 @@
 #include "../Src/IDeviceNotify.h"
 #include "../Src/DeviceResources.h"
 #include "../Src/SpriteData.h"
+#include "../Src/TextData.h"
 #include "Timer.h"
 #include "Sprite.h"
 #include "Text.h"
@@ -54,8 +54,8 @@ class Renderer : public IDeviceNotify {
         void RenderText();
 
         void CreateDeviceDependentResources();
-        void BuildSpriteDataResources();
-        void BuildTextDataResources();
+        void BuildSpriteDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void BuildTextDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
 
         void CreateWindowSizeDependentResources();
         void BuildSpriteDataSize();
@@ -71,11 +71,8 @@ class Renderer : public IDeviceNotify {
         std::unique_ptr<DirectX::SpriteBatch> m_pSpriteBatch = nullptr;
 
         UINT m_nextSpriteDescriptorHeapIndex = 0;
-        std::unordered_map<Sprite*, UINT> m_pSprite = {};
-        std::unordered_map<UINT, std::unique_ptr<SpriteData>> m_pSpriteData = {};
-
-        std::unordered_map<Text*, UINT> m_pText = {};
-        std::unordered_map<UINT, std::unique_ptr<DirectX::SpriteFont>> m_pTextData = {};
+        std::unordered_map<Sprite*, std::unique_ptr<SpriteData>> m_spriteData = {};
+        std::unordered_map<Text*, std::unique_ptr<TextData>> m_textData = {};
 
     private: // TEMP: font test.
         std::unique_ptr<DirectX::SpriteFont> m_pFont;
