@@ -9,11 +9,14 @@
 
 #include "Exceptions/ThrowIfFailed.h"
 #include "Util/Logger.h"
+#include "DebugDraw.h"
 
 Renderer::Renderer(Timer& timer) noexcept : 
-m_timer(timer) {
+m_timer(timer)
+{
     m_pDeviceResources = std::make_unique<DeviceResources>();
-    m_pDeviceResources->RegisterDeviceNotify(this);
+    m_pDeviceResources->RegisterDeviceNotify(this);    
+
 }
 
 Renderer::~Renderer() {
@@ -23,7 +26,7 @@ Renderer::~Renderer() {
 
 void Renderer::Initialize(HWND window, int width, int height) {
     m_pDeviceResources->SetWindow(window, width, height);
-    m_pDeviceResources->CreateDeviceResources();
+    m_pDeviceResources->CreateDeviceResources();    
     CreateDeviceDependentResources();
     m_pDeviceResources->CreateWindowSizeDependentResources();
     CreateWindowSizeDependentResources();
@@ -38,24 +41,58 @@ void Renderer::Render() {
     if (m_timer.GetFrameCount() == 0)
         return;
 
-    // Prepare the command list to render a new frame.
-    m_pDeviceResources->Prepare();
-    Clear();
-
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
+
+    // Prepare the command list to render a new frame.
+    if (m_msaaEnabled) {
+        m_pDeviceResources->Prepare(D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RESOLVE_DEST);
+        CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+                m_pDeviceResources->GetMsaaRenderTarget(),
+                D3D12_RESOURCE_STATE_RESOLVE_SOURCE, 
+                D3D12_RESOURCE_STATE_RENDER_TARGET);
+        pCommandList->ResourceBarrier(1, &barrier);
+    } else {
+        m_pDeviceResources->Prepare();
+    }
+
+    Clear();
 
     ID3D12DescriptorHeap* heaps[] = { m_pResourceDescriptors->Heap(), m_pStates->Heap() };
     pCommandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
 
-    m_pSpriteBatch->Begin(pCommandList, DirectX::SpriteSortMode_FrontToBack);
+    m_pDebugDisplayEffect->SetWorld(m_world);
+    m_pDebugDisplayEffect->Apply(pCommandList);
 
+    m_pDebugDisplayPrimitiveBatch->Begin(pCommandList);
+    DrawGrid(
+            m_pDebugDisplayPrimitiveBatch.get(), 
+            {{ 1.0f, 0.0f, 0.0f, 0.0f }},
+            {{ 0.0f, 0.0f, 1.0f, 0.0f }},
+            {{ 0.0f, 0.0f, 0.0f, 0.0f }},
+            10, 10);
+    m_pDebugDisplayPrimitiveBatch->End();
+
+    m_pSpriteBatch->Begin(pCommandList, DirectX::SpriteSortMode_FrontToBack);
     RenderSprites();
     RenderText();
-
     m_pSpriteBatch->End();
 
     // Show the new frame.
-    m_pDeviceResources->Present();
+    if (m_msaaEnabled) {
+        CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+                m_pDeviceResources->GetMsaaRenderTarget(),
+                D3D12_RESOURCE_STATE_RENDER_TARGET,
+                D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
+        pCommandList->ResourceBarrier(1, &barrier);
+        pCommandList->ResolveSubresource(m_pDeviceResources->GetRenderTarget(),
+                0, m_pDeviceResources->GetMsaaRenderTarget(), 
+                0, m_pDeviceResources->GetBackBufferFormat());
+
+        m_pDeviceResources->Present(D3D12_RESOURCE_STATE_RESOLVE_DEST);
+    } else {
+        m_pDeviceResources->Present();
+    }
+
     m_pGraphicsMemory->Commit(m_pDeviceResources->GetCommandQueue());
 }
 
@@ -87,6 +124,8 @@ void Renderer::OnDeviceLost() {
         text.second->pSpriteFont.reset();
     }
 
+    m_pDebugDisplayEffect.reset();
+    m_pDebugDisplayPrimitiveBatch.reset();
 }
 
 void Renderer::OnDeviceRestored() {
@@ -127,15 +166,25 @@ void Renderer::OnWindowSizeChanged(int width, int height) {
     CreateWindowSizeDependentResources();
 }
 
+void Renderer::SetMsaa(bool state) noexcept {
+    if (m_msaaEnabled == state)
+        return;
+
+    m_msaaEnabled = state;
+    CreateRenderTargetDependentResources();
+}
+
+bool Renderer::MsaaEnabled() const noexcept {
+    return m_msaaEnabled;
+}
+
 void Renderer::Clear() {
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
 
-    // Clear the views.
-    CD3DX12_CPU_DESCRIPTOR_HANDLE const rtvDescriptor = m_pDeviceResources->GetRenderTargetView();
-    CD3DX12_CPU_DESCRIPTOR_HANDLE const dsvDescriptor = m_pDeviceResources->GetDepthStencilView();
-
+    CD3DX12_CPU_DESCRIPTOR_HANDLE const rtvDescriptor = m_msaaEnabled ? m_pDeviceResources->GetMsaaRenderTargetView() : m_pDeviceResources->GetRenderTargetView();
+    CD3DX12_CPU_DESCRIPTOR_HANDLE const dsvDescriptor = m_msaaEnabled ? m_pDeviceResources->GetMsaaDepthStencilView() : m_pDeviceResources->GetDepthStencilView();
     pCommandList->OMSetRenderTargets(1, &rtvDescriptor, FALSE, &dsvDescriptor);
-    pCommandList->ClearRenderTargetView(rtvDescriptor, DirectX::Colors::LightSteelBlue, 0, nullptr);
+    pCommandList->ClearRenderTargetView(rtvDescriptor, DirectX::Colors::CornflowerBlue, 0, nullptr);
     pCommandList->ClearDepthStencilView(dsvDescriptor, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
     // Set the viewport and scissor rect.
@@ -231,18 +280,33 @@ void Renderer::CreateDeviceDependentResources() {
             m_spriteData.size() + m_textData.size());
     m_pStates = std::make_unique<DirectX::CommonStates>(pDevice);
 
-    DirectX::RenderTargetState rtState(m_pDeviceResources->GetBackBufferFormat(), m_pDeviceResources->GetDepthBufferFormat());
+    CreateRenderTargetDependentResources();
+}
+
+void Renderer::CreateRenderTargetDependentResources() {
+    ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
+
+    DirectX::RenderTargetState rtState(
+            m_pDeviceResources->GetBackBufferFormat(), 
+            m_pDeviceResources->GetDepthBufferFormat());
+    if (m_msaaEnabled) {
+        rtState.sampleDesc.Count = DeviceResources::MSAA_COUNT;
+        rtState.sampleDesc.Quality = DeviceResources::MSAA_QUALITY;
+    }
+
     DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
 
     resourceUploadBatch.Begin();
     BuildSpriteDataResources(resourceUploadBatch);
     BuildTextDataResources(resourceUploadBatch);
-    
+
     DirectX::SpriteBatchPipelineStateDescription pd(rtState);
     m_pSpriteBatch = std::make_unique<DirectX::SpriteBatch>(pDevice, resourceUploadBatch, pd);
-        
+
     std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_pDeviceResources->GetCommandQueue());
     uploadResourceFinished.wait();
+
+    BuildDebugDisplayResources(rtState);
 }
 
 void Renderer::BuildSpriteDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
@@ -295,11 +359,47 @@ void Renderer::BuildTextDataResources(DirectX::ResourceUploadBatch& resourceUplo
     }
 }
 
-void Renderer::CreateWindowSizeDependentResources() {
-    BuildSpriteDataSize();
+void Renderer::BuildDebugDisplayResources(DirectX::RenderTargetState& renderTargetState) {
+    ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
+
+    m_pDebugDisplayPrimitiveBatch = std::make_unique<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>>(pDevice);
+
+    CD3DX12_RASTERIZER_DESC rastDesc(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE, FALSE,
+            D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP,
+            D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, TRUE, TRUE, FALSE,
+            0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+
+    DirectX::EffectPipelineStateDescription pd(
+            &DirectX::VertexPositionColor::InputLayout,
+            DirectX::CommonStates::Opaque,
+            DirectX::CommonStates::DepthDefault,
+            m_msaaEnabled ? rastDesc : DirectX::CommonStates::CullNone,
+            renderTargetState,
+            D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
+
+    m_pDebugDisplayEffect = std::make_unique<DirectX::BasicEffect>(pDevice, DirectX::EffectFlags::VertexColor, pd);
+
+    m_world = DirectX::SimpleMath::Matrix::Identity;
 }
 
-void Renderer::BuildSpriteDataSize() {
+void Renderer::CreateWindowSizeDependentResources() {
+    BuildSpriteDataSizeResources();
+    BuildDebugDisplaySizeResources();
+}
+
+void Renderer::BuildSpriteDataSizeResources() noexcept {
     D3D12_VIEWPORT viewport = m_pDeviceResources->GetScreenViewport();
     m_pSpriteBatch->SetViewport(viewport);
+}
+
+void Renderer::BuildDebugDisplaySizeResources() {
+    D3D12_RECT size = m_pDeviceResources->GetOutputSize();
+
+    m_view = DirectX::SimpleMath::Matrix::CreateLookAt(DirectX::SimpleMath::Vector3(2.f, 2.f, 2.f),
+            DirectX::SimpleMath::Vector3::Zero, DirectX::SimpleMath::Vector3::UnitY);
+    m_proj = DirectX::SimpleMath::Matrix::CreatePerspectiveFieldOfView(DirectX::XM_PIDIV4,
+            float(size.right) / float(size.bottom), 0.1f, 10.f);
+
+    m_pDebugDisplayEffect->SetView(m_view);
+    m_pDebugDisplayEffect->SetProjection(m_proj);
 }

@@ -47,12 +47,13 @@ DeviceResources::DeviceResources(
     m_outputSize{0, 0, 1, 1},
     m_colorSpace(DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709),
     m_options(flags),
-    m_pDeviceNotify(nullptr) {
-        if (backBufferCount < 2 || backBufferCount > MAX_BACK_BUFFER_COUNT)
-            throw std::out_of_range("invalid backBufferCount");
-        if (minFeatureLevel < D3D_FEATURE_LEVEL_11_0)
-            throw std::out_of_range("minFeatureLevel too low");
-    }
+    m_pDeviceNotify(nullptr) 
+{
+    if (backBufferCount < 2 || backBufferCount > MAX_BACK_BUFFER_COUNT)
+        throw std::out_of_range("invalid backBufferCount");
+    if (minFeatureLevel < D3D_FEATURE_LEVEL_11_0)
+        throw std::out_of_range("minFeatureLevel too low");
+}
 
 DeviceResources::~DeviceResources() {
     // Ensure that the GPU is no longer referencing resources that are about to be destroyed.
@@ -202,6 +203,22 @@ void DeviceResources::CreateDeviceResources() {
     m_fenceEvent.Attach(CreateEventEx(nullptr, nullptr, 0, EVENT_MODIFY_STATE | SYNCHRONIZE));
     if (!m_fenceEvent.IsValid())
         throw std::system_error(std::error_code(static_cast<int>(GetLastError()), std::system_category()), "CreateEventEx");
+
+    // Create MSAA resources.
+    D3D12_DESCRIPTOR_HEAP_DESC msaaRtvDescriptorHeapDesc = {};
+    msaaRtvDescriptorHeapDesc.NumDescriptors = 1;
+    msaaRtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+
+    D3D12_DESCRIPTOR_HEAP_DESC msaaDsvDescriptorHeapDesc = {};
+    msaaDsvDescriptorHeapDesc.NumDescriptors = 1;
+    msaaDsvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+
+    ThrowIfFailed(m_pDevice->CreateDescriptorHeap(
+                &msaaRtvDescriptorHeapDesc,
+                IID_PPV_ARGS(m_pMsaaRtvDescriptorHeap.ReleaseAndGetAddressOf())));
+    ThrowIfFailed(m_pDevice->CreateDescriptorHeap(
+                &msaaDsvDescriptorHeapDesc,
+                IID_PPV_ARGS(m_pMsaaDsvDescriptorHeap.ReleaseAndGetAddressOf())));
 }
 
 void DeviceResources::CreateWindowSizeDependentResources() {
@@ -353,6 +370,65 @@ void DeviceResources::CreateWindowSizeDependentResources() {
     m_scissorRect.left = m_scissorRect.top = 0;
     m_scissorRect.right = static_cast<LONG>(backBufferWidth);
     m_scissorRect.bottom = static_cast<LONG>(backBufferHeight);
+
+    // Create the MSAA depth/stencil buffer.
+    CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
+
+    CD3DX12_RESOURCE_DESC depthStencilDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+            MSAA_DEPTH_FORMAT,
+            static_cast<UINT>(m_scissorRect.right),
+            static_cast<UINT>(m_scissorRect.bottom),
+            1, // This depth stencil view has only one texture.
+            1, // Use a single mipmap level
+            MSAA_COUNT,
+            MSAA_QUALITY);
+    depthStencilDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+    D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
+    depthOptimizedClearValue.Format = MSAA_DEPTH_FORMAT;
+    depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
+    depthOptimizedClearValue.DepthStencil.Stencil = 0;
+
+    ThrowIfFailed(m_pDevice->CreateCommittedResource(
+                &heapProperties,
+                D3D12_HEAP_FLAG_NONE,
+                &depthStencilDesc,
+                D3D12_RESOURCE_STATE_DEPTH_WRITE,
+                &depthOptimizedClearValue,
+                IID_PPV_ARGS(m_pMsaaDepthStencil.ReleaseAndGetAddressOf())));
+
+    D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+    dsvDesc.Format = MSAA_DEPTH_FORMAT;
+    dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS;
+
+    m_pDevice->CreateDepthStencilView(m_pMsaaDepthStencil.Get(), &dsvDesc,
+            m_pMsaaDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+
+    // Create MSAA render target.
+    CD3DX12_RESOURCE_DESC msaaRTDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+            m_backBufferFormat,
+            static_cast<UINT>(m_scissorRect.right),
+            static_cast<UINT>(m_scissorRect.bottom),
+            1, // This render target view has only one texture.
+            1, // Use a single mipmap level
+            MSAA_COUNT,
+            MSAA_QUALITY);
+    msaaRTDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+    D3D12_CLEAR_VALUE msaaOptimizedClearValue = {};
+    msaaOptimizedClearValue.Format = m_backBufferFormat;
+    memcpy(msaaOptimizedClearValue.Color, DirectX::Colors::CornflowerBlue, sizeof(float) * 4);
+
+    ThrowIfFailed(m_pDevice->CreateCommittedResource(
+                &heapProperties,
+                D3D12_HEAP_FLAG_NONE,
+                &msaaRTDesc,
+                D3D12_RESOURCE_STATE_RESOLVE_SOURCE,
+                &msaaOptimizedClearValue,
+                IID_PPV_ARGS(m_pMsaaRenderTarget.ReleaseAndGetAddressOf())));
+
+    m_pDevice->CreateRenderTargetView(m_pMsaaRenderTarget.Get(), nullptr,
+            m_pMsaaRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 }
 
 bool DeviceResources::WindowSizeChanged(int width, int height) {
@@ -382,13 +458,17 @@ void DeviceResources::HandleDeviceLost() {
         m_pCommandAllocators[i].Reset();
         m_pRenderTargets[i].Reset();
     }
+    m_pMsaaRenderTarget.Reset();
 
     m_pDepthStencil.Reset();
+    m_pMsaaDepthStencil.Reset();
     m_pCommandQueue.Reset();
     m_pCommandList.Reset();
     m_pFence.Reset();
     m_pRtvDescriptorHeap.Reset();
     m_pDsvDescriptorHeap.Reset();
+    m_pMsaaRtvDescriptorHeap.Reset();
+    m_pMsaaDsvDescriptorHeap.Reset();
     m_pSwapChain.Reset();
     m_pDevice.Reset();
     m_pDxgiFactory.Reset();
@@ -514,13 +594,13 @@ void DeviceResources::UpdateColorSpace() {
 
         Microsoft::WRL::ComPtr<IDXGIAdapter> adapter;
         for (UINT adapterIndex = 0;
-            SUCCEEDED(m_pDxgiFactory->EnumAdapters(adapterIndex, adapter.ReleaseAndGetAddressOf()));
-            ++adapterIndex)
+                SUCCEEDED(m_pDxgiFactory->EnumAdapters(adapterIndex, adapter.ReleaseAndGetAddressOf()));
+                ++adapterIndex)
         {
             Microsoft::WRL::ComPtr<IDXGIOutput> output;
             for (UINT outputIndex = 0;
-                SUCCEEDED(adapter->EnumOutputs(outputIndex, output.ReleaseAndGetAddressOf()));
-                ++outputIndex)
+                    SUCCEEDED(adapter->EnumOutputs(outputIndex, output.ReleaseAndGetAddressOf()));
+                    ++outputIndex)
             {
                 // Get the rectangle bounds of current output.
                 DXGI_OUTPUT_DESC desc;
@@ -551,18 +631,18 @@ void DeviceResources::UpdateColorSpace() {
 
     if ((m_options & ENABLE_HDR) && isDisplayHDR10) {
         switch (m_backBufferFormat) {
-        case DXGI_FORMAT_R10G10B10A2_UNORM:
-            // The application creates the HDR10 signal.
-            colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
-            break;
+            case DXGI_FORMAT_R10G10B10A2_UNORM:
+                // The application creates the HDR10 signal.
+                colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
+                break;
 
-        case DXGI_FORMAT_R16G16B16A16_FLOAT:
-            // The system creates the HDR10 signal; application uses linear values.
-            colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709;
-            break;
+            case DXGI_FORMAT_R16G16B16A16_FLOAT:
+                // The system creates the HDR10 signal; application uses linear values.
+                colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709;
+                break;
 
-        default:
-            break;
+            default:
+                break;
         }
     }
 
@@ -570,8 +650,8 @@ void DeviceResources::UpdateColorSpace() {
 
     UINT colorSpaceSupport = 0;
     if (m_pSwapChain
-        && SUCCEEDED(m_pSwapChain->CheckColorSpaceSupport(colorSpace, &colorSpaceSupport))
-        && (colorSpaceSupport & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT))
+            && SUCCEEDED(m_pSwapChain->CheckColorSpaceSupport(colorSpace, &colorSpaceSupport))
+            && (colorSpaceSupport & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT))
         ThrowIfFailed(m_pSwapChain->SetColorSpace1(colorSpace));
 
 }
@@ -618,6 +698,14 @@ ID3D12Resource* DeviceResources::GetRenderTarget() const noexcept {
 
 ID3D12Resource* DeviceResources::GetDepthStencil() const noexcept {
     return m_pDepthStencil.Get();
+}
+
+ID3D12Resource* DeviceResources::GetMsaaRenderTarget() const noexcept {
+    return m_pMsaaRenderTarget.Get();
+}
+
+ID3D12Resource* DeviceResources::GetMsaaDepthStencil() const noexcept {
+    return m_pMsaaDepthStencil.Get();
 }
 
 ID3D12CommandQueue* DeviceResources::GetCommandQueue() const noexcept {
@@ -671,6 +759,16 @@ CD3DX12_CPU_DESCRIPTOR_HANDLE DeviceResources::GetRenderTargetView() const noexc
 
 CD3DX12_CPU_DESCRIPTOR_HANDLE DeviceResources::GetDepthStencilView() const noexcept {
     D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_pDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    return CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuHandle);
+}
+
+CD3DX12_CPU_DESCRIPTOR_HANDLE DeviceResources::GetMsaaRenderTargetView() const noexcept {
+    D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_pMsaaRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    return CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuHandle);
+}
+
+CD3DX12_CPU_DESCRIPTOR_HANDLE DeviceResources::GetMsaaDepthStencilView() const noexcept {
+    D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_pMsaaDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
     return CD3DX12_CPU_DESCRIPTOR_HANDLE(cpuHandle);
 }
 

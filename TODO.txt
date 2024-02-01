@@ -1,0 +1,15 @@
+//--------------- SPRITES ---------------\\
+
+Normalize coordinates. Currently using pixel coordinates.
+Scaling has uninteded side effects.
+
+\\--------------- SPRITES ---------------//
+
+
+
+//--------------- TEXT ---------------\\
+
+Normalize coordinates. Currently using pixel coordinates.
+Scaling has uninteded side effects.
+
+\\--------------- TEXT ---------------//

@@ -12,6 +12,8 @@ set(SOURCE
     Src/Util/Logger.h
     Src/Util/pch.h
 
+    Src/DebugDraw.cpp
+    Src/DebugDraw.h
     Src/DeviceResources.cpp
     Src/DeviceResources.h
     Src/IDeviceNotify.h

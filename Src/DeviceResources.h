@@ -41,6 +41,8 @@ class DeviceResources {
         D3D_FEATURE_LEVEL GetDeviceFeatureLevel() const noexcept;
         ID3D12Resource* GetRenderTarget() const noexcept;
         ID3D12Resource* GetDepthStencil() const noexcept;
+        ID3D12Resource* GetMsaaRenderTarget() const noexcept;
+        ID3D12Resource* GetMsaaDepthStencil() const noexcept;
         ID3D12CommandQueue* GetCommandQueue() const noexcept;     
         ID3D12CommandAllocator* GetCommandAllocator() const noexcept;
         ID3D12GraphicsCommandList* GetCommandList() const noexcept;
@@ -54,6 +56,8 @@ class DeviceResources {
         unsigned int GetDeviceOptions() const noexcept;
         CD3DX12_CPU_DESCRIPTOR_HANDLE GetRenderTargetView() const noexcept;
         CD3DX12_CPU_DESCRIPTOR_HANDLE GetDepthStencilView() const noexcept;
+        CD3DX12_CPU_DESCRIPTOR_HANDLE GetMsaaRenderTargetView() const noexcept;
+        CD3DX12_CPU_DESCRIPTOR_HANDLE GetMsaaDepthStencilView() const noexcept;
 
     private:
         void MoveToNextFrame();
@@ -63,6 +67,10 @@ class DeviceResources {
         static constexpr unsigned int ALLOW_TEARING = 0x1;
         static constexpr unsigned int ENABLE_HDR = 0x2;
         static constexpr unsigned int REVERSE_DEPTH = 0x4;
+
+        static constexpr UINT MSAA_COUNT = 4;
+        static constexpr UINT MSAA_QUALITY = 0;
+        static constexpr DXGI_FORMAT MSAA_DEPTH_FORMAT = DXGI_FORMAT_D32_FLOAT;
 
     private:
         static constexpr size_t MAX_BACK_BUFFER_COUNT = 3;
@@ -80,6 +88,8 @@ class DeviceResources {
         Microsoft::WRL::ComPtr<IDXGISwapChain3> m_pSwapChain;
         Microsoft::WRL::ComPtr<ID3D12Resource> m_pRenderTargets[MAX_BACK_BUFFER_COUNT];
         Microsoft::WRL::ComPtr<ID3D12Resource> m_pDepthStencil;
+        Microsoft::WRL::ComPtr<ID3D12Resource> m_pMsaaRenderTarget; 
+        Microsoft::WRL::ComPtr<ID3D12Resource> m_pMsaaDepthStencil;
 
         // Presentation fence objects.
         Microsoft::WRL::ComPtr<ID3D12Fence> m_pFence;
@@ -89,6 +99,8 @@ class DeviceResources {
         // Direct3D rendering objects.
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_pRtvDescriptorHeap;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_pDsvDescriptorHeap;
+        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_pMsaaRtvDescriptorHeap;
+        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_pMsaaDsvDescriptorHeap;
         UINT m_rtvDescriptorSize;
         D3D12_VIEWPORT m_screenViewport;
         D3D12_RECT m_scissorRect;
