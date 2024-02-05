@@ -16,7 +16,6 @@ m_timer(timer)
 {
     m_pDeviceResources = std::make_unique<DeviceResources>();
     m_pDeviceResources->RegisterDeviceNotify(this);    
-
 }
 
 Renderer::~Renderer() {
@@ -59,6 +58,10 @@ void Renderer::Render() {
 
     ID3D12DescriptorHeap* heaps[] = { m_pResourceDescriptors->Heap(), m_pStates->Heap() };
     pCommandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
+
+    m_pShapeEffect->SetWorld(m_world);
+    m_pShapeEffect->Apply(pCommandList);
+    m_pShape->Draw(pCommandList);
 
     m_pDebugDisplayEffect->SetWorld(m_world);
     m_pDebugDisplayEffect->Apply(pCommandList);
@@ -126,6 +129,10 @@ void Renderer::OnDeviceLost() {
 
     m_pDebugDisplayEffect.reset();
     m_pDebugDisplayPrimitiveBatch.reset();
+
+    // TEMP
+    m_pShapeEffect.reset();
+    m_pShape.reset();
 }
 
 void Renderer::OnDeviceRestored() {
@@ -379,6 +386,18 @@ void Renderer::BuildDebugDisplayResources(DirectX::RenderTargetState& renderTarg
 
     m_pDebugDisplayEffect = std::make_unique<DirectX::BasicEffect>(pDevice, DirectX::EffectFlags::VertexColor, pd);
 
+    // TEMP
+    DirectX::EffectPipelineStateDescription pd2(
+            &DirectX::GeometricPrimitive::VertexType::InputLayout,
+            DirectX::CommonStates::Opaque,
+            DirectX::CommonStates::DepthDefault,
+            DirectX::CommonStates::CullNone,
+            renderTargetState);
+    m_pShapeEffect = std::make_unique<DirectX::BasicEffect>(pDevice, DirectX::EffectFlags::Lighting, pd2);
+    m_pShapeEffect->EnableDefaultLighting();
+
+    m_pShape = DirectX::GeometricPrimitive::CreateTeapot();
+
     m_world = DirectX::SimpleMath::Matrix::Identity;
 }
 
@@ -402,4 +421,8 @@ void Renderer::BuildDebugDisplaySizeResources() {
 
     m_pDebugDisplayEffect->SetView(m_view);
     m_pDebugDisplayEffect->SetProjection(m_proj);
+
+    // TEMP
+    m_pShapeEffect->SetView(m_view);
+    m_pShapeEffect->SetProjection(m_proj);
 }

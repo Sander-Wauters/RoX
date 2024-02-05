@@ -2,14 +2,15 @@
 
 #include <unordered_map>
 
-#include "../../DirectXTK12/Inc/GraphicsMemory.h"
-#include "../../DirectXTK12/Inc/DescriptorHeap.h"
-#include "../../DirectXTK12/Inc/SpriteBatch.h"
-#include "../../DirectXTK12/Inc/CommonStates.h"
-#include "../../DirectXTK12/Inc/SimpleMath.h"
-#include "../../DirectXTK12/Inc/Effects.h"
-#include "../../DirectXTK12/Inc/PrimitiveBatch.h"
-#include "../../DirectXTK12/Inc/VertexTypes.h"
+#include "../Lib/DirectXTK12/Inc/GraphicsMemory.h"
+#include "../Lib/DirectXTK12/Inc/DescriptorHeap.h"
+#include "../Lib/DirectXTK12/Inc/SpriteBatch.h"
+#include "../Lib/DirectXTK12/Inc/CommonStates.h"
+#include "../Lib/DirectXTK12/Inc/SimpleMath.h"
+#include "../Lib/DirectXTK12/Inc/Effects.h"
+#include "../Lib/DirectXTK12/Inc/PrimitiveBatch.h"
+#include "../Lib/DirectXTK12/Inc/VertexTypes.h"
+#include "../Lib/DirectXTK12/Inc/GeometricPrimitive.h"
 
 #include "../Src/Util/pch.h"
 #include "../Src/IDeviceNotify.h"
@@ -90,6 +91,9 @@ class Renderer : public IDeviceNotify {
     private: // TEMP: debug drawing.
         std::unique_ptr<DirectX::BasicEffect> m_pDebugDisplayEffect;
         std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>> m_pDebugDisplayPrimitiveBatch;
+
+        std::unique_ptr<DirectX::BasicEffect> m_pShapeEffect;
+        std::unique_ptr<DirectX::GeometricPrimitive> m_pShape;
 
         DirectX::SimpleMath::Matrix m_world;
         DirectX::SimpleMath::Matrix m_view;

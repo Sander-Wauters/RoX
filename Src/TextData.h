@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../DirectXTK12/Inc/SpriteFont.h"
+#include "../Lib/DirectXTK12/Inc/SpriteFont.h"
 #include <memory>
 
 struct TextData {

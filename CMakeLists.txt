@@ -4,6 +4,14 @@ project(RoX
     LANGUAGES CXX
 )
 
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
+set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "Assimp build tests" FORCE)
+set(ASSIMP_INJECT_DEBUG_POSTFIX OFF CACHE BOOL "Debug postfix" FORCE)
+set(ASSIMP_INSTALL OFF CACHE BOOL "Assimp install" FORCE)
+
+add_subdirectory(Lib/assimp)
+add_subdirectory(Lib/DirectXTK12)
+
 set(SOURCE
     Src/Exceptions/DXException.cpp
     Src/Exceptions/ThrowIfFailed.h
@@ -24,7 +32,12 @@ set(SOURCE
     Src/Window.cpp
 )
 
-include_directories(Inc)
+include_directories(
+    Inc 
+    lib/assimp/include
+    lib/DirectXTK12/Inc
+)
+
 add_library(${PROJECT_NAME} STATIC ${SOURCE})
 target_link_libraries(${PROJECT_NAME} PRIVATE 
     d3d12.lib dxgi.lib dxguid.lib uuid.lib
@@ -33,6 +46,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     ole32.lib oleaut32.lib
     runtimeobject.lib
     DirectXTK12
+    assimp
 )
 
 #--------------- Build HLSL shaders ---------------#
