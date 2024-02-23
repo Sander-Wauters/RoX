@@ -20,13 +20,17 @@ set(SOURCE
     Src/Util/Logger.h
     Src/Util/pch.h
 
+    Src/Camera.cpp
     Src/DebugDraw.cpp
     Src/DebugDraw.h
     Src/DeviceResources.cpp
     Src/DeviceResources.h
+    Src/ModelLoadAssimp.cpp
+    Src/ModelLoadAssimp.h
     Src/IDeviceNotify.h
     Src/Renderer.cpp
     Src/SpriteData.h
+    Src/StaticGeometryData.h
     Src/TextData.h
     Src/Timer.cpp
     Src/Window.cpp

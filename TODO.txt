@@ -1,7 +1,6 @@
 //--------------- SPRITES ---------------\\
 
-Normalize coordinates. Currently using pixel coordinates.
-Scaling has uninteded side effects.
+Scaling has unintended side effects.
 
 \\--------------- SPRITES ---------------//
 
@@ -9,7 +8,6 @@ Scaling has uninteded side effects.
 
 //--------------- TEXT ---------------\\
 
-Normalize coordinates. Currently using pixel coordinates.
-Scaling has uninteded side effects.
+Scaling has unintended side effects.
 
 \\--------------- TEXT ---------------//

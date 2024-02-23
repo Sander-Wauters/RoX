@@ -10,9 +10,11 @@
 #include "Exceptions/ThrowIfFailed.h"
 #include "Util/Logger.h"
 #include "DebugDraw.h"
+#include "ModelLoadAssimp.h"
 
-Renderer::Renderer(Timer& timer) noexcept : 
-m_timer(timer)
+Renderer::Renderer(Timer& timer, Camera& camera) noexcept : 
+    m_timer(timer),
+    m_camera(camera) 
 {
     m_pDeviceResources = std::make_unique<DeviceResources>();
     m_pDeviceResources->RegisterDeviceNotify(this);    
@@ -32,7 +34,14 @@ void Renderer::Initialize(HWND window, int width, int height) {
 }
 
 void Renderer::Update() {
+    m_view = m_camera.GetView();
+    m_proj = m_camera.GetProjection();
 
+    m_staticGeoEffect->SetView(m_view);
+    m_staticGeoEffect->SetProjection(m_proj);
+
+    m_pDebugDisplayEffect->SetView(m_view);
+    m_pDebugDisplayEffect->SetProjection(m_proj);
 }
 
 void Renderer::Render() {
@@ -59,21 +68,19 @@ void Renderer::Render() {
     ID3D12DescriptorHeap* heaps[] = { m_pResourceDescriptors->Heap(), m_pStates->Heap() };
     pCommandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
 
-    m_pShapeEffect->SetWorld(m_world);
-    m_pShapeEffect->Apply(pCommandList);
-    m_pShape->Draw(pCommandList);
-
+    // TEMP: debug drawing.
     m_pDebugDisplayEffect->SetWorld(m_world);
     m_pDebugDisplayEffect->Apply(pCommandList);
-
     m_pDebugDisplayPrimitiveBatch->Begin(pCommandList);
     DrawGrid(
             m_pDebugDisplayPrimitiveBatch.get(), 
-            {{ 1.0f, 0.0f, 0.0f, 0.0f }},
-            {{ 0.0f, 0.0f, 1.0f, 0.0f }},
+            {{ 100.0f, 0.0f, 0.0f, 0.0f }},
+            {{ 0.0f, 0.0f, 100.0f, 0.0f }},
             {{ 0.0f, 0.0f, 0.0f, 0.0f }},
-            10, 10);
+            100, 100);
     m_pDebugDisplayPrimitiveBatch->End();
+
+    RenderStaticGeometry();
 
     m_pSpriteBatch->Begin(pCommandList, DirectX::SpriteSortMode_FrontToBack);
     RenderSprites();
@@ -99,16 +106,21 @@ void Renderer::Render() {
     m_pGraphicsMemory->Commit(m_pDeviceResources->GetCommandQueue());
 }
 
-void Renderer::AddSprite(Sprite* pSprite) {
+void Renderer::Add(Sprite* pSprite) {
     std::unique_ptr<SpriteData> pSpriteData = std::make_unique<SpriteData>();
     pSpriteData->DescriptorHeapIndex = m_nextSpriteDescriptorHeapIndex++;
     m_spriteData[pSprite] = std::move(pSpriteData);
 }
 
-void Renderer::AddText(Text* pText) {
+void Renderer::Add(Text* pText) {
     std::unique_ptr<TextData> pTextData = std::make_unique<TextData>();
     pTextData->DescriptorHeapIndex = m_nextSpriteDescriptorHeapIndex++;
     m_textData[pText] = std::move(pTextData);
+}
+
+void Renderer::Add(StaticGeometry::Base* pStaticGeo) {
+    std::unique_ptr<StaticGeometryData> pStaticGeoData = std::make_unique<StaticGeometryData>();
+    m_staticGeo[pStaticGeo] = std::move(pStaticGeoData);
 }
 
 void Renderer::OnDeviceLost() {
@@ -127,12 +139,9 @@ void Renderer::OnDeviceLost() {
         text.second->pSpriteFont.reset();
     }
 
+    // TEMP: debug drawing.
     m_pDebugDisplayEffect.reset();
     m_pDebugDisplayPrimitiveBatch.reset();
-
-    // TEMP
-    m_pShapeEffect.reset();
-    m_pShape.reset();
 }
 
 void Renderer::OnDeviceRestored() {
@@ -171,6 +180,11 @@ void Renderer::OnWindowSizeChanged(int width, int height) {
     if (!m_pDeviceResources->WindowSizeChanged(width, height))
         return;
     CreateWindowSizeDependentResources();
+    m_camera.SetFrustum(
+            m_camera.GetFovY(), 
+            (float)width / height, 
+            m_camera.GetNearZ(), 
+            m_camera.GetFarZ());
 }
 
 void Renderer::SetMsaa(bool state) noexcept {
@@ -264,6 +278,15 @@ void Renderer::RenderText() {
     }
 }
 
+void Renderer::RenderStaticGeometry() {
+    ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
+    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<StaticGeometryData>>& geo : m_staticGeo) {
+        m_staticGeoEffect->SetWorld(geo.first->World);
+        m_staticGeoEffect->Apply(pCommandList);
+        geo.second->GeometricPrimitive->Draw(pCommandList);
+    } 
+} 
+
 void Renderer::CreateDeviceDependentResources() {
     ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
 
@@ -302,8 +325,8 @@ void Renderer::CreateRenderTargetDependentResources() {
     }
 
     DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
-
     resourceUploadBatch.Begin();
+
     BuildSpriteDataResources(resourceUploadBatch);
     BuildTextDataResources(resourceUploadBatch);
 
@@ -313,6 +336,7 @@ void Renderer::CreateRenderTargetDependentResources() {
     std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_pDeviceResources->GetCommandQueue());
     uploadResourceFinished.wait();
 
+    BuildStaticGeoDataResources(rtState);
     BuildDebugDisplayResources(rtState);
 }
 
@@ -366,6 +390,47 @@ void Renderer::BuildTextDataResources(DirectX::ResourceUploadBatch& resourceUplo
     }
 }
 
+void Renderer::BuildStaticGeoDataResources(DirectX::RenderTargetState& renderTargetState) {
+    ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
+
+    DirectX::EffectPipelineStateDescription pd(
+            &DirectX::GeometricPrimitive::VertexType::InputLayout,
+            DirectX::CommonStates::Opaque,
+            DirectX::CommonStates::DepthDefault,
+            DirectX::CommonStates::CullClockwise,
+            renderTargetState);
+
+    m_staticGeoEffect = std::make_unique<DirectX::BasicEffect>(pDevice, DirectX::EffectFlags::Lighting, pd);
+    m_staticGeoEffect->EnableDefaultLighting();
+
+    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<StaticGeometryData>>& geo : m_staticGeo) {
+        if (StaticGeometry::Cube* p = dynamic_cast<StaticGeometry::Cube*>(geo.first)) 
+            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateCube(p->Size); 
+        else if (StaticGeometry::Box* p = dynamic_cast<StaticGeometry::Box*>(geo.first)) 
+            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateBox(p->Size, true, p->InvertNormal);
+        else if (StaticGeometry::Sphere* p = dynamic_cast<StaticGeometry::Sphere*>(geo.first)) 
+            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateSphere(p->Diameter, p->Tessellation, true, p->InvertNormal);
+        else if (StaticGeometry::GeoSphere* p = dynamic_cast<StaticGeometry::GeoSphere*>(geo.first)) 
+            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateGeoSphere(p->Diameter, p->Tessellation);
+        else if (StaticGeometry::Cylinder* p = dynamic_cast<StaticGeometry::Cylinder*>(geo.first)) 
+            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateCylinder(p->Diameter, p->Tessellation);
+        else if (StaticGeometry::Cone* p = dynamic_cast<StaticGeometry::Cone*>(geo.first)) 
+            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateCone(p->Diameter, p->Height, p->Tessellation);
+        else if (StaticGeometry::Torus* p = dynamic_cast<StaticGeometry::Torus*>(geo.first)) 
+            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateTorus(p->Diameter, p->Thickness, p->Tessellation);
+        else if (StaticGeometry::Tetrahedron* p = dynamic_cast<StaticGeometry::Tetrahedron*>(geo.first)) 
+            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateTetrahedron(p->Size);
+        else if (StaticGeometry::Octahedron* p = dynamic_cast<StaticGeometry::Octahedron*>(geo.first)) 
+            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateOctahedron(p->Size);
+        else if (StaticGeometry::Dodecahedron* p = dynamic_cast<StaticGeometry::Dodecahedron*>(geo.first)) 
+            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateDodecahedron(p->Size);
+        else if (StaticGeometry::Icosahedron* p = dynamic_cast<StaticGeometry::Icosahedron*>(geo.first)) 
+            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateIcosahedron(p->Size);
+        else if (StaticGeometry::Custom* p = dynamic_cast<StaticGeometry::Custom*>(geo.first)) 
+            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateCustom(p->Vertices, p->Indices);
+    }
+}
+
 void Renderer::BuildDebugDisplayResources(DirectX::RenderTargetState& renderTargetState) {
     ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
 
@@ -386,43 +451,11 @@ void Renderer::BuildDebugDisplayResources(DirectX::RenderTargetState& renderTarg
 
     m_pDebugDisplayEffect = std::make_unique<DirectX::BasicEffect>(pDevice, DirectX::EffectFlags::VertexColor, pd);
 
-    // TEMP
-    DirectX::EffectPipelineStateDescription pd2(
-            &DirectX::GeometricPrimitive::VertexType::InputLayout,
-            DirectX::CommonStates::Opaque,
-            DirectX::CommonStates::DepthDefault,
-            DirectX::CommonStates::CullNone,
-            renderTargetState);
-    m_pShapeEffect = std::make_unique<DirectX::BasicEffect>(pDevice, DirectX::EffectFlags::Lighting, pd2);
-    m_pShapeEffect->EnableDefaultLighting();
-
-    m_pShape = DirectX::GeometricPrimitive::CreateTeapot();
-
     m_world = DirectX::SimpleMath::Matrix::Identity;
 }
 
 void Renderer::CreateWindowSizeDependentResources() {
-    BuildSpriteDataSizeResources();
-    BuildDebugDisplaySizeResources();
-}
-
-void Renderer::BuildSpriteDataSizeResources() noexcept {
     D3D12_VIEWPORT viewport = m_pDeviceResources->GetScreenViewport();
     m_pSpriteBatch->SetViewport(viewport);
 }
 
-void Renderer::BuildDebugDisplaySizeResources() {
-    D3D12_RECT size = m_pDeviceResources->GetOutputSize();
-
-    m_view = DirectX::SimpleMath::Matrix::CreateLookAt(DirectX::SimpleMath::Vector3(2.f, 2.f, 2.f),
-            DirectX::SimpleMath::Vector3::Zero, DirectX::SimpleMath::Vector3::UnitY);
-    m_proj = DirectX::SimpleMath::Matrix::CreatePerspectiveFieldOfView(DirectX::XM_PIDIV4,
-            float(size.right) / float(size.bottom), 0.1f, 10.f);
-
-    m_pDebugDisplayEffect->SetView(m_view);
-    m_pDebugDisplayEffect->SetProjection(m_proj);
-
-    // TEMP
-    m_pShapeEffect->SetView(m_view);
-    m_pShapeEffect->SetProjection(m_proj);
-}

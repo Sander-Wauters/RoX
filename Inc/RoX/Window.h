@@ -1,6 +1,15 @@
 #pragma once
 
-#include "../Src/Util/pch.h"
+#ifndef UNICODE
+#define UNICODE
+#endif
+
+#include <windows.h>
+
+#include "../../Lib/DirectXTK12/Inc/Keyboard.h"
+#include "../../Lib/DirectXTK12/Inc/Mouse.h"
+
+#include "../../Src/Util/pch.h"
 #include "Renderer.h"
 
 class Window {
@@ -14,10 +23,13 @@ class Window {
         ~Window();
 
     public: // Properties.
-        HWND GetHwnd() const;
-        int GetWidth() const;
-        int GetHeight() const;
-        float GetAspectRatio() const;
+        DirectX::Mouse& GetMouse() const noexcept;
+        DirectX::Keyboard& GetKeyboard() const noexcept;
+
+        HWND GetHwnd() const noexcept;
+        int GetWidth() const noexcept;
+        int GetHeight() const noexcept;
+        float GetAspectRatio() const noexcept;
 
     private:
         static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -35,7 +47,7 @@ class Window {
             if (pThis)
                 return pThis->HandleMessage(msg, wParam, lParam);
             else
-                return DefWindowProc(hwnd, msg, wParam, lParam);
+                return DefWindowProcW(hwnd, msg, wParam, lParam);
         }
 
         LRESULT HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam);
@@ -43,7 +55,9 @@ class Window {
     private:
         Renderer& m_renderer;
 
-    private:
+        std::unique_ptr<DirectX::Keyboard> m_pKeyboard = nullptr;
+        std::unique_ptr<DirectX::Mouse> m_pMouse = nullptr;
+
         HWND m_hwnd = 0;
 
         int m_width = 0;

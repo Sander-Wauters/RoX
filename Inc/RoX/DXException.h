@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Src/Util/pch.h"
+#include "../../Src/Util/pch.h"
 
 class DXException {
     public:

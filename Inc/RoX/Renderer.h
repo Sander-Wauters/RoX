@@ -2,28 +2,32 @@
 
 #include <unordered_map>
 
-#include "../Lib/DirectXTK12/Inc/GraphicsMemory.h"
-#include "../Lib/DirectXTK12/Inc/DescriptorHeap.h"
-#include "../Lib/DirectXTK12/Inc/SpriteBatch.h"
-#include "../Lib/DirectXTK12/Inc/CommonStates.h"
-#include "../Lib/DirectXTK12/Inc/SimpleMath.h"
-#include "../Lib/DirectXTK12/Inc/Effects.h"
-#include "../Lib/DirectXTK12/Inc/PrimitiveBatch.h"
-#include "../Lib/DirectXTK12/Inc/VertexTypes.h"
-#include "../Lib/DirectXTK12/Inc/GeometricPrimitive.h"
+#include "../../Lib/DirectXTK12/Inc/GraphicsMemory.h"
+#include "../../Lib/DirectXTK12/Inc/DescriptorHeap.h"
+#include "../../Lib/DirectXTK12/Inc/SpriteBatch.h"
+#include "../../Lib/DirectXTK12/Inc/CommonStates.h"
+#include "../../Lib/DirectXTK12/Inc/SimpleMath.h"
+#include "../../Lib/DirectXTK12/Inc/Effects.h"
+#include "../../Lib/DirectXTK12/Inc/Model.h"
+#include "../../Lib/DirectXTK12/Inc/PrimitiveBatch.h"
+#include "../../Lib/DirectXTK12/Inc/VertexTypes.h"
+#include "../../Lib/DirectXTK12/Inc/GeometricPrimitive.h"
 
-#include "../Src/Util/pch.h"
-#include "../Src/IDeviceNotify.h"
-#include "../Src/DeviceResources.h"
-#include "../Src/SpriteData.h"
-#include "../Src/TextData.h"
+#include "../../Src/Util/pch.h"
+#include "../../Src/IDeviceNotify.h"
+#include "../../Src/DeviceResources.h"
+#include "../../Src/SpriteData.h"
+#include "../../Src/TextData.h"
+#include "../../Src/StaticGeometryData.h"
+#include "Camera.h"
 #include "Timer.h"
 #include "Sprite.h"
 #include "Text.h"
+#include "StaticGeometry.h"
 
 class Renderer : public IDeviceNotify {
     public:
-        Renderer(Timer& timer) noexcept;
+        Renderer(Timer& timer, Camera& camera) noexcept;
         ~Renderer();
 
         Renderer(Renderer&&) = default;
@@ -37,8 +41,9 @@ class Renderer : public IDeviceNotify {
         void Update();
         void Render();
 
-        void AddSprite(Sprite* pSprite);
-        void AddText(Text* pText);
+        void Add(Sprite* pSprite);
+        void Add(Text* pText);
+        void Add(StaticGeometry::Base* pStaticGeo);
 
     public:
         void OnDeviceLost() override;
@@ -60,19 +65,21 @@ class Renderer : public IDeviceNotify {
 
         void RenderSprites();
         void RenderText();
+        void RenderStaticGeometry();
 
         void CreateDeviceDependentResources();
         void CreateRenderTargetDependentResources();
         void BuildSpriteDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
         void BuildTextDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void BuildDebugDisplayResources(DirectX::RenderTargetState& RenderTargetState);
+        void BuildStaticGeoDataResources(DirectX::RenderTargetState& renderTargetState);
+
+        void BuildDebugDisplayResources(DirectX::RenderTargetState& renderTargetState);
 
         void CreateWindowSizeDependentResources();
-        void BuildSpriteDataSizeResources() noexcept;
-        void BuildDebugDisplaySizeResources();
 
     private:
         Timer& m_timer;
+        Camera& m_camera;
         
         bool m_msaaEnabled = false;
 
@@ -88,14 +95,26 @@ class Renderer : public IDeviceNotify {
         std::unordered_map<Sprite*, std::unique_ptr<SpriteData>> m_spriteData = {};
         std::unordered_map<Text*, std::unique_ptr<TextData>> m_textData = {};
 
-    private: // TEMP: debug drawing.
+        std::unique_ptr<DirectX::BasicEffect> m_staticGeoEffect = nullptr;
+        std::unordered_map<StaticGeometry::Base*, std::unique_ptr<StaticGeometryData>> m_staticGeo = {}; 
+
+    private: 
+        // TEMP: debug drawing.
         std::unique_ptr<DirectX::BasicEffect> m_pDebugDisplayEffect;
         std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>> m_pDebugDisplayPrimitiveBatch;
 
+        // TEMP: shape drawing.
         std::unique_ptr<DirectX::BasicEffect> m_pShapeEffect;
         std::unique_ptr<DirectX::GeometricPrimitive> m_pShape;
 
-        DirectX::SimpleMath::Matrix m_world;
+        // TEMP: model drawing.
+        std::unique_ptr<DirectX::IEffectFactory> m_pFxFactory;
+        std::unique_ptr<DirectX::EffectTextureFactory> m_pModelResources;
+        std::unique_ptr<DirectX::Model> m_pModel;
+        DirectX::Model::EffectCollection m_modelNormal;
+
         DirectX::SimpleMath::Matrix m_view;
         DirectX::SimpleMath::Matrix m_proj;
+        DirectX::SimpleMath::Matrix m_world;
+
 };

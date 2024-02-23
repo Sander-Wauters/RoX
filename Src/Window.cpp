@@ -45,24 +45,36 @@ Window::Window(Renderer& renderer, PCWSTR windowName, HINSTANCE hInstance,
     if (!m_hwnd)
         return;
 
+    m_pKeyboard = std::make_unique<DirectX::Keyboard>();
+    m_pMouse = std::make_unique<DirectX::Mouse>();
+    m_pMouse->SetWindow(m_hwnd);
+
     Logger::Info("window initialized");
 }
 
 Window::~Window() {}
 
-HWND Window::GetHwnd() const {
+DirectX::Mouse& Window::GetMouse() const noexcept {
+    return *m_pMouse.get();
+}
+
+DirectX::Keyboard& Window::GetKeyboard() const noexcept {
+    return *m_pKeyboard.get();
+}
+
+HWND Window::GetHwnd() const noexcept {
     return m_hwnd;
 }
 
-int Window::GetWidth() const {
+int Window::GetWidth() const noexcept {
     return m_width;
 }
 
-int Window::GetHeight() const {
+int Window::GetHeight() const noexcept {
     return m_height;
 }
 
-float Window::GetAspectRatio() const {
+float Window::GetAspectRatio() const noexcept {
     return (float)m_width / m_height;
 }
 
@@ -135,6 +147,9 @@ LRESULT Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             else
                 m_renderer.OnDeactivated();
 
+            DirectX::Keyboard::ProcessMessage(msg, wParam, lParam);
+            DirectX::Mouse::ProcessMessage(msg, wParam, lParam);
+
             break;
 
         case WM_POWERBROADCAST:
@@ -160,7 +175,35 @@ LRESULT Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             PostQuitMessage(0);
             return 0;
 
+        case WM_MOUSEACTIVATE:
+            // When you click activate the window, we want Mouse to ignore it.
+            return MA_ACTIVATEANDEAT;
+
+        case WM_ACTIVATE:
+        case WM_INPUT:
+        case WM_MOUSEMOVE:
+        case WM_LBUTTONDOWN:
+        case WM_LBUTTONUP:
+        case WM_RBUTTONDOWN:
+        case WM_RBUTTONUP:
+        case WM_MBUTTONDOWN:
+        case WM_MBUTTONUP:
+        case WM_MOUSEWHEEL:
+        case WM_XBUTTONDOWN:
+        case WM_XBUTTONUP:
+        case WM_MOUSEHOVER:
+            DirectX::Mouse::ProcessMessage(msg, wParam, lParam);
+            break;
+
+        case WM_KEYDOWN:
+        case WM_KEYUP:
+        case WM_SYSKEYUP:
+            DirectX::Keyboard::ProcessMessage(msg, wParam, lParam);
+            break;
+
         case WM_SYSKEYDOWN:
+            DirectX::Keyboard::ProcessMessage(msg, wParam, lParam);
+
             if (wParam == VK_RETURN && (lParam & 0x60000000) == 0x20000000) {
                 // Implements the classic ALT+ENTER fullscreen toggle
                 if (s_fullscreen) {
