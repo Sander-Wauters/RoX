@@ -37,8 +37,10 @@ void Renderer::Update() {
     m_view = m_camera.GetView();
     m_proj = m_camera.GetProjection();
 
-    m_staticGeoEffect->SetView(m_view);
-    m_staticGeoEffect->SetProjection(m_proj);
+    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<ObjectData::StaticGeometry>>& geo : m_staticGeoData) {
+        geo.second->pEffect->SetView(m_view);
+        geo.second->pEffect->SetProjection(m_proj);
+    }
 
     m_pDebugDisplayEffect->SetView(m_view);
     m_pDebugDisplayEffect->SetProjection(m_proj);
@@ -107,20 +109,40 @@ void Renderer::Render() {
 }
 
 void Renderer::Add(Sprite* pSprite) {
-    std::unique_ptr<SpriteData> pSpriteData = std::make_unique<SpriteData>();
-    pSpriteData->DescriptorHeapIndex = m_nextSpriteDescriptorHeapIndex++;
+    std::unique_ptr<ObjectData::Sprite> pSpriteData = std::make_unique<ObjectData::Sprite>();
+    pSpriteData->DescriptorHeapIndex = m_nextDescriptorHeapIndex++;
     m_spriteData[pSprite] = std::move(pSpriteData);
 }
 
 void Renderer::Add(Text* pText) {
-    std::unique_ptr<TextData> pTextData = std::make_unique<TextData>();
-    pTextData->DescriptorHeapIndex = m_nextSpriteDescriptorHeapIndex++;
+    std::unique_ptr<ObjectData::Text> pTextData = std::make_unique<ObjectData::Text>();
+    pTextData->DescriptorHeapIndex = m_nextDescriptorHeapIndex++;
     m_textData[pText] = std::move(pTextData);
 }
 
 void Renderer::Add(StaticGeometry::Base* pStaticGeo) {
-    std::unique_ptr<StaticGeometryData> pStaticGeoData = std::make_unique<StaticGeometryData>();
-    m_staticGeo[pStaticGeo] = std::move(pStaticGeoData);
+    std::unique_ptr<ObjectData::StaticGeometry> pStaticGeoData = std::make_unique<ObjectData::StaticGeometry>();
+
+    if (pStaticGeo->pTexture->TextureFilePath != L"" && 
+            m_textures.find(pStaticGeo->pTexture) == m_textures.end()) {
+        std::unique_ptr<ObjectData::Texture> pTexture = std::make_unique<ObjectData::Texture>();
+        pTexture->DescriptorHeapIndex = m_nextDescriptorHeapIndex++;
+        m_textures[pStaticGeo->pTexture] = std::move(pTexture); 
+    }
+    if (pStaticGeo->pTexture->NormalMapFilePath != L"" &&
+            m_normalMaps.find(pStaticGeo->pTexture) == m_normalMaps.end()) {
+        std::unique_ptr<ObjectData::Texture> pNormalMap = std::make_unique<ObjectData::Texture>();
+        pNormalMap->DescriptorHeapIndex = m_nextDescriptorHeapIndex++;
+        m_normalMaps[pStaticGeo->pTexture] = std::move(pNormalMap); 
+    }
+    if (pStaticGeo->pTexture->SpecularMapFilePath != L"" &&
+            m_specularMaps.find(pStaticGeo->pTexture) == m_specularMaps.end()) {
+        std::unique_ptr<ObjectData::Texture> pSpecularMap = std::make_unique<ObjectData::Texture>();
+        pSpecularMap->DescriptorHeapIndex = m_nextDescriptorHeapIndex++;
+        m_specularMaps[pStaticGeo->pTexture] = std::move(pSpecularMap); 
+    }
+
+    m_staticGeoData[pStaticGeo] = std::move(pStaticGeoData);
 }
 
 void Renderer::OnDeviceLost() {
@@ -132,11 +154,24 @@ void Renderer::OnDeviceLost() {
     m_pStates.reset();
     m_pSpriteBatch.reset();
 
-    for (std::pair<Sprite* const, std::unique_ptr<SpriteData>>& sprite : m_spriteData) {
+    for (std::pair<Sprite* const, std::unique_ptr<ObjectData::Sprite>>& sprite : m_spriteData) {
         sprite.second->pTexture.Reset();
     }
-    for (std::pair<Text* const, std::unique_ptr<TextData>>& text : m_textData) {
+    for (std::pair<Text* const, std::unique_ptr<ObjectData::Text>>& text : m_textData) {
         text.second->pSpriteFont.reset();
+    }
+    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<ObjectData::StaticGeometry>>& geo : m_staticGeoData) {
+        geo.second->pGeometricPrimitive.reset();
+        geo.second->pEffect.reset();
+    }
+    for (std::pair<Texture* const, std::unique_ptr<ObjectData::Texture>>& texture : m_textures) {
+        texture.second->pTexture.Reset();
+    }
+    for (std::pair<Texture* const, std::unique_ptr<ObjectData::Texture>>& normal : m_normalMaps) {
+        normal.second->pTexture.Reset();
+    }
+    for (std::pair<Texture* const, std::unique_ptr<ObjectData::Texture>>& specular : m_specularMaps) {
+        specular.second->pTexture.Reset();
     }
 
     // TEMP: debug drawing.
@@ -216,7 +251,7 @@ void Renderer::Clear() {
 }
 
 void Renderer::RenderSprites() {
-    for (std::pair<Sprite* const, std::unique_ptr<SpriteData>>& sprite : m_spriteData) {
+    for (std::pair<Sprite* const, std::unique_ptr<ObjectData::Sprite>>& sprite : m_spriteData) {
         if (!sprite.first->Visible)
             continue;
 
@@ -250,7 +285,7 @@ void Renderer::RenderSprites() {
 }
 
 void Renderer::RenderText() {
-    for (std::pair<Text* const, std::unique_ptr<TextData>>& text : m_textData) {
+    for (std::pair<Text* const, std::unique_ptr<ObjectData::Text>>& text : m_textData) {
         if (!text.first->Visible)
             continue;
 
@@ -280,10 +315,11 @@ void Renderer::RenderText() {
 
 void Renderer::RenderStaticGeometry() {
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
-    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<StaticGeometryData>>& geo : m_staticGeo) {
-        m_staticGeoEffect->SetWorld(geo.first->World);
-        m_staticGeoEffect->Apply(pCommandList);
-        geo.second->GeometricPrimitive->Draw(pCommandList);
+
+    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<ObjectData::StaticGeometry>>& geo : m_staticGeoData) {
+        geo.second->pEffect->SetWorld(geo.first->World);
+        geo.second->pEffect->Apply(pCommandList);
+        geo.second->pGeometricPrimitive->Draw(pCommandList);
     } 
 } 
 
@@ -307,7 +343,9 @@ void Renderer::CreateDeviceDependentResources() {
             pDevice,
             D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
             D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-            m_spriteData.size() + m_textData.size());
+            m_spriteData.size() + m_textData.size() + 
+            m_textures.size() + m_normalMaps.size() + 
+            m_specularMaps.size());
     m_pStates = std::make_unique<DirectX::CommonStates>(pDevice);
 
     CreateRenderTargetDependentResources();
@@ -329,6 +367,8 @@ void Renderer::CreateRenderTargetDependentResources() {
 
     BuildSpriteDataResources(resourceUploadBatch);
     BuildTextDataResources(resourceUploadBatch);
+    BuildTextureDataResources(resourceUploadBatch);
+    BuildStaticGeoDataResources(rtState, resourceUploadBatch);
 
     DirectX::SpriteBatchPipelineStateDescription pd(rtState);
     m_pSpriteBatch = std::make_unique<DirectX::SpriteBatch>(pDevice, resourceUploadBatch, pd);
@@ -336,14 +376,13 @@ void Renderer::CreateRenderTargetDependentResources() {
     std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_pDeviceResources->GetCommandQueue());
     uploadResourceFinished.wait();
 
-    BuildStaticGeoDataResources(rtState);
     BuildDebugDisplayResources(rtState);
 }
 
 void Renderer::BuildSpriteDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
     ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
 
-    for (std::pair<Sprite* const, std::unique_ptr<SpriteData>>& sprite : m_spriteData) {
+    for (std::pair<Sprite* const, std::unique_ptr<ObjectData::Sprite>>& sprite : m_spriteData) {
         if (sprite.first->FilePath.size() < 5)
             throw std::system_error(std::error_code(static_cast<int>(GetLastError()), std::system_category()), "BuildSpriteDataResources");
 
@@ -378,7 +417,7 @@ void Renderer::BuildSpriteDataResources(DirectX::ResourceUploadBatch& resourceUp
 void Renderer::BuildTextDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
     ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
 
-    for (std::pair<Text* const, std::unique_ptr<TextData>>& text : m_textData) {
+    for (std::pair<Text* const, std::unique_ptr<ObjectData::Text>>& text : m_textData) {
         std::unique_ptr<DirectX::SpriteFont> pFont = std::make_unique<DirectX::SpriteFont>(
                 pDevice, 
                 resourceUploadBatch,
@@ -390,44 +429,84 @@ void Renderer::BuildTextDataResources(DirectX::ResourceUploadBatch& resourceUplo
     }
 }
 
-void Renderer::BuildStaticGeoDataResources(DirectX::RenderTargetState& renderTargetState) {
+void Renderer::BuildTextureDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
+    ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
+
+    for (std::pair<Texture* const, std::unique_ptr<ObjectData::Texture>>& texture : m_textures) {
+        ThrowIfFailed(DirectX::CreateDDSTextureFromFile(
+                    pDevice, resourceUploadBatch, 
+                    texture.first->TextureFilePath.c_str(),
+                    texture.second->pTexture.ReleaseAndGetAddressOf()));
+        DirectX::CreateShaderResourceView(pDevice, texture.second->pTexture.Get(),
+                m_pResourceDescriptors->GetCpuHandle(texture.second->DescriptorHeapIndex));
+    }
+    for (std::pair<Texture* const, std::unique_ptr<ObjectData::Texture>>& normalMap : m_normalMaps) {
+        ThrowIfFailed(DirectX::CreateDDSTextureFromFile(
+                    pDevice, resourceUploadBatch, 
+                    normalMap.first->NormalMapFilePath.c_str(),
+                    normalMap.second->pTexture.ReleaseAndGetAddressOf()));
+        DirectX::CreateShaderResourceView(pDevice, normalMap.second->pTexture.Get(),
+                m_pResourceDescriptors->GetCpuHandle(normalMap.second->DescriptorHeapIndex));
+    }
+    for (std::pair<Texture* const, std::unique_ptr<ObjectData::Texture>>& specularMap : m_specularMaps) {
+        ThrowIfFailed(DirectX::CreateDDSTextureFromFile(
+                    pDevice, resourceUploadBatch, 
+                    specularMap.first->SpecularMapFilePath.c_str(),
+                    specularMap.second->pTexture.ReleaseAndGetAddressOf()));
+        DirectX::CreateShaderResourceView(pDevice, specularMap.second->pTexture.Get(),
+                m_pResourceDescriptors->GetCpuHandle(specularMap.second->DescriptorHeapIndex));
+    }
+}
+
+void Renderer::BuildStaticGeoDataResources(DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch) {
     ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
 
     DirectX::EffectPipelineStateDescription pd(
             &DirectX::GeometricPrimitive::VertexType::InputLayout,
             DirectX::CommonStates::Opaque,
             DirectX::CommonStates::DepthDefault,
-            DirectX::CommonStates::CullClockwise,
+            DirectX::CommonStates::CullCounterClockwise,
             renderTargetState);
 
-    m_staticGeoEffect = std::make_unique<DirectX::BasicEffect>(pDevice, DirectX::EffectFlags::Lighting, pd);
-    m_staticGeoEffect->EnableDefaultLighting();
-
-    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<StaticGeometryData>>& geo : m_staticGeo) {
+    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<ObjectData::StaticGeometry>>& geo : m_staticGeoData) {
         if (StaticGeometry::Cube* p = dynamic_cast<StaticGeometry::Cube*>(geo.first)) 
-            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateCube(p->Size); 
+            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateCube(p->Size, false); 
         else if (StaticGeometry::Box* p = dynamic_cast<StaticGeometry::Box*>(geo.first)) 
-            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateBox(p->Size, true, p->InvertNormal);
+            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateBox(p->Size, false, p->InvertNormal);
         else if (StaticGeometry::Sphere* p = dynamic_cast<StaticGeometry::Sphere*>(geo.first)) 
-            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateSphere(p->Diameter, p->Tessellation, true, p->InvertNormal);
+            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateSphere(p->Diameter, p->Tessellation, false, p->InvertNormal);
         else if (StaticGeometry::GeoSphere* p = dynamic_cast<StaticGeometry::GeoSphere*>(geo.first)) 
-            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateGeoSphere(p->Diameter, p->Tessellation);
+            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateGeoSphere(p->Diameter, p->Tessellation, false);
         else if (StaticGeometry::Cylinder* p = dynamic_cast<StaticGeometry::Cylinder*>(geo.first)) 
-            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateCylinder(p->Diameter, p->Tessellation);
+            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateCylinder(p->Height, p->Diameter, p->Tessellation, false);
         else if (StaticGeometry::Cone* p = dynamic_cast<StaticGeometry::Cone*>(geo.first)) 
-            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateCone(p->Diameter, p->Height, p->Tessellation);
+            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateCone(p->Diameter, p->Height, p->Tessellation, false);
         else if (StaticGeometry::Torus* p = dynamic_cast<StaticGeometry::Torus*>(geo.first)) 
-            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateTorus(p->Diameter, p->Thickness, p->Tessellation);
+            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateTorus(p->Diameter, p->Thickness, p->Tessellation, false);
         else if (StaticGeometry::Tetrahedron* p = dynamic_cast<StaticGeometry::Tetrahedron*>(geo.first)) 
-            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateTetrahedron(p->Size);
+            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateTetrahedron(p->Size, false);
         else if (StaticGeometry::Octahedron* p = dynamic_cast<StaticGeometry::Octahedron*>(geo.first)) 
-            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateOctahedron(p->Size);
+            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateOctahedron(p->Size, false);
         else if (StaticGeometry::Dodecahedron* p = dynamic_cast<StaticGeometry::Dodecahedron*>(geo.first)) 
-            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateDodecahedron(p->Size);
+            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateDodecahedron(p->Size, false);
         else if (StaticGeometry::Icosahedron* p = dynamic_cast<StaticGeometry::Icosahedron*>(geo.first)) 
-            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateIcosahedron(p->Size);
+            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateIcosahedron(p->Size, false);
         else if (StaticGeometry::Custom* p = dynamic_cast<StaticGeometry::Custom*>(geo.first)) 
-            geo.second->GeometricPrimitive = DirectX::GeometricPrimitive::CreateCustom(p->Vertices, p->Indices);
+            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateCustom(p->Vertices, p->Indices);
+        else
+            throw std::runtime_error("Error downcasting StaticGeometry");
+
+        // Updload to dedicated video memory for better performance.
+        geo.second->pGeometricPrimitive->LoadStaticBuffers(pDevice, resourceUploadBatch);
+
+        geo.second->pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice,
+                DirectX::EffectFlags::Lighting | DirectX::EffectFlags::Texture, pd);
+        geo.second->pEffect->EnableDefaultLighting();
+        geo.second->pEffect->SetTexture(
+                m_pResourceDescriptors->GetGpuHandle(m_textures.at(geo.first->pTexture)->DescriptorHeapIndex),
+                m_pStates->AnisotropicWrap());
+        geo.second->pEffect->SetNormalTexture(
+                m_pResourceDescriptors->GetGpuHandle(m_normalMaps.at(geo.first->pTexture)->DescriptorHeapIndex));
     }
 }
 

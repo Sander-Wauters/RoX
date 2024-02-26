@@ -28,10 +28,8 @@ set(SOURCE
     Src/ModelLoadAssimp.cpp
     Src/ModelLoadAssimp.h
     Src/IDeviceNotify.h
+    Src/ObjectData.h
     Src/Renderer.cpp
-    Src/SpriteData.h
-    Src/StaticGeometryData.h
-    Src/TextData.h
     Src/Timer.cpp
     Src/Window.cpp
 )

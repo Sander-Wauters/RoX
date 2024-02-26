@@ -1,10 +1,10 @@
 #include "Rox/Camera.h"
 
-Camera::Camera() {
+Camera::Camera() noexcept {
     SetFrustum(DirectX::XM_PIDIV4, 1.0f, 1.0f, 1000.0f);
 }
 
-Camera::~Camera() {
+Camera::~Camera() noexcept {
 
 }
 
@@ -35,19 +35,19 @@ void Camera::TranslateAlongLocalZAxis(float distance) {
     m_outdated = true;
 }
 
-void Camera::TranslateAlongGlobalXAxis(float distance) {
+void Camera::TranslateAlongGlobalXAxis(float distance) noexcept {
     m_position.x += distance;
 
     m_outdated = true;
 }
  
-void Camera::TranslateAlongGlobalYAxis(float distance) {
+void Camera::TranslateAlongGlobalYAxis(float distance) noexcept {
     m_position.y += distance;
 
     m_outdated = true;
 }
 
-void Camera::TranslateAlongGlobalZAxis(float distance) {
+void Camera::TranslateAlongGlobalZAxis(float distance) noexcept {
     m_position.z += distance;
 
     m_outdated = true;
@@ -137,12 +137,12 @@ void Camera::SetFrustum(float fovY, float aspect, float nearZ, float farZ) {
     DirectX::XMStoreFloat4x4(&m_projection, P);
 }
 
-void Camera::SetPosition(float x, float y, float z) {
+void Camera::SetPosition(float x, float y, float z) noexcept {
     m_position = {x, y, z};
     m_outdated = true;
 }
 
-void Camera::SetPosition(DirectX::XMFLOAT3& position) {
+void Camera::SetPosition(DirectX::XMFLOAT3& position) noexcept {
     m_position = position;
     m_outdated = true;
 }
@@ -192,52 +192,52 @@ void Camera::Update() {
     m_outdated = false;
 }
 
-const DirectX::XMFLOAT3& Camera::GetPosition() const {
+const DirectX::XMFLOAT3& Camera::GetPosition() const noexcept {
     return m_position;
 }
 
-float Camera::GetNearZ() const {
+float Camera::GetNearZ() const noexcept {
     return m_nearZ;
 }
 
-float Camera::GetFarZ() const {
+float Camera::GetFarZ() const noexcept {
     return m_farZ;
 }
 
-float Camera::GetAspect() const {
+float Camera::GetAspect() const noexcept {
     return m_aspect;
 }
 
-float Camera::GetFovX() const {
+float Camera::GetFovX() const noexcept {
     float halfWidth = 0.5f * GetNearWindowWidth();
     return (float)(2.0f * atan(halfWidth / m_nearZ));
 }
 
-float Camera::GetFovY() const { 
+float Camera::GetFovY() const noexcept { 
     return m_fovY;
 }
 
-float Camera::GetNearWindowWidth() const {
+float Camera::GetNearWindowWidth() const noexcept {
     return m_aspect * m_nearWindowHeight;
 }
 
-float Camera::GetNearWindowHeight() const {
+float Camera::GetNearWindowHeight() const noexcept {
     return m_nearWindowHeight;
 }
 
-float Camera::GetFarWindowWidth() const {
+float Camera::GetFarWindowWidth() const noexcept {
     return m_aspect * m_farWindowHeight;
 }
 
-float Camera::GetFarWindowHeight() const {
+float Camera::GetFarWindowHeight() const noexcept {
     return m_farWindowHeight;
 }
 
-const DirectX::XMFLOAT4X4& Camera::GetView() const {
+const DirectX::XMFLOAT4X4& Camera::GetView() const noexcept {
     return m_view;
 }
 
-const DirectX::XMFLOAT4X4& Camera::GetProjection() const {
+const DirectX::XMFLOAT4X4& Camera::GetProjection() const noexcept {
     return m_projection;
 }
 

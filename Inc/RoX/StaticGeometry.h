@@ -1,15 +1,20 @@
 #pragma once
 
 #include <vector>
+#include <string>
 
 #include "../../Lib/DirectXTK12/Inc/SimpleMath.h"
 #include "../../Lib/DirectXTK12/Inc/VertexTypes.h"
+
+#include "Texture.h"
 
 namespace StaticGeometry {
     struct Base {
         virtual ~Base() {}
 
         DirectX::XMMATRIX World = DirectX::XMMatrixIdentity();
+
+        Texture* pTexture = nullptr;
     };
 
     struct Cube : Base {

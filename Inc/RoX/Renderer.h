@@ -16,13 +16,12 @@
 #include "../../Src/Util/pch.h"
 #include "../../Src/IDeviceNotify.h"
 #include "../../Src/DeviceResources.h"
-#include "../../Src/SpriteData.h"
-#include "../../Src/TextData.h"
-#include "../../Src/StaticGeometryData.h"
+#include "../../Src/ObjectData.h"
 #include "Camera.h"
 #include "Timer.h"
 #include "Sprite.h"
 #include "Text.h"
+#include "Texture.h"
 #include "StaticGeometry.h"
 
 class Renderer : public IDeviceNotify {
@@ -71,7 +70,8 @@ class Renderer : public IDeviceNotify {
         void CreateRenderTargetDependentResources();
         void BuildSpriteDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
         void BuildTextDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void BuildStaticGeoDataResources(DirectX::RenderTargetState& renderTargetState);
+        void BuildTextureDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void BuildStaticGeoDataResources(DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch);
 
         void BuildDebugDisplayResources(DirectX::RenderTargetState& renderTargetState);
 
@@ -86,26 +86,24 @@ class Renderer : public IDeviceNotify {
         std::unique_ptr<DeviceResources> m_pDeviceResources = nullptr;
         std::unique_ptr<DirectX::GraphicsMemory> m_pGraphicsMemory = nullptr;
 
+        UINT m_nextDescriptorHeapIndex = 0;
         std::unique_ptr<DirectX::DescriptorHeap> m_pResourceDescriptors = nullptr;
         std::unique_ptr<DirectX::CommonStates> m_pStates = nullptr;
 
         std::unique_ptr<DirectX::SpriteBatch> m_pSpriteBatch = nullptr;
 
-        UINT m_nextSpriteDescriptorHeapIndex = 0;
-        std::unordered_map<Sprite*, std::unique_ptr<SpriteData>> m_spriteData = {};
-        std::unordered_map<Text*, std::unique_ptr<TextData>> m_textData = {};
+        std::unordered_map<Sprite*, std::unique_ptr<ObjectData::Sprite>> m_spriteData = {};
+        std::unordered_map<Text*, std::unique_ptr<ObjectData::Text>> m_textData = {};
+        std::unordered_map<StaticGeometry::Base*, std::unique_ptr<ObjectData::StaticGeometry>> m_staticGeoData = {}; 
 
-        std::unique_ptr<DirectX::BasicEffect> m_staticGeoEffect = nullptr;
-        std::unordered_map<StaticGeometry::Base*, std::unique_ptr<StaticGeometryData>> m_staticGeo = {}; 
+        std::unordered_map<Texture*, std::unique_ptr<ObjectData::Texture>> m_textures;
+        std::unordered_map<Texture*, std::unique_ptr<ObjectData::Texture>> m_normalMaps;
+        std::unordered_map<Texture*, std::unique_ptr<ObjectData::Texture>> m_specularMaps;
 
     private: 
         // TEMP: debug drawing.
         std::unique_ptr<DirectX::BasicEffect> m_pDebugDisplayEffect;
         std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>> m_pDebugDisplayPrimitiveBatch;
-
-        // TEMP: shape drawing.
-        std::unique_ptr<DirectX::BasicEffect> m_pShapeEffect;
-        std::unique_ptr<DirectX::GeometricPrimitive> m_pShape;
 
         // TEMP: model drawing.
         std::unique_ptr<DirectX::IEffectFactory> m_pFxFactory;

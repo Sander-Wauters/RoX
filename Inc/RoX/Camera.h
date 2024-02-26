@@ -4,16 +4,16 @@
 
 class Camera { 
     public:
-        Camera();
-        ~Camera();
+        Camera() noexcept;
+        ~Camera() noexcept;
 
         void TranslateAlongLocalXAxis(float distance); 
         void TranslateAlongLocalYAxis(float distance);
         void TranslateAlongLocalZAxis(float distance);
 
-        void TranslateAlongGlobalXAxis(float distance); 
-        void TranslateAlongGlobalYAxis(float distance);
-        void TranslateAlongGlobalZAxis(float distance);
+        void TranslateAlongGlobalXAxis(float distance) noexcept; 
+        void TranslateAlongGlobalYAxis(float distance) noexcept;
+        void TranslateAlongGlobalZAxis(float distance) noexcept;
 
         void RotateAroundLocalXAxis(float angle); 
         void RotateAroundLocalYAxis(float angle); 
@@ -27,27 +27,27 @@ class Camera {
         void PointAt(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& target, const DirectX::XMFLOAT3& up);
 
         void SetFrustum(float fovY, float aspect, float nearZ, float farZ);
-        void SetPosition(float x, float y, float z);
-        void SetPosition(DirectX::XMFLOAT3& position);
+        void SetPosition(float x, float y, float z) noexcept;
+        void SetPosition(DirectX::XMFLOAT3& position) noexcept;
 
         void Update();
 
     public:
-        const DirectX::XMFLOAT3& GetPosition() const;
+        const DirectX::XMFLOAT3& GetPosition() const noexcept;
 
-        float GetNearZ() const;
-        float GetFarZ() const;
-        float GetAspect() const;
-        float GetFovX() const;
-        float GetFovY() const;
+        float GetNearZ() const noexcept;
+        float GetFarZ() const noexcept;
+        float GetAspect() const noexcept;
+        float GetFovX() const noexcept;
+        float GetFovY() const noexcept;
 
-        float GetNearWindowWidth() const;
-        float GetNearWindowHeight() const;
-        float GetFarWindowWidth() const;
-        float GetFarWindowHeight() const;
+        float GetNearWindowWidth() const noexcept;
+        float GetNearWindowHeight() const noexcept;
+        float GetFarWindowWidth() const noexcept;
+        float GetFarWindowHeight() const noexcept;
 
-        const DirectX::XMFLOAT4X4& GetView() const;
-        const DirectX::XMFLOAT4X4& GetProjection() const;
+        const DirectX::XMFLOAT4X4& GetView() const noexcept;
+        const DirectX::XMFLOAT4X4& GetProjection() const noexcept;
 
     private:
         float m_nearZ = 0.0f;
