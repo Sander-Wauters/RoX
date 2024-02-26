@@ -41,6 +41,10 @@ void Renderer::Update() {
         geo.second->pEffect->SetView(m_view);
         geo.second->pEffect->SetProjection(m_proj);
     }
+    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<ObjectData::StaticGeometry>>& geo : m_instancedStaticGeoData) {
+        geo.second->pEffect->SetView(m_view);
+        geo.second->pEffect->SetProjection(m_proj);
+    }
 
     m_pDebugDisplayEffect->SetView(m_view);
     m_pDebugDisplayEffect->SetProjection(m_proj);
@@ -79,7 +83,7 @@ void Renderer::Render() {
             {{ 100.0f, 0.0f, 0.0f, 0.0f }},
             {{ 0.0f, 0.0f, 100.0f, 0.0f }},
             {{ 0.0f, 0.0f, 0.0f, 0.0f }},
-            100, 100);
+            200, 200);
     m_pDebugDisplayPrimitiveBatch->End();
 
     RenderStaticGeometry();
@@ -142,7 +146,10 @@ void Renderer::Add(StaticGeometry::Base* pStaticGeo) {
         m_specularMaps[pStaticGeo->pTexture] = std::move(pSpecularMap); 
     }
 
-    m_staticGeoData[pStaticGeo] = std::move(pStaticGeoData);
+    if (pStaticGeo->Instanced)
+        m_instancedStaticGeoData[pStaticGeo] = std::move(pStaticGeoData);
+    else
+        m_staticGeoData[pStaticGeo] = std::move(pStaticGeoData);
 }
 
 void Renderer::OnDeviceLost() {
@@ -321,6 +328,21 @@ void Renderer::RenderStaticGeometry() {
         geo.second->pEffect->Apply(pCommandList);
         geo.second->pGeometricPrimitive->Draw(pCommandList);
     } 
+
+    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<ObjectData::StaticGeometry>>& geo : m_instancedStaticGeoData) {
+        const size_t instBytes = geo.first->Instances.size() * sizeof(DirectX::XMFLOAT3X4);
+        DirectX::GraphicsResource inst = m_pGraphicsMemory->Allocate(instBytes);
+        memcpy(inst.Memory(), geo.first->Instances.data(), instBytes);
+
+        D3D12_VERTEX_BUFFER_VIEW vertexBufferInst = {};
+        vertexBufferInst.BufferLocation = inst.GpuAddress();
+        vertexBufferInst.SizeInBytes = static_cast<UINT>(instBytes);
+        vertexBufferInst.StrideInBytes = sizeof(DirectX::XMFLOAT3X4);
+        pCommandList->IASetVertexBuffers(1, 1, &vertexBufferInst);
+
+        geo.second->pEffect->Apply(pCommandList);
+        geo.second->pGeometricPrimitive->DrawInstanced(pCommandList, geo.first->Instances.size());
+    } 
 } 
 
 void Renderer::CreateDeviceDependentResources() {
@@ -368,7 +390,8 @@ void Renderer::CreateRenderTargetDependentResources() {
     BuildSpriteDataResources(resourceUploadBatch);
     BuildTextDataResources(resourceUploadBatch);
     BuildTextureDataResources(resourceUploadBatch);
-    BuildStaticGeoDataResources(rtState, resourceUploadBatch);
+    BuildStaticGeoDataResources(false, rtState, resourceUploadBatch);
+    BuildStaticGeoDataResources(true, rtState, resourceUploadBatch);
 
     DirectX::SpriteBatchPipelineStateDescription pd(rtState);
     m_pSpriteBatch = std::make_unique<DirectX::SpriteBatch>(pDevice, resourceUploadBatch, pd);
@@ -458,17 +481,29 @@ void Renderer::BuildTextureDataResources(DirectX::ResourceUploadBatch& resourceU
     }
 }
 
-void Renderer::BuildStaticGeoDataResources(DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch) {
+void Renderer::BuildStaticGeoDataResources(bool instanced, DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch) {
     ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
 
+
+    const D3D12_INPUT_ELEMENT_DESC inputElements[] = {
+        { "SV_Position", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
+        { "NORMAL",      0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
+        { "TEXCOORD",    0, DXGI_FORMAT_R32G32_FLOAT,       0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
+        { "InstMatrix",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+        { "InstMatrix",  1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+        { "InstMatrix",  2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+    };
+
+    const D3D12_INPUT_LAYOUT_DESC layout = { inputElements, static_cast<UINT>(std::size(inputElements)) };
+
     DirectX::EffectPipelineStateDescription pd(
-            &DirectX::GeometricPrimitive::VertexType::InputLayout,
+            instanced ? &layout : &DirectX::GeometricPrimitive::VertexType::InputLayout,
             DirectX::CommonStates::Opaque,
             DirectX::CommonStates::DepthDefault,
             DirectX::CommonStates::CullCounterClockwise,
             renderTargetState);
 
-    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<ObjectData::StaticGeometry>>& geo : m_staticGeoData) {
+    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<ObjectData::StaticGeometry>>& geo : instanced ? m_instancedStaticGeoData : m_staticGeoData) {
         if (StaticGeometry::Cube* p = dynamic_cast<StaticGeometry::Cube*>(geo.first)) 
             geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateCube(p->Size, false); 
         else if (StaticGeometry::Box* p = dynamic_cast<StaticGeometry::Box*>(geo.first)) 
@@ -500,7 +535,7 @@ void Renderer::BuildStaticGeoDataResources(DirectX::RenderTargetState& renderTar
         geo.second->pGeometricPrimitive->LoadStaticBuffers(pDevice, resourceUploadBatch);
 
         geo.second->pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice,
-                DirectX::EffectFlags::Lighting | DirectX::EffectFlags::Texture, pd);
+                instanced ? DirectX::EffectFlags::Instancing : DirectX::EffectFlags::Lighting, pd);
         geo.second->pEffect->EnableDefaultLighting();
         geo.second->pEffect->SetTexture(
                 m_pResourceDescriptors->GetGpuHandle(m_textures.at(geo.first->pTexture)->DescriptorHeapIndex),

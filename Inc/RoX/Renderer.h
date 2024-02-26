@@ -71,7 +71,7 @@ class Renderer : public IDeviceNotify {
         void BuildSpriteDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
         void BuildTextDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
         void BuildTextureDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void BuildStaticGeoDataResources(DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void BuildStaticGeoDataResources(bool instanced, DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch);
 
         void BuildDebugDisplayResources(DirectX::RenderTargetState& renderTargetState);
 
@@ -95,6 +95,7 @@ class Renderer : public IDeviceNotify {
         std::unordered_map<Sprite*, std::unique_ptr<ObjectData::Sprite>> m_spriteData = {};
         std::unordered_map<Text*, std::unique_ptr<ObjectData::Text>> m_textData = {};
         std::unordered_map<StaticGeometry::Base*, std::unique_ptr<ObjectData::StaticGeometry>> m_staticGeoData = {}; 
+        std::unordered_map<StaticGeometry::Base*, std::unique_ptr<ObjectData::StaticGeometry>> m_instancedStaticGeoData = {}; 
 
         std::unordered_map<Texture*, std::unique_ptr<ObjectData::Texture>> m_textures;
         std::unordered_map<Texture*, std::unique_ptr<ObjectData::Texture>> m_normalMaps;
