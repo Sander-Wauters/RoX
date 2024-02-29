@@ -64,15 +64,13 @@ class Camera {
         DirectX::XMFLOAT3 m_localZAxis = { 0.0f, 0.0f, 1.0f };
         DirectX::XMFLOAT3 m_position =   { 0.0f, 0.0f, 0.0f };
 
-        DirectX::XMFLOAT4X4 m_view =
-        {
+        DirectX::XMFLOAT4X4 m_view = {
             1.0f, 0.0f, 0.0f, 0.0f,
             0.0f, 1.0f, 0.0f, 0.0f,
             0.0f, 0.0f, 1.0f, 0.0f,
             0.0f, 0.0f, 0.0f, 1.0f,
         };
-        DirectX::XMFLOAT4X4 m_projection = 
-        {
+        DirectX::XMFLOAT4X4 m_projection = {
             1.0f, 0.0f, 0.0f, 0.0f,
             0.0f, 1.0f, 0.0f, 0.0f,
             0.0f, 0.0f, 1.0f, 0.0f,

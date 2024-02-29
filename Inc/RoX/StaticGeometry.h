@@ -10,96 +10,98 @@
 
 namespace StaticGeometry {
     struct Base {
-        Base(const bool instanced = false) noexcept :
+        Base(const bool instanced = true) noexcept :
             Instanced(instanced) {}
-
         virtual ~Base() {}
 
-        DirectX::XMMATRIX World = DirectX::XMMatrixIdentity();
+        const bool Instanced = false;
+        bool Visible = true;
 
         Texture* pTexture = nullptr;
 
-        const bool Instanced = false;
+        DirectX::XMMATRIX World = DirectX::XMMatrixIdentity();
+        DirectX::XMMATRIX View = DirectX::XMMatrixIdentity();
+        DirectX::XMMATRIX Projection = DirectX::XMMatrixIdentity();
         std::vector<DirectX::XMFLOAT3X4> Instances = {};
     };
 
-    struct Cube : Base {
+    struct Cube : public Base {
         using Base::Base;
 
-        float Size = 2; 
+        float Size = 1.f; 
     };
 
-    struct Box : Base {
+    struct Box : public Base {
         using Base::Base;
 
         DirectX::XMFLOAT3 Size = { 1.0f, 1.0f, 1.0f };
         bool InvertNormal = false;
     };
 
-    struct Sphere : Base {
+    struct Sphere : public Base {
         using Base::Base;
 
-        float Diameter = 1;
-        size_t Tessellation = 3;
+        float Diameter = 1.f;
+        size_t Tessellation = 16;
         bool InvertNormal = false;
     };
 
-    struct GeoSphere : Base {
+    struct GeoSphere : public Base {
         using Base::Base;
 
-        float Diameter = 1;
+        float Diameter = 1.f;
         size_t Tessellation = 3;
     };
 
-    struct Cylinder : Base {
+    struct Cylinder : public Base {
         using Base::Base;
 
-        float Height = 1;
-        float Diameter = 1;
-        size_t Tessellation = 3;
+        float Height = 1.f;
+        float Diameter = 1.f;
+        size_t Tessellation = 32;
     };
 
-    struct Cone : Base {
+    struct Cone : public Base {
         using Base::Base;
 
-        float Diameter = 1;
-        float Height = 1;
-        size_t Tessellation = 3;
+        float Diameter = 1.f;
+        float Height = 1.f;
+        size_t Tessellation = 32;
     };
 
-    struct Torus : Base {
+    struct Torus : public Base {
         using Base::Base;
 
-        float Diameter = 1;
-        float Thickness = 1;
-        size_t Tessellation = 3;
+        float Diameter = 1.f;
+        float Thickness = 0.333f;
+        size_t Tessellation = 32;
     };
 
-    struct Tetrahedron : Base {
+    struct Tetrahedron : public Base {
         using Base::Base;
 
-        float Size = 1;
+        float Size = 1.f;
     };
 
-    struct Octahedron : Base {
+    struct Octahedron : public Base {
         using Base::Base;
 
-        float Size = 1;
+        float Size = 1.f;
     };
 
-    struct Dodecahedron : Base {
+    struct Dodecahedron : public Base {
         using Base::Base;
 
-        float Size = 1;
+        float Size = 1.f;
     };
 
-    struct Icosahedron : Base {
+    struct Icosahedron : public Base {
         using Base::Base;
 
-        float Size = 1;
+        float Size = 1.f;
     };
 
-    struct Custom : Base {
+    struct Custom : public Base {
         using Base::Base;
 
         std::vector<DirectX::VertexPositionNormalTexture> Vertices = {}; 

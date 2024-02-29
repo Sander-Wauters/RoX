@@ -1,13 +1,1 @@
-//--------------- SPRITES ---------------\\
-
-Scaling has unintended side effects.
-
-\\--------------- SPRITES ---------------//
-
-
-
-//--------------- TEXT ---------------\\
-
-Scaling has unintended side effects.
-
-\\--------------- TEXT ---------------//
+1 effect per geometry might be overkill. Per texture might be better.

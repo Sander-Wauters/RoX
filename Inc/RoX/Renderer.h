@@ -1,6 +1,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <unordered_set>
 
 #include "../../Lib/DirectXTK12/Inc/GraphicsMemory.h"
 #include "../../Lib/DirectXTK12/Inc/DescriptorHeap.h"
@@ -23,10 +24,11 @@
 #include "Text.h"
 #include "Texture.h"
 #include "StaticGeometry.h"
+#include "Primitive.h"
 
 class Renderer : public IDeviceNotify {
     public:
-        Renderer(Timer& timer, Camera& camera) noexcept;
+        Renderer(Timer& timer, Camera* camera) noexcept;
         ~Renderer();
 
         Renderer(Renderer&&) = default;
@@ -43,6 +45,7 @@ class Renderer : public IDeviceNotify {
         void Add(Sprite* pSprite);
         void Add(Text* pText);
         void Add(StaticGeometry::Base* pStaticGeo);
+        void Add(Primitive::Base* pPrimitive);
 
     public:
         void OnDeviceLost() override;
@@ -59,27 +62,31 @@ class Renderer : public IDeviceNotify {
         void SetMsaa(bool state) noexcept;
         bool MsaaEnabled() const noexcept;
 
+        void SetCamera(Camera* pCamera) noexcept;
+        Camera* GetCamera() const noexcept;
+
     private:
         void Clear();
 
+        void RenderPrimitives();
+        void RenderStaticGeometry();
         void RenderSprites();
         void RenderText();
-        void RenderStaticGeometry();
 
         void CreateDeviceDependentResources();
-        void CreateRenderTargetDependentResources();
         void BuildSpriteDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
         void BuildTextDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
         void BuildTextureDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void BuildStaticGeoDataResources(bool instanced, DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch);
 
-        void BuildDebugDisplayResources(DirectX::RenderTargetState& renderTargetState);
+        void CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void BuildPrimitivesResources(DirectX::RenderTargetState& renderTargetState);
+        void BuildStaticGeoDataResources(bool instanced, DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch);
 
         void CreateWindowSizeDependentResources();
 
     private:
         Timer& m_timer;
-        Camera& m_camera;
+        Camera* m_pCamera;
         
         bool m_msaaEnabled = false;
 
@@ -92,20 +99,20 @@ class Renderer : public IDeviceNotify {
 
         std::unique_ptr<DirectX::SpriteBatch> m_pSpriteBatch = nullptr;
 
+        std::unique_ptr<DirectX::BasicEffect> m_pDebugDisplayEffect = nullptr;
+        std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>> m_pDebugDisplayPrimitiveBatch = nullptr;
+        std::unordered_set<Primitive::Base*> m_primiteves = {};
+
         std::unordered_map<Sprite*, std::unique_ptr<ObjectData::Sprite>> m_spriteData = {};
         std::unordered_map<Text*, std::unique_ptr<ObjectData::Text>> m_textData = {};
         std::unordered_map<StaticGeometry::Base*, std::unique_ptr<ObjectData::StaticGeometry>> m_staticGeoData = {}; 
         std::unordered_map<StaticGeometry::Base*, std::unique_ptr<ObjectData::StaticGeometry>> m_instancedStaticGeoData = {}; 
 
-        std::unordered_map<Texture*, std::unique_ptr<ObjectData::Texture>> m_textures;
-        std::unordered_map<Texture*, std::unique_ptr<ObjectData::Texture>> m_normalMaps;
-        std::unordered_map<Texture*, std::unique_ptr<ObjectData::Texture>> m_specularMaps;
+        std::unordered_map<Texture*, std::unique_ptr<ObjectData::Texture>> m_textures = {};
+        std::unordered_map<Texture*, std::unique_ptr<ObjectData::Texture>> m_normalMaps = {};
+        std::unordered_map<Texture*, std::unique_ptr<ObjectData::Texture>> m_specularMaps = {};
 
     private: 
-        // TEMP: debug drawing.
-        std::unique_ptr<DirectX::BasicEffect> m_pDebugDisplayEffect;
-        std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>> m_pDebugDisplayPrimitiveBatch;
-
         // TEMP: model drawing.
         std::unique_ptr<DirectX::IEffectFactory> m_pFxFactory;
         std::unique_ptr<DirectX::EffectTextureFactory> m_pModelResources;

@@ -11,8 +11,8 @@ namespace ObjectData {
         UINT DescriptorHeapIndex = -1;
         Microsoft::WRL::ComPtr<ID3D12Resource> pTexture = nullptr;
 
+        // TODO: move to RoX/Sprite.h
         RECT StretchRect = { 0, 0, 1, 1};
-
         DirectX::XMFLOAT2 Origin = { 0.0f, 0.0f };
         DirectX::FXMVECTOR Tint = DirectX::Colors::White;
     };
@@ -24,6 +24,7 @@ namespace ObjectData {
 
     struct StaticGeometry {
         std::unique_ptr<DirectX::GeometricPrimitive> pGeometricPrimitive = nullptr;     
+        // TODO: 1 effect per geometry might be overkill. Per texture might be better.
         std::unique_ptr<DirectX::NormalMapEffect> pEffect = nullptr;
     };
 
