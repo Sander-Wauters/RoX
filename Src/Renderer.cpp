@@ -48,7 +48,6 @@ void Renderer::Update() {
 
     m_pDebugDisplayEffect->SetView(m_view);
     m_pDebugDisplayEffect->SetProjection(m_proj);
-
 }
 
 void Renderer::Render() {
@@ -143,12 +142,11 @@ void Renderer::Add(StaticGeometry::Base* pStaticGeo) {
 }
 
 void Renderer::Add(Primitive::Base* pPrimitive) {
-    m_primiteves.insert(pPrimitive);
+    m_primitives.insert(pPrimitive);
 }
 
 void Renderer::OnDeviceLost() {
     // Add Direct3D resource cleanup here.
-    m_pDeviceResources->HandleDeviceLost();
     m_pGraphicsMemory.reset();
 
     m_pResourceDescriptors.reset();
@@ -175,7 +173,6 @@ void Renderer::OnDeviceLost() {
         specular.second->pTexture.Reset();
     }
 
-    // TEMP: debug drawing.
     m_pDebugDisplayEffect.reset();
     m_pDebugDisplayPrimitiveBatch.reset();
 }
@@ -229,11 +226,13 @@ void Renderer::SetMsaa(bool state) noexcept {
 
     m_msaaEnabled = state;
 
+    m_pDeviceResources->WaitForGpu();
     ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
     DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
     resourceUploadBatch.Begin();
 
     CreateRenderTargetDependentResources(resourceUploadBatch);
+    CreateWindowSizeDependentResources();
 
     std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_pDeviceResources->GetCommandQueue());
     uploadResourceFinished.wait();
@@ -271,11 +270,11 @@ void Renderer::RenderPrimitives() {
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
 
     m_pDebugDisplayPrimitiveBatch->Begin(pCommandList);
-    for (Primitive::Base* prim : m_primiteves) {
+    for (Primitive::Base* prim : m_primitives) {
         if (!prim->Visible)
             continue;
 
-        m_pDebugDisplayEffect->SetWorld(prim->World);
+        m_pDebugDisplayEffect->SetWorld(DirectX::XMMatrixIdentity());
         m_pDebugDisplayEffect->Apply(pCommandList);
         
         if (Primitive::BoundingSphere* p = dynamic_cast<Primitive::BoundingSphere*>(prim)) 

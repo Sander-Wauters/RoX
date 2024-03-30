@@ -5,68 +5,43 @@
 
 namespace Primitive {
     struct Base {
-        Base(
-                DirectX::XMMATRIX world = DirectX::XMMatrixIdentity(), 
-                DirectX::XMVECTOR color = DirectX::Colors::White,
-                bool visible = true) noexcept :
-            Visible(visible), World(world), Color(color)
-            {}
         virtual ~Base() {}
 
         bool Visible = true;
 
-        DirectX::XMMATRIX World = DirectX::XMMatrixIdentity();
+        DirectX::XMMATRIX View = DirectX::XMMatrixIdentity();
+        DirectX::XMMATRIX Projection = DirectX::XMMatrixIdentity();
         DirectX::XMVECTOR Color = DirectX::Colors::White;
     };
 
     struct BoundingSphere : public Base {
         BoundingSphere(
-                DirectX::BoundingSphere* pBounds = nullptr, 
-                DirectX::XMMATRIX world = DirectX::XMMatrixIdentity(), 
-                DirectX::XMVECTOR color = DirectX::Colors::White) noexcept :
-            pBounds(pBounds) 
-            {
-                BoundingSphere::Base(world, color);
-            }
+                DirectX::BoundingSphere* pBounds = nullptr) noexcept :
+            pBounds(pBounds) {}
 
         const DirectX::BoundingSphere* pBounds;
     };
 
     struct BoundingBox : public Base {
         BoundingBox(
-                DirectX::BoundingBox* pBounds = nullptr,
-                DirectX::XMMATRIX world = DirectX::XMMatrixIdentity(), 
-                DirectX::XMVECTOR color = DirectX::Colors::White) noexcept :
-            pBounds(pBounds) 
-            {
-                BoundingBox::Base(world, color);
-            }
+                DirectX::BoundingBox* pBounds = nullptr) noexcept :
+            pBounds(pBounds) {}
 
         const DirectX::BoundingBox* pBounds;
     };
 
     struct BoundingOrientedBox : public Base {
         BoundingOrientedBox(
-                DirectX::BoundingOrientedBox* pBounds = nullptr,
-                DirectX::XMMATRIX world = DirectX::XMMatrixIdentity(), 
-                DirectX::XMVECTOR color = DirectX::Colors::White) noexcept :
-            pBounds(pBounds) 
-            {
-                BoundingOrientedBox::Base(world, color);
-            }
+                DirectX::BoundingOrientedBox* pBounds = nullptr) noexcept :
+            pBounds(pBounds) {}
 
         const DirectX::BoundingOrientedBox* pBounds;
     };
 
     struct BoundingFrustum : public Base {
         BoundingFrustum(
-                DirectX::BoundingFrustum* pBounds = nullptr,
-                DirectX::XMMATRIX world = DirectX::XMMatrixIdentity(), 
-                DirectX::XMVECTOR color = DirectX::Colors::White) noexcept :
-            pBounds(pBounds) 
-            {
-                BoundingFrustum::Base(world, color);
-            }
+                DirectX::BoundingFrustum* pBounds = nullptr) noexcept :
+            pBounds(pBounds) {}
 
         const DirectX::BoundingFrustum* pBounds;
     };
@@ -81,10 +56,7 @@ namespace Primitive {
                 DirectX::XMMATRIX world = DirectX::XMMatrixIdentity(), 
                 DirectX::XMVECTOR color = DirectX::Colors::White) noexcept :
             XAxis(xAxis), YAxis(yAxis), Origin(origin), 
-            XDivsions(xDivsions), YDivsions(yDivsions)
-            {
-                Grid::Base(world, color);
-            }
+            XDivsions(xDivsions), YDivsions(yDivsions) {}
 
         DirectX::XMVECTOR XAxis;
         DirectX::XMVECTOR YAxis;
@@ -100,10 +72,7 @@ namespace Primitive {
                 DirectX::XMVECTOR minorAxis = {{ 0.f, 0.f, 1.f }},
                 DirectX::XMMATRIX world = DirectX::XMMatrixIdentity(), 
                 DirectX::XMVECTOR color = DirectX::Colors::White) noexcept :
-            Origin(origin), MajorAxis(majorAxis), MinorAxis(minorAxis)
-            {
-                Ring::Base(world, color);
-            }
+            Origin(origin), MajorAxis(majorAxis), MinorAxis(minorAxis) {}
 
         DirectX::XMVECTOR Origin;
         DirectX::XMVECTOR MajorAxis;
@@ -117,10 +86,7 @@ namespace Primitive {
                 bool normalize = false,
                 DirectX::XMMATRIX world = DirectX::XMMatrixIdentity(), 
                 DirectX::XMVECTOR color = DirectX::Colors::White) noexcept :
-            Origin(origin), Direction(direction), Normalize(normalize)
-            {
-                Ray::Base(world, color);
-            }
+            Origin(origin), Direction(direction), Normalize(normalize) {}
 
         DirectX::XMVECTOR Origin;
         DirectX::XMVECTOR Direction;
@@ -134,10 +100,7 @@ namespace Primitive {
                 DirectX::XMVECTOR pointC = {{ 0.f, 0.f, 1.f }},
                 DirectX::XMMATRIX world = DirectX::XMMatrixIdentity(), 
                 DirectX::XMVECTOR color = DirectX::Colors::White) noexcept :
-            PointA(pointA), PointB(pointB), PointC(pointC)
-            {
-                Triangle::Base(world, color);
-            }
+            PointA(pointA), PointB(pointB), PointC(pointC) {}
 
         DirectX::XMVECTOR PointA;
         DirectX::XMVECTOR PointB;
@@ -152,10 +115,7 @@ namespace Primitive {
                 DirectX::XMVECTOR pointD = {{ 0.f, 0.f, 0.f }},
                 DirectX::XMMATRIX world = DirectX::XMMatrixIdentity(), 
                 DirectX::XMVECTOR color = DirectX::Colors::White) noexcept :
-            PointA(pointA), PointB(pointB), PointC(pointC), PointD(pointD)
-            {
-                Quad::Base(world, color);
-            }
+            PointA(pointA), PointB(pointB), PointC(pointC), PointD(pointD) {}
 
         DirectX::XMVECTOR PointA;
         DirectX::XMVECTOR PointB;

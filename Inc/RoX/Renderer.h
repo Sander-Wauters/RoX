@@ -101,7 +101,7 @@ class Renderer : public IDeviceNotify {
 
         std::unique_ptr<DirectX::BasicEffect> m_pDebugDisplayEffect = nullptr;
         std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>> m_pDebugDisplayPrimitiveBatch = nullptr;
-        std::unordered_set<Primitive::Base*> m_primiteves = {};
+        std::unordered_set<Primitive::Base*> m_primitives = {};
 
         std::unordered_map<Sprite*, std::unique_ptr<ObjectData::Sprite>> m_spriteData = {};
         std::unordered_map<Text*, std::unique_ptr<ObjectData::Text>> m_textData = {};
