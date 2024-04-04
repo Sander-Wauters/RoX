@@ -5,12 +5,14 @@
 #endif
 
 #include <windows.h>
+#include <unordered_set>
 
 #include "../../Lib/DirectXTK12/Inc/Keyboard.h"
 #include "../../Lib/DirectXTK12/Inc/Mouse.h"
 
 #include "../../Src/Util/pch.h"
 #include "Renderer.h"
+#include "IWindowObserver.h"
 
 class Window {
     public:
@@ -31,6 +33,8 @@ class Window {
         int GetHeight() const noexcept;
         float GetAspectRatio() const noexcept;
 
+        void RegisterWindowObserver(IWindowObserver* windowObserver) noexcept;
+
     private:
         static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             Window *pThis = NULL;
@@ -50,16 +54,26 @@ class Window {
                 return DefWindowProcW(hwnd, msg, wParam, lParam);
         }
 
+        void HandleActivated();
+        void HandleDeactivated();
+        void HandleSuspending();
+        void HandleResuming();
+        void HandleWindowMoved();
+        void HandleDisplayChange();
+        void HandleWindowSizeChanged(int width, int height);
+
         LRESULT HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam);
 
     private:
         Renderer& m_renderer;
 
-        std::unique_ptr<DirectX::Keyboard> m_pKeyboard = nullptr;
-        std::unique_ptr<DirectX::Mouse> m_pMouse = nullptr;
+        std::unique_ptr<DirectX::Keyboard> m_pKeyboard;
+        std::unique_ptr<DirectX::Mouse> m_pMouse;
 
         HWND m_hwnd = 0;
 
         int m_width = 0;
         int m_height = 0;
+
+        std::unordered_set<IWindowObserver*> m_windowObservers;
 };

@@ -4,33 +4,33 @@
 
 class Camera { 
     public:
-        Camera() noexcept;
+        Camera(float fovY = DirectX::XM_PIDIV4, float aspect = 1.7f, float nearZ = 1.f, float farZ = 1000.f) noexcept;
         ~Camera() noexcept;
 
-        void TranslateAlongLocalXAxis(float distance); 
-        void TranslateAlongLocalYAxis(float distance);
-        void TranslateAlongLocalZAxis(float distance);
+        void TranslateAlongLocalXAxis(float distance) noexcept; 
+        void TranslateAlongLocalYAxis(float distance) noexcept;
+        void TranslateAlongLocalZAxis(float distance) noexcept;
 
         void TranslateAlongGlobalXAxis(float distance) noexcept; 
         void TranslateAlongGlobalYAxis(float distance) noexcept;
         void TranslateAlongGlobalZAxis(float distance) noexcept;
 
-        void RotateAroundLocalXAxis(float angle); 
-        void RotateAroundLocalYAxis(float angle); 
-        void RotateAroundLocalZAxis(float angle); 
+        void RotateAroundLocalXAxis(float angle) noexcept; 
+        void RotateAroundLocalYAxis(float angle) noexcept; 
+        void RotateAroundLocalZAxis(float angle) noexcept; 
 
-        void RotateAroundGlobalXAxis(float angle); 
-        void RotateAroundGlobalYAxis(float angle);
-        void RotateAroundGlobalZAxis(float angle);
+        void RotateAroundGlobalXAxis(float angle) noexcept; 
+        void RotateAroundGlobalYAxis(float angle) noexcept;
+        void RotateAroundGlobalZAxis(float angle) noexcept;
 
-        void PointAt(DirectX::FXMVECTOR position, DirectX::FXMVECTOR target, DirectX::FXMVECTOR up);
-        void PointAt(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& target, const DirectX::XMFLOAT3& up);
+        void PointAt(DirectX::FXMVECTOR position, DirectX::FXMVECTOR target, DirectX::FXMVECTOR up) noexcept;
+        void PointAt(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& target, const DirectX::XMFLOAT3& up) noexcept;
 
-        void SetFrustum(float fovY, float aspect, float nearZ, float farZ);
+        void SetFrustum(float fovY, float aspect, float nearZ, float farZ) noexcept;
         void SetPosition(float x, float y, float z) noexcept;
         void SetPosition(DirectX::XMFLOAT3& position) noexcept;
 
-        void Update();
+        void Update() noexcept;
 
     public:
         const DirectX::XMFLOAT3& GetPosition() const noexcept;

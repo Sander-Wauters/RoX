@@ -1,6 +1,6 @@
 #include <tuple>
 
-#include "../Inc/RoX/Window.h"
+#include "RoX/Window.h"
 #include "util/Logger.h"
 #include "Exceptions/ThrowIfFailed.h"
 
@@ -9,7 +9,10 @@ Window::Window(Renderer& renderer, PCWSTR windowName, HINSTANCE hInstance,
         int x, int y,
         int width, int height,
         HWND parent, HMENU menu
-        ) : m_renderer(renderer), m_width(width), m_height(height) {
+        ) : m_renderer(renderer), m_width(width), m_height(height) 
+{
+    RegisterWindowObserver(&m_renderer);
+
     if (!DirectX::XMVerifyCPUSupport())
         ThrowIfFailed(E_NOTIMPL);
 
@@ -78,6 +81,52 @@ float Window::GetAspectRatio() const noexcept {
     return (float)m_width / m_height;
 }
 
+void Window::RegisterWindowObserver(IWindowObserver* windowObserver) noexcept {
+    m_windowObservers.insert(windowObserver);
+}
+
+void Window::HandleActivated() {
+    for (IWindowObserver* pWindowObserver : m_windowObservers) {
+        pWindowObserver->OnActivated();
+    }
+}
+
+void Window::HandleDeactivated() {
+    for (IWindowObserver* pWindowObserver : m_windowObservers) {
+        pWindowObserver->OnDeactivated();
+    }
+}
+
+void Window::HandleSuspending() {
+    for (IWindowObserver* pWindowObserver : m_windowObservers) {
+        pWindowObserver->OnSuspending();
+    }
+}
+
+void Window::HandleResuming() {
+    for (IWindowObserver* pWindowObserver : m_windowObservers) {
+        pWindowObserver->OnResuming();
+    }
+}
+
+void Window::HandleWindowMoved() {
+    for (IWindowObserver* pWindowObserver : m_windowObservers) {
+        pWindowObserver->OnWindowMoved();
+    }
+}
+
+void Window::HandleDisplayChange() {
+    for (IWindowObserver* pWindowObserver : m_windowObservers) {
+        pWindowObserver->OnDisplayChange();
+    }
+}
+
+void Window::HandleWindowSizeChanged(int width, int height) {
+    for (IWindowObserver* pWindowObserver : m_windowObservers) {
+        pWindowObserver->OnWindowSizeChanged(width, height);
+    }
+}
+
 LRESULT Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
     static bool s_in_sizemove = false;
     static bool s_in_suspend = false;
@@ -97,11 +146,11 @@ LRESULT Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             break;
 
         case WM_DISPLAYCHANGE:
-            m_renderer.OnDisplayChange();
+            HandleDisplayChange();
             break;
 
         case WM_MOVE:
-            m_renderer.OnWindowMoved();
+            HandleWindowMoved();
             break;
 
         case WM_SIZE:
@@ -109,16 +158,16 @@ LRESULT Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
                 if (!s_minimized) {
                     s_minimized = true;
                     if (!s_in_suspend)
-                        m_renderer.OnSuspending();
+                        HandleSuspending();
                     s_in_suspend = true;
                 }
             } else if (s_minimized) {
                 s_minimized = false;
                 if (s_in_suspend)
-                    m_renderer.OnResuming();
+                    HandleResuming();
                 s_in_suspend = false;
             } else if (!s_in_sizemove) {
-                m_renderer.OnWindowSizeChanged(LOWORD(lParam), HIWORD(lParam));
+                HandleWindowSizeChanged(LOWORD(lParam), HIWORD(lParam));
             }
             break;
 
@@ -130,7 +179,7 @@ LRESULT Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             s_in_sizemove = false;
             RECT rc;
             GetClientRect(m_hwnd, &rc);
-            m_renderer.OnWindowSizeChanged(rc.right - rc.left, rc.bottom - rc.top);
+            HandleWindowSizeChanged(rc.right - rc.left, rc.bottom - rc.top);
             break;
 
         case WM_GETMINMAXINFO:
@@ -143,9 +192,9 @@ LRESULT Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
 
         case WM_ACTIVATEAPP:
             if (wParam)
-                m_renderer.OnActivated();
+                HandleActivated();
             else
-                m_renderer.OnDeactivated();
+                HandleDeactivated();
 
             DirectX::Keyboard::ProcessMessage(msg, wParam, lParam);
             DirectX::Mouse::ProcessMessage(msg, wParam, lParam);
@@ -156,7 +205,7 @@ LRESULT Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             switch (wParam) {
                 case PBT_APMQUERYSUSPEND:
                     if (!s_in_suspend)
-                        m_renderer.OnSuspending();
+                        HandleSuspending();
 
                     s_in_suspend = true;
                     return TRUE;
@@ -164,7 +213,7 @@ LRESULT Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
                 case PBT_APMRESUMESUSPEND:
                     if (!s_minimized) {
                         if (s_in_suspend)
-                            m_renderer.OnResuming();
+                            HandleResuming();
                         s_in_suspend = false;
                     }
                     return TRUE;

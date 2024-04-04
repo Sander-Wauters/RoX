@@ -1,14 +1,14 @@
 #include "Rox/Camera.h"
 
-Camera::Camera() noexcept {
-    SetFrustum(DirectX::XM_PIDIV4, 1.0f, 1.0f, 1000.0f);
+Camera::Camera(float fovY, float aspect, float nearZ, float farZ) noexcept {
+    SetFrustum(fovY, aspect, nearZ, farZ);
 }
 
 Camera::~Camera() noexcept {
 
 }
 
-void Camera::TranslateAlongLocalXAxis(float distance) {
+void Camera::TranslateAlongLocalXAxis(float distance) noexcept {
     DirectX::XMVECTOR s = DirectX::XMVectorReplicate(distance);
     DirectX::XMVECTOR x = DirectX::XMLoadFloat3(&m_localXAxis);
     DirectX::XMVECTOR p = DirectX::XMLoadFloat3(&m_position);
@@ -17,7 +17,7 @@ void Camera::TranslateAlongLocalXAxis(float distance) {
     m_outdated = true;
 }
  
-void Camera::TranslateAlongLocalYAxis(float distance) {
+void Camera::TranslateAlongLocalYAxis(float distance) noexcept {
     DirectX::XMVECTOR s = DirectX::XMVectorReplicate(distance);
     DirectX::XMVECTOR y = DirectX::XMLoadFloat3(&m_localYAxis);
     DirectX::XMVECTOR p = DirectX::XMLoadFloat3(&m_position);
@@ -26,7 +26,7 @@ void Camera::TranslateAlongLocalYAxis(float distance) {
     m_outdated = true;
 }
 
-void Camera::TranslateAlongLocalZAxis(float distance) {
+void Camera::TranslateAlongLocalZAxis(float distance) noexcept {
     DirectX::XMVECTOR s = DirectX::XMVectorReplicate(distance);
     DirectX::XMVECTOR z = DirectX::XMLoadFloat3(&m_localZAxis);
     DirectX::XMVECTOR p = DirectX::XMLoadFloat3(&m_position);
@@ -53,7 +53,7 @@ void Camera::TranslateAlongGlobalZAxis(float distance) noexcept {
     m_outdated = true;
 }
 
-void Camera::RotateAroundLocalXAxis(float angle) {
+void Camera::RotateAroundLocalXAxis(float angle) noexcept {
     DirectX::XMMATRIX R = DirectX::XMMatrixRotationAxis(DirectX::XMLoadFloat3(&m_localXAxis), angle);
     DirectX::XMStoreFloat3(&m_localYAxis, DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&m_localYAxis), R));
     DirectX::XMStoreFloat3(&m_localZAxis, DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&m_localZAxis), R));
@@ -61,7 +61,7 @@ void Camera::RotateAroundLocalXAxis(float angle) {
     m_outdated = true;
 }
  
-void Camera::RotateAroundLocalYAxis(float angle) {
+void Camera::RotateAroundLocalYAxis(float angle) noexcept {
     DirectX::XMMATRIX R = DirectX::XMMatrixRotationAxis(DirectX::XMLoadFloat3(&m_localYAxis), angle);
     DirectX::XMStoreFloat3(&m_localXAxis, DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&m_localXAxis), R));
     DirectX::XMStoreFloat3(&m_localZAxis, DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&m_localZAxis), R));
@@ -69,7 +69,7 @@ void Camera::RotateAroundLocalYAxis(float angle) {
     m_outdated = true;
 }
  
-void Camera::RotateAroundLocalZAxis(float angle) {
+void Camera::RotateAroundLocalZAxis(float angle) noexcept {
     DirectX::XMMATRIX R = DirectX::XMMatrixRotationAxis(DirectX::XMLoadFloat3(&m_localZAxis), angle);
     DirectX::XMStoreFloat3(&m_localYAxis, DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&m_localYAxis), R));
     DirectX::XMStoreFloat3(&m_localXAxis, DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&m_localXAxis), R));
@@ -77,7 +77,7 @@ void Camera::RotateAroundLocalZAxis(float angle) {
     m_outdated = true;
 }
  
-void Camera::RotateAroundGlobalXAxis(float angle) {
+void Camera::RotateAroundGlobalXAxis(float angle) noexcept {
     DirectX::XMMATRIX R = DirectX::XMMatrixRotationX(angle);
     DirectX::XMStoreFloat3(&m_localYAxis, DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&m_localYAxis), R));
     DirectX::XMStoreFloat3(&m_localZAxis, DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&m_localZAxis), R));
@@ -85,7 +85,7 @@ void Camera::RotateAroundGlobalXAxis(float angle) {
     m_outdated = true;
 }
  
-void Camera::RotateAroundGlobalYAxis(float angle) {
+void Camera::RotateAroundGlobalYAxis(float angle) noexcept {
     DirectX::XMMATRIX R = DirectX::XMMatrixRotationY(angle);
     DirectX::XMStoreFloat3(&m_localXAxis, DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&m_localXAxis), R));
     DirectX::XMStoreFloat3(&m_localZAxis, DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&m_localZAxis), R));
@@ -93,7 +93,7 @@ void Camera::RotateAroundGlobalYAxis(float angle) {
     m_outdated = true;
 }
 
-void Camera::RotateAroundGlobalZAxis(float angle) {
+void Camera::RotateAroundGlobalZAxis(float angle) noexcept {
     DirectX::XMMATRIX R = DirectX::XMMatrixRotationZ(angle);
     DirectX::XMStoreFloat3(&m_localYAxis, DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&m_localYAxis), R));
     DirectX::XMStoreFloat3(&m_localXAxis, DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&m_localXAxis), R));
@@ -101,7 +101,7 @@ void Camera::RotateAroundGlobalZAxis(float angle) {
     m_outdated = true;
 }
 
-void Camera::PointAt(DirectX::FXMVECTOR position, DirectX::FXMVECTOR target, DirectX::FXMVECTOR up) {
+void Camera::PointAt(DirectX::FXMVECTOR position, DirectX::FXMVECTOR target, DirectX::FXMVECTOR up) noexcept {
     DirectX::XMVECTOR Z = DirectX::XMVector3Normalize(DirectX::XMVectorSubtract(target, position));
     DirectX::XMVECTOR X = DirectX::XMVector3Normalize(DirectX::XMVector3Cross(up, Z));
     DirectX::XMVECTOR Y = DirectX::XMVector3Cross(Z, X);
@@ -114,7 +114,7 @@ void Camera::PointAt(DirectX::FXMVECTOR position, DirectX::FXMVECTOR target, Dir
     m_outdated = true;
 }
 
-void Camera::PointAt(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& target, const DirectX::XMFLOAT3& up) {
+void Camera::PointAt(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& target, const DirectX::XMFLOAT3& up) noexcept {
     DirectX::XMVECTOR T = DirectX::XMLoadFloat3(&target);
     DirectX::XMVECTOR P = DirectX::XMLoadFloat3(&position);
     DirectX::XMVECTOR U = DirectX::XMLoadFloat3(&up);
@@ -124,7 +124,7 @@ void Camera::PointAt(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3&
     m_outdated = true;
 }
 
-void Camera::SetFrustum(float fovY, float aspect, float nearZ, float farZ) {
+void Camera::SetFrustum(float fovY, float aspect, float nearZ, float farZ) noexcept {
     m_fovY = fovY;
     m_aspect = aspect;
     m_nearZ = nearZ;
@@ -147,7 +147,7 @@ void Camera::SetPosition(DirectX::XMFLOAT3& position) noexcept {
     m_outdated = true;
 }
 
-void Camera::Update() {
+void Camera::Update() noexcept {
     if (!m_outdated)
         return;
  

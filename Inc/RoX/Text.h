@@ -2,28 +2,32 @@
 
 #include <string>
 
-// Positioning
-//      -y
-//      |
-// -x --+-- +x
-//      |
-//      +y
+#include "Sprite.h"
 
-struct Text {
-    std::wstring FilePath = L"";
+class Text : public Sprite {
+    public:
+        Text(
+                const std::string name,
+                const std::wstring filePath,
+                std::wstring content,
+                DirectX::XMFLOAT2 origin = { 0.f, 0.f },
+                DirectX::XMFLOAT2 offset = { 0.f, 0.f }, 
+                DirectX::XMFLOAT2 scale = { 1.f, 1.f },
+                float layer = 0.f, float angle = 0.f,
+                DirectX::XMVECTOR color = DirectX::Colors::Black,
+                bool visible = true
+            ) noexcept :
+            Sprite(name, filePath, origin, offset, scale, layer, angle, color, visible),
+            m_content(content)
+            {}
+        ~Text() noexcept {};
 
-    std::string Content = "";
+    public:
+        std::wstring GetContent() const noexcept { return m_content; }
 
-    bool Visible = true;
+        void SetContent(std::wstring content) noexcept { m_content = content; }
 
-    float Angle = 0.0f; // In radians.
-    float Layer = 0.0f;
-    float Scale = 1.0f;
-
-    float PositionX = 0.0f;
-    float PositionY = 0.0f;
-
-    float OriginOffsetX = 0.0f;
-    float OriginOffsetY = 0.0f;
-
+    private:
+        std::wstring m_content;
 };
+

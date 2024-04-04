@@ -1,58 +1,108 @@
 #include "RoX/Renderer.h"
 
-#include <CommonStates.h>
 #include <ResourceUploadBatch.h>
-#include <WICTextureLoader.h>
-#include <DDSTextureLoader.h>
-#include <DirectXHelpers.h>
+#include <DescriptorHeap.h>
+#include <CommonStates.h>
 #include <RenderTargetState.h>
+#include <SpriteBatch.h>
+#include <DirectXHelpers.h>
 
-#include "Exceptions/ThrowIfFailed.h"
-#include "Util/Logger.h"
+#include "Util/pch.h"
+
 #include "DebugDraw.h"
-#include "ModelLoadAssimp.h"
+#include "IDeviceObserver.h"
+#include "DeviceResources.h"
+#include "DeviceDataBuilder.h"
 
-Renderer::Renderer(Timer& timer, Camera* pCamera) noexcept : 
-m_timer(timer),
-    m_pCamera(pCamera) 
+
+class Renderer::Impl : public IDeviceObserver {
+    public:
+        Impl(Renderer* pOwner) noexcept;
+        ~Impl() noexcept;
+    
+        Impl(Impl&&) = default;
+        Impl& operator= (Impl&&) = default;
+
+        Impl(Impl const&) = delete;
+        Impl& operator= (Impl const&) = delete;
+
+        void Initialize(HWND window, int width, int height);
+        void Load(Scene& scene);
+
+        void Update();
+        void Render();
+
+        void OnDeviceLost() override;
+        void OnDeviceRestored() override;
+        void OnActivated();
+        void OnDeactivated();
+        void OnSuspending();
+        void OnResuming();
+        void OnWindowMoved();
+        void OnDisplayChange();
+        void OnWindowSizeChanged(int width, int height);
+
+        void SetMsaa(bool state) noexcept;
+        bool IsMsaaEnabled() const noexcept;
+
+    private:
+        void Clear();
+
+        void RenderMeshes();
+        void RenderOutlines();
+        void RenderSprites();
+        void RenderText();
+
+        void CreateDeviceDependentResources();
+        void CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void CreateWindowSizeDependentResources();
+
+    private:
+        Renderer* m_pOwner;
+        std::unique_ptr<DeviceResources> m_pDeviceResources;
+        std::unique_ptr<DirectX::GraphicsMemory> m_pGraphicsMemory;
+        std::unique_ptr<DeviceDataBuilder> m_pDeviceDataBuilder;
+
+        bool m_msaaEnabled;
+        
+};
+
+Renderer::Impl::Impl(Renderer* pOwner) 
+    noexcept : m_pOwner(pOwner),
+    m_pDeviceResources(nullptr),
+    m_pGraphicsMemory(nullptr),
+    m_pDeviceDataBuilder(nullptr),
+    m_msaaEnabled(false)
 {
     m_pDeviceResources = std::make_unique<DeviceResources>();
-    m_pDeviceResources->RegisterDeviceNotify(this);    
+    m_pDeviceResources->RegisterDeviceObserver(this);
 }
 
-Renderer::~Renderer() {
+Renderer::Impl::~Impl() noexcept {
     if (m_pDeviceResources)
         m_pDeviceResources->WaitForGpu();
 }
-
-void Renderer::Initialize(HWND window, int width, int height) {
+void Renderer::Impl::Initialize(HWND window, int width, int height) {
     m_pDeviceResources->SetWindow(window, width, height);
-    m_pDeviceResources->CreateDeviceResources();    
-    CreateDeviceDependentResources();
+    m_pDeviceResources->CreateDeviceResources();
     m_pDeviceResources->CreateWindowSizeDependentResources();
+}
+
+void Renderer::Impl::Load(Scene& scene) {
+    m_pDeviceDataBuilder = std::make_unique<DeviceDataBuilder>(scene, *m_pDeviceResources.get());
+    CreateDeviceDependentResources();
     CreateWindowSizeDependentResources();
 }
 
-void Renderer::Update() {
-    m_view = m_pCamera->GetView();
-    m_proj = m_pCamera->GetProjection();
-
-    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<ObjectData::StaticGeometry>>& geo : m_staticGeoData) {
-        geo.second->pEffect->SetView(geo.first->View);
-        geo.second->pEffect->SetProjection(geo.first->Projection);
-    }
-    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<ObjectData::StaticGeometry>>& geo : m_instancedStaticGeoData) {
-        geo.second->pEffect->SetView(geo.first->View);
-        geo.second->pEffect->SetProjection(geo.first->Projection);
-    }
-
-    m_pDebugDisplayEffect->SetView(m_view);
-    m_pDebugDisplayEffect->SetProjection(m_proj);
+void Renderer::Impl::Update() {
+    if (m_pDeviceDataBuilder)
+        m_pDeviceDataBuilder->Update();
 }
 
-void Renderer::Render() {
-    // Don't try to render anything before the first Update.
-    if (m_timer.GetFrameCount() == 0)
+void Renderer::Impl::Render() {
+    // Don't try to render anything before the first Update
+    // and before a Scene is loaded.
+    if (m_pOwner->m_timer.GetFrameCount() == 0 || !m_pDeviceDataBuilder)
         return;
 
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
@@ -71,16 +121,28 @@ void Renderer::Render() {
 
     Clear();
 
-    ID3D12DescriptorHeap* heaps[] = { m_pResourceDescriptors->Heap(), m_pStates->Heap() };
-    pCommandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
+    // Only set the descriptor heap if there are resources.
+    if (m_pDeviceDataBuilder->GetResourceDescriptorCount() > 0) {
+        ID3D12DescriptorHeap* heaps[] = { 
+            m_pDeviceDataBuilder->GetDescriptorHeap()->Heap(), 
+            m_pDeviceDataBuilder->GetStates()->Heap() 
+        };
+        pCommandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
+    }
 
-    RenderPrimitives();
-    RenderStaticGeometry();
+    if (m_pDeviceDataBuilder->GetMaterialData().size() > 0) 
+        RenderMeshes();
 
-    m_pSpriteBatch->Begin(pCommandList, DirectX::SpriteSortMode_FrontToBack);
-    RenderSprites();
-    RenderText();
-    m_pSpriteBatch->End();
+    RenderOutlines();
+
+    // Sprites can only be drawn if the descriptor heaps contains there resources.
+    if (m_pDeviceDataBuilder->GetResourceDescriptorCount() > 0) {
+        DirectX::SpriteBatch* pSpriteBatch = m_pDeviceDataBuilder->GetSpriteBatch();
+        pSpriteBatch->Begin(pCommandList, DirectX::SpriteSortMode_FrontToBack);
+        RenderSprites();
+        RenderText();
+        pSpriteBatch->End();
+    }
 
     // Show the new frame.
     if (m_msaaEnabled) {
@@ -101,126 +163,52 @@ void Renderer::Render() {
     m_pGraphicsMemory->Commit(m_pDeviceResources->GetCommandQueue());
 }
 
-void Renderer::Add(Sprite* pSprite) {
-    std::unique_ptr<ObjectData::Sprite> pSpriteData = std::make_unique<ObjectData::Sprite>();
-    pSpriteData->DescriptorHeapIndex = m_nextDescriptorHeapIndex++;
-    m_spriteData[pSprite] = std::move(pSpriteData);
-}
-
-void Renderer::Add(Text* pText) {
-    std::unique_ptr<ObjectData::Text> pTextData = std::make_unique<ObjectData::Text>();
-    pTextData->DescriptorHeapIndex = m_nextDescriptorHeapIndex++;
-    m_textData[pText] = std::move(pTextData);
-}
-
-void Renderer::Add(StaticGeometry::Base* pStaticGeo) {
-    std::unique_ptr<ObjectData::StaticGeometry> pStaticGeoData = std::make_unique<ObjectData::StaticGeometry>();
-
-    if (pStaticGeo->pTexture->TextureFilePath != L"" && 
-            m_textures.find(pStaticGeo->pTexture) == m_textures.end()) {
-        std::unique_ptr<ObjectData::Texture> pTexture = std::make_unique<ObjectData::Texture>();
-        pTexture->DescriptorHeapIndex = m_nextDescriptorHeapIndex++;
-        m_textures[pStaticGeo->pTexture] = std::move(pTexture); 
-    }
-    if (pStaticGeo->pTexture->NormalMapFilePath != L"" &&
-            m_normalMaps.find(pStaticGeo->pTexture) == m_normalMaps.end()) {
-        std::unique_ptr<ObjectData::Texture> pNormalMap = std::make_unique<ObjectData::Texture>();
-        pNormalMap->DescriptorHeapIndex = m_nextDescriptorHeapIndex++;
-        m_normalMaps[pStaticGeo->pTexture] = std::move(pNormalMap); 
-    }
-    if (pStaticGeo->pTexture->SpecularMapFilePath != L"" &&
-            m_specularMaps.find(pStaticGeo->pTexture) == m_specularMaps.end()) {
-        std::unique_ptr<ObjectData::Texture> pSpecularMap = std::make_unique<ObjectData::Texture>();
-        pSpecularMap->DescriptorHeapIndex = m_nextDescriptorHeapIndex++;
-        m_specularMaps[pStaticGeo->pTexture] = std::move(pSpecularMap); 
-    }
-
-    if (pStaticGeo->Instanced)
-        m_instancedStaticGeoData[pStaticGeo] = std::move(pStaticGeoData);
-    else
-        m_staticGeoData[pStaticGeo] = std::move(pStaticGeoData);
-}
-
-void Renderer::Add(Primitive::Base* pPrimitive) {
-    m_primitives.insert(pPrimitive);
-}
-
-void Renderer::OnDeviceLost() {
-    // Add Direct3D resource cleanup here.
+void Renderer::Impl::OnDeviceLost() {
     m_pGraphicsMemory.reset();
-
-    m_pResourceDescriptors.reset();
-    m_pStates.reset();
-    m_pSpriteBatch.reset();
-
-    for (std::pair<Sprite* const, std::unique_ptr<ObjectData::Sprite>>& sprite : m_spriteData) {
-        sprite.second->pTexture.Reset();
-    }
-    for (std::pair<Text* const, std::unique_ptr<ObjectData::Text>>& text : m_textData) {
-        text.second->pSpriteFont.reset();
-    }
-    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<ObjectData::StaticGeometry>>& geo : m_staticGeoData) {
-        geo.second->pGeometricPrimitive.reset();
-        geo.second->pEffect.reset();
-    }
-    for (std::pair<Texture* const, std::unique_ptr<ObjectData::Texture>>& texture : m_textures) {
-        texture.second->pTexture.Reset();
-    }
-    for (std::pair<Texture* const, std::unique_ptr<ObjectData::Texture>>& normal : m_normalMaps) {
-        normal.second->pTexture.Reset();
-    }
-    for (std::pair<Texture* const, std::unique_ptr<ObjectData::Texture>>& specular : m_specularMaps) {
-        specular.second->pTexture.Reset();
-    }
-
-    m_pDebugDisplayEffect.reset();
-    m_pDebugDisplayPrimitiveBatch.reset();
+    m_pDeviceDataBuilder->OnDeviceLost();
 }
 
-void Renderer::OnDeviceRestored() {
+void Renderer::Impl::OnDeviceRestored() {
     CreateDeviceDependentResources();
     CreateWindowSizeDependentResources();
 }
 
-void Renderer::OnActivated() {
+void Renderer::Impl::OnActivated() {
     // Game is becoming active window.
 }
 
-void Renderer::OnDeactivated() {
+void Renderer::Impl::OnDeactivated() {
     // Game is becoming background window.
 }
 
-void Renderer::OnSuspending() {
+void Renderer::Impl::OnSuspending() {
     // Game is being power-suspended (or minimized).
 }
 
-void Renderer::OnResuming() {
+void Renderer::Impl::OnResuming() {
     // Game is being power-resumed (or returning from minimize).
-    m_timer.ResetElapsedTime();
+    m_pOwner->m_timer.ResetElapsedTime();
 }
 
-void Renderer::OnWindowMoved() {
+void Renderer::Impl::OnWindowMoved() {
     RECT const r = m_pDeviceResources->GetOutputSize();
     m_pDeviceResources->WindowSizeChanged(r.right, r.bottom);
 }
 
-void Renderer::OnDisplayChange() {
+void Renderer::Impl::OnDisplayChange() {
     m_pDeviceResources->UpdateColorSpace();
 }
 
-void Renderer::OnWindowSizeChanged(int width, int height) {
+void Renderer::Impl::OnWindowSizeChanged(int width, int height) {
     // Game window is being resized.
     if (!m_pDeviceResources->WindowSizeChanged(width, height))
         return;
     CreateWindowSizeDependentResources();
-    m_pCamera->SetFrustum(
-            m_pCamera->GetFovY(), 
-            (float)width / height, 
-            m_pCamera->GetNearZ(), 
-            m_pCamera->GetFarZ());
+    Camera& camera = m_pDeviceDataBuilder->GetScene().GetCamera();
+    camera.SetFrustum(camera.GetFovY(), (float)width/height, camera.GetNearZ(), camera.GetFarZ());
 }
 
-void Renderer::SetMsaa(bool state) noexcept {
+void Renderer::Impl::SetMsaa(bool state) noexcept {
     if (m_msaaEnabled == state)
         return;
 
@@ -238,19 +226,11 @@ void Renderer::SetMsaa(bool state) noexcept {
     uploadResourceFinished.wait();
 }
 
-bool Renderer::MsaaEnabled() const noexcept {
+bool Renderer::Impl::IsMsaaEnabled() const noexcept {
     return m_msaaEnabled;
 }
 
-void Renderer::SetCamera(Camera* pCamera) noexcept {
-    m_pCamera = pCamera;
-}
-
-Camera* Renderer::GetCamera() const noexcept {
-    return m_pCamera;
-}
-
-void Renderer::Clear() {
+void Renderer::Impl::Clear() {
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
 
     CD3DX12_CPU_DESCRIPTOR_HANDLE const rtvDescriptor = m_msaaEnabled ? m_pDeviceResources->GetMsaaRenderTargetView() : m_pDeviceResources->GetRenderTargetView();
@@ -266,65 +246,16 @@ void Renderer::Clear() {
     pCommandList->RSSetScissorRects(1, &scissorRect);
 }
 
-void Renderer::RenderPrimitives() {
+void Renderer::Impl::RenderMeshes() {
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
 
-    m_pDebugDisplayPrimitiveBatch->Begin(pCommandList);
-    for (Primitive::Base* prim : m_primitives) {
-        if (!prim->Visible)
+    for (const std::pair<Mesh* const, std::unique_ptr<DeviceData::Mesh>>& mesh : m_pDeviceDataBuilder->GetMeshData()) {
+        if (!mesh.first->IsVisible())
             continue;
 
-        m_pDebugDisplayEffect->SetWorld(DirectX::XMMatrixIdentity());
-        m_pDebugDisplayEffect->Apply(pCommandList);
-        
-        if (Primitive::BoundingSphere* p = dynamic_cast<Primitive::BoundingSphere*>(prim)) 
-            Draw(m_pDebugDisplayPrimitiveBatch.get(), *p->pBounds, p->Color);
-        else if (Primitive::BoundingBox* p = dynamic_cast<Primitive::BoundingBox*>(prim))
-            Draw(m_pDebugDisplayPrimitiveBatch.get(), *p->pBounds, p->Color);
-        else if (Primitive::BoundingOrientedBox* p = dynamic_cast<Primitive::BoundingOrientedBox*>(prim))
-            Draw(m_pDebugDisplayPrimitiveBatch.get(), *p->pBounds, p->Color);
-        else if (Primitive::BoundingFrustum* p = dynamic_cast<Primitive::BoundingFrustum*>(prim))
-            Draw(m_pDebugDisplayPrimitiveBatch.get(), *p->pBounds, p->Color);
-        else if (Primitive::Grid* p = dynamic_cast<Primitive::Grid*>(prim))
-            DrawGrid(m_pDebugDisplayPrimitiveBatch.get(), p->XAxis, p->YAxis,
-                    p->Origin, p->XDivsions, p->YDivsions, p->Color);
-        else if (Primitive::Ring* p = dynamic_cast<Primitive::Ring*>(prim))
-            DrawRing(m_pDebugDisplayPrimitiveBatch.get(), p->Origin, 
-                    p->MajorAxis, p->MinorAxis, p->Color);
-        else if (Primitive::Ray* p = dynamic_cast<Primitive::Ray*>(prim))
-            DrawRay(m_pDebugDisplayPrimitiveBatch.get(), p->Origin,
-                    p->Direction, p->Normalize, p->Color);
-        else if (Primitive::Triangle* p = dynamic_cast<Primitive::Triangle*>(prim))
-            DrawTriangle(m_pDebugDisplayPrimitiveBatch.get(), p->PointA,
-                    p->PointB, p->PointC, p->Color);
-        else if (Primitive::Quad* p = dynamic_cast<Primitive::Quad*>(prim))
-            DrawQuad(m_pDebugDisplayPrimitiveBatch.get(), p->PointA, p->PointB,
-                    p->PointC, p->PointD, p->Color);
-        else
-            throw std::runtime_error("Error downcasting Primitive::Base");
-    }
-    m_pDebugDisplayPrimitiveBatch->End();
-}
-
-void Renderer::RenderStaticGeometry() {
-    ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
-
-    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<ObjectData::StaticGeometry>>& geo : m_staticGeoData) {
-        if (!geo.first->Visible)
-            continue;
-
-        geo.second->pEffect->SetWorld(geo.first->World);
-        geo.second->pEffect->Apply(pCommandList);
-        geo.second->pGeometricPrimitive->Draw(pCommandList);
-    } 
-
-    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<ObjectData::StaticGeometry>>& geo : m_instancedStaticGeoData) {
-        if (!geo.first->Visible)
-            continue;
-
-        const size_t instBytes = geo.first->Instances.size() * sizeof(DirectX::XMFLOAT3X4);
+        const size_t instBytes = mesh.first->GetInstances().size() * sizeof(DirectX::XMFLOAT3X4);
         DirectX::GraphicsResource inst = m_pGraphicsMemory->Allocate(instBytes);
-        memcpy(inst.Memory(), geo.first->Instances.data(), instBytes);
+        memcpy(inst.Memory(), mesh.first->GetInstances().data(), instBytes);
 
         D3D12_VERTEX_BUFFER_VIEW vertexBufferInst = {};
         vertexBufferInst.BufferLocation = inst.GpuAddress();
@@ -332,75 +263,100 @@ void Renderer::RenderStaticGeometry() {
         vertexBufferInst.StrideInBytes = sizeof(DirectX::XMFLOAT3X4);
         pCommandList->IASetVertexBuffers(1, 1, &vertexBufferInst);
 
-        geo.second->pEffect->Apply(pCommandList);
-        geo.second->pGeometricPrimitive->DrawInstanced(pCommandList, geo.first->Instances.size());
-    } 
-} 
+        m_pDeviceDataBuilder->GetMaterialData(&mesh.first->GetMaterial())->pEffect->Apply(pCommandList);
+        mesh.second->pGeometricPrimitive->DrawInstanced(pCommandList, mesh.first->GetInstances().size());
+    }
+}
 
-void Renderer::RenderSprites() {
-    for (std::pair<Sprite* const, std::unique_ptr<ObjectData::Sprite>>& sprite : m_spriteData) {
-        if (!sprite.first->Visible)
+void Renderer::Impl::RenderOutlines() {
+    ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
+
+    DirectX::PrimitiveBatch<DirectX::VertexPositionColor>* pOutlineBatch = m_pDeviceDataBuilder->GetOutlineBatch();
+    pOutlineBatch->Begin(pCommandList);
+
+    DirectX::BasicEffect* pOutlineEffect = m_pDeviceDataBuilder->GetOutlineEffect();
+    pOutlineEffect->SetWorld(DirectX::XMMatrixIdentity());
+    pOutlineEffect->Apply(pCommandList);
+
+    for (const std::pair<std::string const, std::shared_ptr<Outline::Base>>& outline : m_pDeviceDataBuilder->GetScene().GetOutlines()) {
+        if (!outline.second->IsVisible())
             continue;
 
-        DirectX::SimpleMath::Vector2 origin = sprite.second->Origin;
-        origin.x -= sprite.first->OriginOffsetX;
-        origin.y -= sprite.first->OriginOffsetY;
+        if (std::shared_ptr<Outline::BoundingBody<DirectX::BoundingBox>> p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingBox>>(outline.second)) 
+            Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
+        else if (std::shared_ptr<Outline::BoundingBody<DirectX::BoundingFrustum>> p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingFrustum>>(outline.second)) 
+            Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
+        else if (std::shared_ptr<Outline::BoundingBody<DirectX::BoundingOrientedBox>> p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingOrientedBox>>(outline.second)) 
+            Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
+        else if (std::shared_ptr<Outline::BoundingBody<DirectX::BoundingSphere>> p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingSphere>>(outline.second)) 
+            Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
+        else if (std::shared_ptr<Outline::Grid> p = std::dynamic_pointer_cast<Outline::Grid>(outline.second))
+            DrawGrid(pOutlineBatch, p->GetXAxis(), p->GetYAxis(), p->GetOrigin(), p->GetXDivsions(), p->GetYDivsions(), p->GetColor());
+        else if (std::shared_ptr<Outline::Ring> p = std::dynamic_pointer_cast<Outline::Ring>(outline.second))
+            DrawRing(pOutlineBatch, p->GetOrigin(), p->GetMajorAxis(), p->GetMinorAxis(), p->GetColor());
+        else if (std::shared_ptr<Outline::Ray> p = std::dynamic_pointer_cast<Outline::Ray>(outline.second)) 
+            DrawRay(pOutlineBatch, p->GetOrigin(), p->GetDirection(), p->IsNormalized(), p->GetColor());
+        else if (std::shared_ptr<Outline::Triangle> p = std::dynamic_pointer_cast<Outline::Triangle>(outline.second)) 
+            DrawTriangle(pOutlineBatch, p->GetPointA(), p->GetPointB(), p->GetPointC(), p->GetColor());
+        else if (std::shared_ptr<Outline::Quad> p = std::dynamic_pointer_cast<Outline::Quad>(outline.second)) 
+            DrawQuad(pOutlineBatch, p->GetPointA(), p->GetPointB(), p->GetPointC(), p->GetPointD(), p->GetColor());
+    }
+    pOutlineBatch->End();
+}
 
-        RECT stretchRect = sprite.second->StretchRect;
-        stretchRect.right  += sprite.first->WidthStretch / 2;
-        stretchRect.bottom += sprite.first->HeightStretch / 2;
+void Renderer::Impl::RenderSprites() {
+    DirectX::SpriteBatch* pSpriteBatch = m_pDeviceDataBuilder->GetSpriteBatch();
 
-        stretchRect.right  *= sprite.first->Scale;
-        stretchRect.bottom *= sprite.first->Scale;
+    for (const std::pair<Sprite* const, std::unique_ptr<DeviceData::Texture>>& sprite : m_pDeviceDataBuilder->GetSpriteData()) {
+        if (!sprite.first->IsVisible())
+            continue;
 
-        stretchRect.left   += sprite.first->PositionX;
-        stretchRect.top    += sprite.first->PositionY;
-        stretchRect.right  += sprite.first->PositionX;
-        stretchRect.bottom += sprite.first->PositionY;
+        DirectX::XMUINT2 textureSize = DirectX::GetTextureSize(sprite.second->pTexture.Get());
 
-        m_pSpriteBatch->Draw(
-                m_pResourceDescriptors->GetGpuHandle(sprite.second->DescriptorHeapIndex),
-                DirectX::GetTextureSize(sprite.second->pTexture.Get()),
-                stretchRect,
+        DirectX::XMFLOAT2 origin = { -sprite.first->GetOrigin().x, -sprite.first->GetOrigin().y };
+        origin.x += (float)textureSize.x / 2;
+        origin.y += (float)textureSize.y / 2;
+
+        DirectX::XMFLOAT2 offset;
+        offset.x = (float)textureSize.x / 2;
+        offset.y = (float)textureSize.y / 2;
+        offset.x *= sprite.first->GetScale().x;
+        offset.y *= sprite.first->GetScale().y;
+        offset.x += sprite.first->GetOffset().x;
+        offset.y += sprite.first->GetOffset().y;
+
+        pSpriteBatch->Draw(
+                m_pDeviceDataBuilder->GetDescriptorHeap()->GetGpuHandle(sprite.second->DescriptorHeapIndex),
+                textureSize,
+                offset,
                 nullptr,
-                sprite.second->Tint,
-                sprite.first->Angle,
+                sprite.first->GetColor(),
+                sprite.first->GetAngle(),
                 origin,
+                sprite.first->GetScale(),
                 DirectX::SpriteEffects_None,
-                sprite.first->Layer);
+                sprite.first->GetLayer());
     }
 }
 
-void Renderer::RenderText() {
-    for (std::pair<Text* const, std::unique_ptr<ObjectData::Text>>& text : m_textData) {
-        if (!text.first->Visible)
-            continue;
+void Renderer::Impl::RenderText() {
+    DirectX::SpriteBatch* pSpriteBatch = m_pDeviceDataBuilder->GetSpriteBatch();
 
-        DirectX::SpriteFont* pFont = text.second->pSpriteFont.get();
-
-        DirectX::SimpleMath::Vector2 origin = pFont->MeasureString(text.first->Content.c_str());
-        origin /= 2.0f;
-        origin.x += text.first->OriginOffsetX;
-        origin.y += text.first->OriginOffsetY;
-
-        DirectX::SimpleMath::Vector2 position = origin;
-        position.x += text.first->PositionX;
-        position.y += text.first->PositionY;
-
-        pFont->DrawString(
-                m_pSpriteBatch.get(), 
-                text.first->Content.c_str(),
-                position, 
-                DirectX::Colors::Black, 
-                text.first->Angle, 
-                origin, 
-                text.first->Scale, 
-                DirectX::SpriteEffects_None, 
-                text.first->Layer);
+    for (const std::pair<Text* const, std::unique_ptr<DeviceData::Text>>& text : m_pDeviceDataBuilder->GetTextData()) {
+        text.second->pSpriteFont->DrawString(
+                pSpriteBatch,
+                text.first->GetContent().c_str(),
+                text.first->GetOffset(),
+                text.first->GetColor(),
+                text.first->GetAngle(),
+                { -text.first->GetOrigin().x, -text.first->GetOrigin().y },
+                text.first->GetScale(),
+                DirectX::SpriteEffects_None,
+                text.first->GetLayer());
     }
 }
 
-void Renderer::CreateDeviceDependentResources() {
+void Renderer::Impl::CreateDeviceDependentResources() {
     ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
 
     // Check Shader Model 6 support
@@ -415,214 +371,37 @@ void Renderer::CreateDeviceDependentResources() {
     }
 
     m_pGraphicsMemory = std::make_unique<DirectX::GraphicsMemory>(pDevice);
-
-    m_pResourceDescriptors = std::make_unique<DirectX::DescriptorHeap>(
-            pDevice,
-            D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-            D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-            m_spriteData.size() + m_textData.size() + 
-            m_textures.size() + m_normalMaps.size() + 
-            m_specularMaps.size());
-    m_pStates = std::make_unique<DirectX::CommonStates>(pDevice);
-
-    DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
-    resourceUploadBatch.Begin();
-
-    BuildSpriteDataResources(resourceUploadBatch);
-    BuildTextDataResources(resourceUploadBatch);
-    BuildTextureDataResources(resourceUploadBatch);
-
-    CreateRenderTargetDependentResources(resourceUploadBatch);
-
-    std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_pDeviceResources->GetCommandQueue());
-    uploadResourceFinished.wait();
+    if (m_pDeviceDataBuilder)
+        m_pDeviceDataBuilder->BuildDeviceDependentResources(m_msaaEnabled);
 }
 
-void Renderer::BuildSpriteDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
-    ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
-
-    for (std::pair<Sprite* const, std::unique_ptr<ObjectData::Sprite>>& sprite : m_spriteData) {
-        if (sprite.first->FilePath.size() < 5)
-            throw std::system_error(std::error_code(static_cast<int>(GetLastError()), std::system_category()), "BuildSpriteDataResources");
-
-        std::wstring fileExtension = sprite.first->FilePath.substr(sprite.first->FilePath.size() - 4);
-        if (fileExtension == L".png") {
-            ThrowIfFailed(DirectX::CreateWICTextureFromFile(
-                        pDevice, resourceUploadBatch, sprite.first->FilePath.c_str(), sprite.second->pTexture.ReleaseAndGetAddressOf()));  
-        } else if (fileExtension == L".dds") {
-            ThrowIfFailed(DirectX::CreateDDSTextureFromFile(
-                        pDevice, resourceUploadBatch, sprite.first->FilePath.c_str(), sprite.second->pTexture.ReleaseAndGetAddressOf()));
-        } else
-            throw std::system_error(std::error_code(static_cast<int>(GetLastError()), std::system_category()), "BuildSpriteDataResources");
-
-        DirectX::CreateShaderResourceView(pDevice, sprite.second->pTexture.Get(),
-                m_pResourceDescriptors->GetCpuHandle(sprite.second->DescriptorHeapIndex));
-
-        DirectX::XMUINT2 textureSize = DirectX::GetTextureSize(sprite.second->pTexture.Get());
-        DirectX::XMUINT2 textureSizeHalf = textureSize;
-        textureSizeHalf.x /= 2;
-        textureSizeHalf.y /= 2;
-
-        sprite.second->Origin.x = textureSizeHalf.x;
-        sprite.second->Origin.y = textureSizeHalf.y;
-
-        sprite.second->StretchRect.left   = textureSizeHalf.x; 
-        sprite.second->StretchRect.top    = textureSizeHalf.y;
-        sprite.second->StretchRect.right  = textureSizeHalf.x + textureSize.x;
-        sprite.second->StretchRect.bottom = textureSizeHalf.y + textureSize.y;
-    }
+void Renderer::Impl::CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
+    if (m_pDeviceDataBuilder)
+        m_pDeviceDataBuilder->BuildRenderTargetDependentResources(resourceUploadBatch, m_msaaEnabled);
 }
 
-void Renderer::BuildTextDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
-    ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
-
-    for (std::pair<Text* const, std::unique_ptr<ObjectData::Text>>& text : m_textData) {
-        std::unique_ptr<DirectX::SpriteFont> pFont = std::make_unique<DirectX::SpriteFont>(
-                pDevice, 
-                resourceUploadBatch,
-                text.first->FilePath.c_str(),
-                m_pResourceDescriptors->GetCpuHandle(text.second->DescriptorHeapIndex),
-                m_pResourceDescriptors->GetGpuHandle(text.second->DescriptorHeapIndex));
-
-        text.second->pSpriteFont = std::move(pFont);
-    }
+void Renderer::Impl::CreateWindowSizeDependentResources() {
+    if (m_pDeviceDataBuilder)
+        m_pDeviceDataBuilder->BuildWindowSizeDependentResources();
 }
 
-void Renderer::BuildTextureDataResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
-    ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
-
-    for (std::pair<Texture* const, std::unique_ptr<ObjectData::Texture>>& texture : m_textures) {
-        ThrowIfFailed(DirectX::CreateDDSTextureFromFile(
-                    pDevice, resourceUploadBatch, 
-                    texture.first->TextureFilePath.c_str(),
-                    texture.second->pTexture.ReleaseAndGetAddressOf()));
-        DirectX::CreateShaderResourceView(pDevice, texture.second->pTexture.Get(),
-                m_pResourceDescriptors->GetCpuHandle(texture.second->DescriptorHeapIndex));
-    }
-    for (std::pair<Texture* const, std::unique_ptr<ObjectData::Texture>>& normalMap : m_normalMaps) {
-        ThrowIfFailed(DirectX::CreateDDSTextureFromFile(
-                    pDevice, resourceUploadBatch, 
-                    normalMap.first->NormalMapFilePath.c_str(),
-                    normalMap.second->pTexture.ReleaseAndGetAddressOf()));
-        DirectX::CreateShaderResourceView(pDevice, normalMap.second->pTexture.Get(),
-                m_pResourceDescriptors->GetCpuHandle(normalMap.second->DescriptorHeapIndex));
-    }
-    for (std::pair<Texture* const, std::unique_ptr<ObjectData::Texture>>& specularMap : m_specularMaps) {
-        ThrowIfFailed(DirectX::CreateDDSTextureFromFile(
-                    pDevice, resourceUploadBatch, 
-                    specularMap.first->SpecularMapFilePath.c_str(),
-                    specularMap.second->pTexture.ReleaseAndGetAddressOf()));
-        DirectX::CreateShaderResourceView(pDevice, specularMap.second->pTexture.Get(),
-                m_pResourceDescriptors->GetCpuHandle(specularMap.second->DescriptorHeapIndex));
-    }
-}
-
-void Renderer::CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
-    ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
-
-    DirectX::RenderTargetState rtState(
-            m_pDeviceResources->GetBackBufferFormat(), 
-            m_pDeviceResources->GetDepthBufferFormat());
-    if (m_msaaEnabled) {
-        rtState.sampleDesc.Count = DeviceResources::MSAA_COUNT;
-        rtState.sampleDesc.Quality = DeviceResources::MSAA_QUALITY;
-    }
-
-    BuildPrimitivesResources(rtState);
-    BuildStaticGeoDataResources(false, rtState, resourceUploadBatch);
-    BuildStaticGeoDataResources(true, rtState, resourceUploadBatch);
-
-    DirectX::SpriteBatchPipelineStateDescription pd(rtState);
-    m_pSpriteBatch = std::make_unique<DirectX::SpriteBatch>(pDevice, resourceUploadBatch, pd);
-}
-
-void Renderer::BuildPrimitivesResources(DirectX::RenderTargetState& renderTargetState) {
-    ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
-
-    m_pDebugDisplayPrimitiveBatch = std::make_unique<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>>(pDevice);
-
-    CD3DX12_RASTERIZER_DESC rastDesc(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE, FALSE,
-            D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP,
-            D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, TRUE, TRUE, FALSE,
-            0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
-
-    DirectX::EffectPipelineStateDescription pd(
-            &DirectX::VertexPositionColor::InputLayout,
-            DirectX::CommonStates::Opaque,
-            DirectX::CommonStates::DepthDefault,
-            m_msaaEnabled ? rastDesc : DirectX::CommonStates::CullNone,
-            renderTargetState,
-            D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
-
-    m_pDebugDisplayEffect = std::make_unique<DirectX::BasicEffect>(pDevice, DirectX::EffectFlags::VertexColor, pd);
-}
-
-void Renderer::BuildStaticGeoDataResources(bool instanced, DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch) {
-    ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
-
-
-    const D3D12_INPUT_ELEMENT_DESC inputElements[] = {
-        { "SV_Position", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
-        { "NORMAL",      0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
-        { "TEXCOORD",    0, DXGI_FORMAT_R32G32_FLOAT,       0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
-        { "InstMatrix",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-        { "InstMatrix",  1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-        { "InstMatrix",  2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-    };
-
-    const D3D12_INPUT_LAYOUT_DESC layout = { inputElements, static_cast<UINT>(std::size(inputElements)) };
-
-    DirectX::EffectPipelineStateDescription pd(
-            instanced ? &layout : &DirectX::GeometricPrimitive::VertexType::InputLayout,
-            DirectX::CommonStates::Opaque,
-            DirectX::CommonStates::DepthDefault,
-            DirectX::CommonStates::CullCounterClockwise,
-            renderTargetState);
-
-    for (std::pair<StaticGeometry::Base* const, std::unique_ptr<ObjectData::StaticGeometry>>& geo : instanced ? m_instancedStaticGeoData : m_staticGeoData) {
-        if (StaticGeometry::Cube* p = dynamic_cast<StaticGeometry::Cube*>(geo.first)) 
-            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateCube(p->Size, false); 
-        else if (StaticGeometry::Box* p = dynamic_cast<StaticGeometry::Box*>(geo.first)) 
-            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateBox(p->Size, false, p->InvertNormal);
-        else if (StaticGeometry::Sphere* p = dynamic_cast<StaticGeometry::Sphere*>(geo.first)) 
-            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateSphere(p->Diameter, p->Tessellation, false, p->InvertNormal);
-        else if (StaticGeometry::GeoSphere* p = dynamic_cast<StaticGeometry::GeoSphere*>(geo.first)) 
-            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateGeoSphere(p->Diameter, p->Tessellation, false);
-        else if (StaticGeometry::Cylinder* p = dynamic_cast<StaticGeometry::Cylinder*>(geo.first)) 
-            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateCylinder(p->Height, p->Diameter, p->Tessellation, false);
-        else if (StaticGeometry::Cone* p = dynamic_cast<StaticGeometry::Cone*>(geo.first)) 
-            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateCone(p->Diameter, p->Height, p->Tessellation, false);
-        else if (StaticGeometry::Torus* p = dynamic_cast<StaticGeometry::Torus*>(geo.first)) 
-            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateTorus(p->Diameter, p->Thickness, p->Tessellation, false);
-        else if (StaticGeometry::Tetrahedron* p = dynamic_cast<StaticGeometry::Tetrahedron*>(geo.first)) 
-            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateTetrahedron(p->Size, false);
-        else if (StaticGeometry::Octahedron* p = dynamic_cast<StaticGeometry::Octahedron*>(geo.first)) 
-            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateOctahedron(p->Size, false);
-        else if (StaticGeometry::Dodecahedron* p = dynamic_cast<StaticGeometry::Dodecahedron*>(geo.first)) 
-            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateDodecahedron(p->Size, false);
-        else if (StaticGeometry::Icosahedron* p = dynamic_cast<StaticGeometry::Icosahedron*>(geo.first)) 
-            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateIcosahedron(p->Size, false);
-        else if (StaticGeometry::Custom* p = dynamic_cast<StaticGeometry::Custom*>(geo.first)) 
-            geo.second->pGeometricPrimitive = DirectX::GeometricPrimitive::CreateCustom(p->Vertices, p->Indices);
-        else
-            throw std::runtime_error("Error downcasting StaticGeometry::Base");
-
-        // Updload to dedicated video memory for better performance.
-        geo.second->pGeometricPrimitive->LoadStaticBuffers(pDevice, resourceUploadBatch);
-
-        geo.second->pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice,
-                instanced ? DirectX::EffectFlags::Instancing : DirectX::EffectFlags::Lighting, pd);
-        geo.second->pEffect->EnableDefaultLighting();
-        geo.second->pEffect->SetTexture(
-                m_pResourceDescriptors->GetGpuHandle(m_textures.at(geo.first->pTexture)->DescriptorHeapIndex),
-                m_pStates->AnisotropicWrap());
-        geo.second->pEffect->SetNormalTexture(
-                m_pResourceDescriptors->GetGpuHandle(m_normalMaps.at(geo.first->pTexture)->DescriptorHeapIndex));
-    }
-}
-
-void Renderer::CreateWindowSizeDependentResources() {
-    D3D12_VIEWPORT viewport = m_pDeviceResources->GetScreenViewport();
-    m_pSpriteBatch->SetViewport(viewport);
-}
+Renderer::Renderer(Timer& timer) 
+    noexcept : m_timer(timer), 
+    m_pImpl(std::make_unique<Impl>(this)) 
+{} 
+Renderer::~Renderer() noexcept {}
+Renderer::Renderer(Renderer&& moveFrom) noexcept : m_timer(moveFrom.m_timer), m_pImpl(std::make_unique<Impl>(this)) {}
+void Renderer::Initialize(HWND window, int width, int height) { m_pImpl->Initialize(window, width, height); }
+void Renderer::Load(Scene& scene) { m_pImpl->Load(scene); }
+void Renderer::Update() { m_pImpl->Update(); }
+void Renderer::Render() { m_pImpl->Render(); }
+void Renderer::OnActivated() { m_pImpl->OnActivated(); }
+void Renderer::OnDeactivated() { m_pImpl->OnDeactivated(); }
+void Renderer::OnSuspending() { m_pImpl->OnSuspending(); }
+void Renderer::OnResuming() { m_pImpl->OnResuming(); }
+void Renderer::OnWindowMoved() { m_pImpl->OnWindowMoved(); }
+void Renderer::OnDisplayChange() { m_pImpl->OnDisplayChange(); }
+void Renderer::OnWindowSizeChanged(int width, int height) { m_pImpl->OnWindowSizeChanged(width, height); }
+void Renderer::SetMsaa(bool state) noexcept { m_pImpl->SetMsaa(state); }
+bool Renderer::IsMsaaEnabled() const noexcept { return m_pImpl->IsMsaaEnabled(); }
 

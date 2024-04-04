@@ -1,7 +1,9 @@
 #pragma once
 
+#include <unordered_set>
+
 #include "Util/pch.h"
-#include "IDeviceNotify.h"
+#include "IDeviceObserver.h"
 
 class DeviceResources {
     public:
@@ -30,7 +32,7 @@ class DeviceResources {
         void UpdateColorSpace();
 
     public:
-        void RegisterDeviceNotify(IDeviceNotify* pDeviceNotify) noexcept;
+        void RegisterDeviceObserver(IDeviceObserver* pDeviceObserver) noexcept;
         void SetWindow(HWND window, int width, int height) noexcept;
 
         RECT GetOutputSize() const noexcept;
@@ -123,5 +125,5 @@ class DeviceResources {
         // DeviceResources options (see flags above)
         unsigned int m_options;
 
-        IDeviceNotify* m_pDeviceNotify;
+        std::unordered_set<IDeviceObserver*> m_deviceObservers;
 };

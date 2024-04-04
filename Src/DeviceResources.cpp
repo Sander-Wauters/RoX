@@ -47,7 +47,7 @@ DeviceResources::DeviceResources(
     m_outputSize{0, 0, 1, 1},
     m_colorSpace(DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709),
     m_options(flags),
-    m_pDeviceNotify(nullptr) 
+    m_deviceObservers({}) 
 {
     if (backBufferCount < 2 || backBufferCount > MAX_BACK_BUFFER_COUNT)
         throw std::out_of_range("invalid backBufferCount");
@@ -451,8 +451,10 @@ bool DeviceResources::WindowSizeChanged(int width, int height) {
 }
 
 void DeviceResources::HandleDeviceLost() {
-    if (m_pDeviceNotify)
-        m_pDeviceNotify->OnDeviceLost();
+    for (IDeviceObserver* pDeviceObserver : m_deviceObservers) {
+        if (pDeviceObserver)
+            pDeviceObserver->OnDeviceLost();
+    }
 
     for (UINT i = 0; i < m_backBufferCount; ++i) {
         m_pCommandAllocators[i].Reset();
@@ -484,8 +486,10 @@ void DeviceResources::HandleDeviceLost() {
     CreateDeviceResources();
     CreateWindowSizeDependentResources();
 
-    if (m_pDeviceNotify)
-        m_pDeviceNotify->OnDeviceRestored();
+    for (IDeviceObserver* pDeviceObserver : m_deviceObservers) {
+        if (pDeviceObserver)
+            pDeviceObserver->OnDeviceRestored();
+    }
 }
 
 void DeviceResources::Prepare(D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState) {
@@ -656,8 +660,8 @@ void DeviceResources::UpdateColorSpace() {
 
 }
 
-void DeviceResources::RegisterDeviceNotify(IDeviceNotify* pDeviceNotify) noexcept {
-    m_pDeviceNotify = pDeviceNotify;
+void DeviceResources::RegisterDeviceObserver(IDeviceObserver* pDeviceObserver) noexcept {
+    m_deviceObservers.insert(pDeviceObserver);
 }
 
 void DeviceResources::SetWindow(HWND window, int width, int height) noexcept {

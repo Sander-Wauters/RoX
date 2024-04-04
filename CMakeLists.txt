@@ -23,13 +23,16 @@ set(SOURCE
     Src/Camera.cpp
     Src/DebugDraw.cpp
     Src/DebugDraw.h
+    Src/DeviceData.h
+    Src/DeviceDataBuilder.cpp
+    Src/DeviceDataBuilder.h
     Src/DeviceResources.cpp
     Src/DeviceResources.h
-    Src/ModelLoadAssimp.cpp
-    Src/ModelLoadAssimp.h
-    Src/IDeviceNotify.h
-    Src/ObjectData.h
+    Src/IDeviceObserver.h
+    Src/Material.cpp
+    Src/Mesh.cpp
     Src/Renderer.cpp
+    Src/Scene.cpp
     Src/Timer.cpp
     Src/Window.cpp
 )
