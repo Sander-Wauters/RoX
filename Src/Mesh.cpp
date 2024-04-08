@@ -32,7 +32,7 @@ Mesh::Type Mesh::GetType() const noexcept {
     return m_type;
 }
 
-const std::vector<DirectX::XMFLOAT3X4>& Mesh::GetInstances() const noexcept {
+std::vector<DirectX::XMFLOAT3X4>& Mesh::GetInstances() noexcept {
     return m_instances;
 }
 
@@ -48,4 +48,6 @@ bool Mesh::IsVisible() const noexcept {
     return m_visible;
 }
 
-
+void Mesh::SetVisible(bool visible) noexcept {
+    m_visible = visible;
+}

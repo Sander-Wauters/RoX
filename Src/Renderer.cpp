@@ -204,8 +204,6 @@ void Renderer::Impl::OnWindowSizeChanged(int width, int height) {
     if (!m_pDeviceResources->WindowSizeChanged(width, height))
         return;
     CreateWindowSizeDependentResources();
-    Camera& camera = m_pDeviceDataBuilder->GetScene().GetCamera();
-    camera.SetFrustum(camera.GetFovY(), (float)width/height, camera.GetNearZ(), camera.GetFarZ());
 }
 
 void Renderer::Impl::SetMsaa(bool state) noexcept {
@@ -263,6 +261,8 @@ void Renderer::Impl::RenderMeshes() {
         vertexBufferInst.StrideInBytes = sizeof(DirectX::XMFLOAT3X4);
         pCommandList->IASetVertexBuffers(1, 1, &vertexBufferInst);
 
+        // TODO: Doing an std::unordered_map lookup for every mesh every frame. Bad for performance,
+        // find a way to change this to a std::vector.
         m_pDeviceDataBuilder->GetMaterialData(&mesh.first->GetMaterial())->pEffect->Apply(pCommandList);
         mesh.second->pGeometricPrimitive->DrawInstanced(pCommandList, mesh.first->GetInstances().size());
     }

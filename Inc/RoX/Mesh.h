@@ -39,12 +39,13 @@ class Mesh {
         const Material& GetMaterial() const noexcept;
         Type GetType() const noexcept;
 
-        const std::vector<DirectX::XMFLOAT3X4>& GetInstances() const noexcept;
+        std::vector<DirectX::XMFLOAT3X4>& GetInstances() noexcept;
         std::vector<DirectX::VertexPositionNormalTexture>& GetVertices() noexcept; 
         std::vector<std::uint16_t>& GetIndices() noexcept;
 
         bool IsVisible() const noexcept;
 
+        void SetVisible(bool visible) noexcept;
     
     private:
         const std::string m_name;

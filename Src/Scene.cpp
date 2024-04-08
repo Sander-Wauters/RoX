@@ -3,7 +3,6 @@
 Scene::Scene(Camera& camera) 
     noexcept : m_camera(camera),
     m_meshes({}),
-    m_materials({}),
     m_sprites({}),
     m_text({}),
     m_outlines({}),
@@ -14,8 +13,9 @@ Scene::~Scene() noexcept {
 }
 
 void Scene::Add(std::shared_ptr<Mesh> pMesh) {
-    if (m_meshes.find(pMesh->GetName()) == m_meshes.end()) {
-        m_meshes[pMesh->GetName()] = pMesh;
+    std::shared_ptr<Mesh>& entry = m_meshes[pMesh->GetName()];
+    if (!entry) {
+        entry = pMesh;
         NotifyAdd<Mesh>(pMesh.get());
     }
     else
@@ -23,8 +23,9 @@ void Scene::Add(std::shared_ptr<Mesh> pMesh) {
 }
 
 void Scene::Add(std::shared_ptr<Sprite> pSprite) {
-    if (m_sprites.find(pSprite->GetName()) == m_sprites.end()) {
-        m_sprites[pSprite->GetName()] = pSprite;
+    std::shared_ptr<Sprite>& entry = m_sprites[pSprite->GetName()];
+    if (!entry) {
+        entry = pSprite;
         NotifyAdd<Sprite>(pSprite.get());
     }
     else
@@ -32,8 +33,9 @@ void Scene::Add(std::shared_ptr<Sprite> pSprite) {
 }
 
 void Scene::Add(std::shared_ptr<Text> pText) {
-    if (m_text.find(pText->GetName()) == m_text.end()) {
-        m_text[pText->GetName()] = pText;
+    std::shared_ptr<Text>& entry = m_text[pText->GetName()];
+    if (!entry) {
+        entry = pText;
         NotifyAdd<Text>(pText.get());
     }
     else
@@ -41,8 +43,9 @@ void Scene::Add(std::shared_ptr<Text> pText) {
 }
 
 void Scene::Add(std::shared_ptr<Outline::Base> pOutline) {
-    if (m_outlines.find(pOutline->GetName()) == m_outlines.end()) {
-        m_outlines[pOutline->GetName()] = pOutline;
+    std::shared_ptr<Outline::Base>& entry = m_outlines[pOutline->GetName()];
+    if (!entry) {
+        entry = pOutline;
         NotifyAdd<Outline::Base>(pOutline.get());
     }
     else
@@ -113,3 +116,27 @@ const std::unordered_map<std::string, std::shared_ptr<Outline::Base>>& Scene::Ge
     return m_outlines;
 }
 
+
+std::uint64_t Scene::GetTotalInstanceCount() const noexcept {
+    std::uint64_t count = 0;
+    for (const std::pair<std::string const, std::shared_ptr<Mesh>>& mesh : m_meshes) {
+        count += mesh.second->GetInstances().size();
+    } 
+    return count;
+}
+
+std::uint64_t Scene::GetTotalVerticesLoaded() const noexcept {
+    std::uint64_t count = 0;
+    for (const std::pair<std::string const, std::shared_ptr<Mesh>>& mesh : m_meshes) {
+        count += mesh.second->GetVertices().size();
+    }
+    return count;
+}
+
+std::uint64_t Scene::GetTotalVerticesRendered() const noexcept {
+    std::uint64_t count = 0;
+    for (const std::pair<std::string const, std::shared_ptr<Mesh>>& mesh : m_meshes) {
+        count += mesh.second->GetVertices().size() * mesh.second->GetInstances().size();
+    }
+    return count;
+}

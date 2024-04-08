@@ -42,16 +42,18 @@ class Scene {
         const std::unordered_map<std::string, std::shared_ptr<Text>>& GetText() const noexcept;
         const std::unordered_map<std::string, std::shared_ptr<Outline::Base>>& GetOutlines() const noexcept;
 
+        std::uint64_t GetTotalInstanceCount() const noexcept;
+        std::uint64_t GetTotalVerticesLoaded() const noexcept;
+        std::uint64_t GetTotalVerticesRendered() const noexcept;
+
     private:
-        template<typename T>
-        void NotifyAdd(T* ptr) {
+        template<typename T> void NotifyAdd(T* ptr) {
             for (ISceneObserver* sceneObserver : m_sceneObservers) {
                 sceneObserver->OnAdd(ptr);
             }
         }
 
-        template<typename T>
-        void NotifyRemove(T* ptr) {
+        template<typename T> void NotifyRemove(T* ptr) {
             for (ISceneObserver* sceneObserver : m_sceneObservers) {
                 sceneObserver->OnRemove(ptr);
             }
@@ -60,7 +62,6 @@ class Scene {
     private:
         Camera& m_camera;
         std::unordered_map<std::string, std::shared_ptr<Mesh>> m_meshes;
-        std::unordered_map<std::string, std::shared_ptr<Material>> m_materials;
         std::unordered_map<std::string, std::shared_ptr<Sprite>> m_sprites;
         std::unordered_map<std::string, std::shared_ptr<Text>> m_text;
         std::unordered_map<std::string, std::shared_ptr<Outline::Base>> m_outlines;

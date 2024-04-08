@@ -59,7 +59,6 @@ void DeviceDataBuilder::OnDeviceLost() {
     for (std::pair<Text* const, std::unique_ptr<DeviceData::Text>>& text : m_textData) {
         text.second->pSpriteFont.reset();
     }
-
     for (std::pair<std::wstring const, std::unique_ptr<DeviceData::Texture>>& texture : m_textureData) {
         texture.second->pTexture.Reset();
     }
@@ -71,15 +70,17 @@ void DeviceDataBuilder::OnDeviceRestored() {
 void DeviceDataBuilder::OnAdd(Mesh* pMesh) {
     m_meshData[pMesh] = std::make_unique<DeviceData::Mesh>();
     m_materialData[&pMesh->GetMaterial()] = std::make_unique<DeviceData::Material>();
-    if (m_textureData.find(pMesh->GetMaterial().GetDiffuseMapFilePath()) == m_textureData.end()) {
-        std::unique_ptr<DeviceData::Texture> pTextureData = std::make_unique<DeviceData::Texture>();
-        pTextureData->DescriptorHeapIndex = m_nextDescriptorHeapIndex++;
-        m_textureData[pMesh->GetMaterial().GetDiffuseMapFilePath()] = std::move(pTextureData);
+
+    std::unique_ptr<DeviceData::Texture>& pDiffData = m_textureData[pMesh->GetMaterial().GetDiffuseMapFilePath()];
+    if (!pDiffData) {
+        pDiffData = std::make_unique<DeviceData::Texture>();
+        pDiffData->DescriptorHeapIndex = m_nextDescriptorHeapIndex++;
     }
-    if (m_textureData.find(pMesh->GetMaterial().GetNormalMapFilePath()) == m_textureData.end()) {
-        std::unique_ptr<DeviceData::Texture> pTextureData = std::make_unique<DeviceData::Texture>();
-        pTextureData->DescriptorHeapIndex = m_nextDescriptorHeapIndex++;
-        m_textureData[pMesh->GetMaterial().GetNormalMapFilePath()] = std::move(pTextureData);
+
+    std::unique_ptr<DeviceData::Texture>& pNormData = m_textureData[pMesh->GetMaterial().GetNormalMapFilePath()];
+    if (!pNormData) {
+        pNormData = std::make_unique<DeviceData::Texture>();
+        pNormData->DescriptorHeapIndex = m_nextDescriptorHeapIndex++;
     }
 }
 
