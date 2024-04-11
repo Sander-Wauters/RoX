@@ -20,6 +20,7 @@ set(SOURCE
     Src/Util/Logger.h
     Src/Util/pch.h
 
+    Src/AssetIO.cpp
     Src/Camera.cpp
     Src/DebugDraw.cpp
     Src/DebugDraw.h
@@ -39,8 +40,8 @@ set(SOURCE
 
 include_directories(
     Inc 
-    lib/assimp/include
-    lib/DirectXTK12/Inc
+    Lib/assimp/include
+    Lib/DirectXTK12/Inc
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE})
