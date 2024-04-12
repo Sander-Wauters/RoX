@@ -8,12 +8,13 @@
 
 namespace DeviceData {
 
-    struct Mesh {
-        std::unique_ptr<DirectX::GeometricPrimitive> pGeometricPrimitive = nullptr;     
-    };
-
     struct Material {
         std::unique_ptr<DirectX::NormalMapEffect> pEffect = nullptr;
+    };
+
+    struct Mesh {
+        Material* pMaterialData = nullptr;
+        std::unique_ptr<DirectX::GeometricPrimitive> pGeometricPrimitive = nullptr;     
     };
 
     struct Texture {

@@ -2,18 +2,11 @@
 
 #include "Mesh.h"
 
-class AssetIO {
-    public: 
-        AssetIO() = delete;
-        ~AssetIO() = delete;
+namespace AssetIO {
+    void ImportMeshFromVBO(Mesh& mesh, std::string filePath);
+    void ExportMeshToVBO(Mesh& mesh, std::string filePath);
 
-        AssetIO(AssetIO&) = delete;
-        AssetIO& operator= (AssetIO&) = delete;
-
-        AssetIO(AssetIO&&) = delete;
-        AssetIO& operator= (AssetIO&&) = delete;
-
-        static void ImportMeshFromVBO(Mesh& mesh, std::wstring filePath);
-        static void ExportMeshToVBO(Mesh& mesh, std::wstring filePath);
+    void ImportMesh(Mesh& mesh, std::string filePath);
+    void ExportMesh(Mesh& mesh, std::string filePath);
 };
 

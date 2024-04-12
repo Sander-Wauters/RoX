@@ -39,18 +39,24 @@ class Mesh {
         const Material& GetMaterial() const noexcept;
         Type GetType() const noexcept;
 
+        std::uint64_t GetCulled() const noexcept;
+
         std::vector<DirectX::XMFLOAT3X4>& GetInstances() noexcept;
         std::vector<DirectX::VertexPositionNormalTexture>& GetVertices() noexcept; 
         std::vector<std::uint16_t>& GetIndices() noexcept;
 
         bool IsVisible() const noexcept;
 
+        void SetCulled(std::uint64_t amount);
         void SetVisible(bool visible) noexcept;
     
     private:
         const std::string m_name;
         const Material& m_material;
         const Type m_type;
+
+        // The last m_culled instances in m_instances will not be sent to the GPU.
+        std::uint64_t m_culled;
 
         std::vector<DirectX::XMFLOAT3X4> m_instances;
         std::vector<DirectX::VertexPositionNormalTexture> m_vertices; 

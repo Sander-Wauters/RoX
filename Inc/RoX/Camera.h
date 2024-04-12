@@ -26,13 +26,17 @@ class Camera {
         void PointAt(DirectX::FXMVECTOR position, DirectX::FXMVECTOR target, DirectX::FXMVECTOR up) noexcept;
         void PointAt(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& target, const DirectX::XMFLOAT3& up) noexcept;
 
-        void SetFrustum(float fovY, float aspect, float nearZ, float farZ) noexcept;
+        void SetPerspectiveView(float fovY, float aspect, float nearZ, float farZ) noexcept;
+        void SetOrthographicView(float width, float height, float nearZ, float farZ) noexcept;
+
         void SetPosition(float x, float y, float z) noexcept;
         void SetPosition(DirectX::XMFLOAT3& position) noexcept;
 
         void Update() noexcept;
 
     public:
+        bool IsOrthographic() const noexcept;
+
         const DirectX::XMFLOAT3& GetPosition() const noexcept;
 
         float GetNearZ() const noexcept;
@@ -50,30 +54,21 @@ class Camera {
         const DirectX::XMFLOAT4X4& GetProjection() const noexcept;
 
     private:
-        float m_nearZ = 0.0f;
-        float m_farZ = 0.0f;
-        float m_aspect = 0.0f;
-        float m_fovY = 0.0f;
-        float m_nearWindowHeight = 0.0f;
-        float m_farWindowHeight = 0.0f;
+        float m_nearZ;
+        float m_farZ;
+        float m_aspect;
+        float m_fovY;
+        float m_nearWindowHeight;
+        float m_farWindowHeight;
 
-        bool m_outdated = false;
+        bool m_orthographic;
+        bool m_outdated;
 
-        DirectX::XMFLOAT3 m_localXAxis = { 1.0f, 0.0f, 0.0f };
-        DirectX::XMFLOAT3 m_localYAxis = { 0.0f, 1.0f, 0.0f };
-        DirectX::XMFLOAT3 m_localZAxis = { 0.0f, 0.0f, 1.0f };
-        DirectX::XMFLOAT3 m_position =   { 0.0f, 0.0f, 0.0f };
+        DirectX::XMFLOAT3 m_localXAxis;
+        DirectX::XMFLOAT3 m_localYAxis;
+        DirectX::XMFLOAT3 m_localZAxis;
+        DirectX::XMFLOAT3 m_position;
 
-        DirectX::XMFLOAT4X4 m_view = {
-            1.0f, 0.0f, 0.0f, 0.0f,
-            0.0f, 1.0f, 0.0f, 0.0f,
-            0.0f, 0.0f, 1.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 1.0f,
-        };
-        DirectX::XMFLOAT4X4 m_projection = {
-            1.0f, 0.0f, 0.0f, 0.0f,
-            0.0f, 1.0f, 0.0f, 0.0f,
-            0.0f, 0.0f, 1.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 1.0f,
-        };
+        DirectX::XMFLOAT4X4 m_view;
+        DirectX::XMFLOAT4X4 m_projection;
 };

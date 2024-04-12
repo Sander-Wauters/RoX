@@ -2,11 +2,18 @@
 
 #include <fstream>
 
-#include "Util/Logger.h"
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
-void AssetIO::ImportMeshFromVBO(Mesh& mesh, std::wstring filePath) {
-    std::wstring extension = filePath.substr(filePath.size() - 4);
-    if (extension != L".vbo")
+#define ASSIMP_LOAD_FLAGS (aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_JoinIdenticalVertices | aiProcess_ConvertToLeftHanded)
+
+void ParseVertices(std::vector<DirectX::VertexPositionNormalTexture>& vertices, const aiMesh* pMesh);
+void ParseIndices(std::vector<std::uint16_t>& indices, const aiMesh* pMesh);
+
+void AssetIO::ImportMeshFromVBO(Mesh& mesh, std::string filePath) {
+    std::string extension = filePath.substr(filePath.size() - 4);
+    if (extension != ".vbo")
         throw std::invalid_argument("Must be a .vbo file");
 
     std::ifstream file(filePath, std::ifstream::binary); 
@@ -33,10 +40,10 @@ void AssetIO::ImportMeshFromVBO(Mesh& mesh, std::wstring filePath) {
     file.close();
 }
 
-void AssetIO::ExportMeshToVBO(Mesh& mesh, std::wstring filePath) {
-    std::wstring extension = filePath.substr(filePath.size() - 4);
-    if (extension != L".vbo")
-        filePath += L".vbo";
+void AssetIO::ExportMeshToVBO(Mesh& mesh, std::string filePath) {
+    std::string extension = filePath.substr(filePath.size() - 4);
+    if (extension != ".vbo")
+        filePath += ".vbo";
 
     std::uint32_t numVertices = mesh.GetVertices().size();
     std::uint32_t numIndices = mesh.GetIndices().size();
@@ -48,4 +55,51 @@ void AssetIO::ExportMeshToVBO(Mesh& mesh, std::wstring filePath) {
         .write(reinterpret_cast<char*>(mesh.GetIndices().data()), sizeof(std::uint16_t) * numIndices);
 
     file.close();
+}
+
+void AssetIO::ImportMesh(Mesh& mesh, std::string filePath) {
+    Assimp::Importer importer;
+    const aiScene* pScene = importer.ReadFile(filePath.c_str(), ASSIMP_LOAD_FLAGS);
+
+    if (!pScene)
+        throw std::runtime_error("Error parsing '" + filePath + "': " + importer.GetErrorString());
+
+    ParseVertices(mesh.GetVertices(), pScene->mMeshes[0]);
+    ParseIndices(mesh.GetIndices(), pScene->mMeshes[0]);
+}
+
+void AssetIO::ExportMesh(Mesh& mesh, std::string filePath) {
+    // TODO
+    throw std::runtime_error("ExportMesh() is unsupported");
+}
+
+void ParseVertices(std::vector<DirectX::VertexPositionNormalTexture>& vertices, const aiMesh* pMesh) {
+    printf("Parsing vertices...\n");
+
+    vertices.resize(pMesh->mNumVertices);
+    for (int i = 0; i < pMesh->mNumVertices; ++i) {
+        vertices[i].position.x = pMesh->mVertices[i].x;
+        vertices[i].position.y = pMesh->mVertices[i].y;
+        vertices[i].position.z = pMesh->mVertices[i].z;
+
+        vertices[i].normal.x = pMesh->mNormals[i].x;
+        vertices[i].normal.y = pMesh->mNormals[i].y;
+        vertices[i].normal.z = pMesh->mNormals[i].z;
+
+        vertices[i].textureCoordinate.x = pMesh->mTextureCoords[0][i].x;
+        vertices[i].textureCoordinate.y = pMesh->mTextureCoords[0][i].y;
+    }
+}
+
+void ParseIndices(std::vector<std::uint16_t>& indices, const aiMesh* pMesh) {
+    printf("Parsing indices...\n");
+
+    indices.resize(pMesh->mNumFaces * 3);
+
+    int indicesIndex = 0;
+    for (int faceIndex = 0; faceIndex < pMesh->mNumFaces; ++faceIndex) {
+        for (int faceIndicesIndex = 0; faceIndicesIndex < pMesh->mFaces[faceIndex].mNumIndices; ++faceIndicesIndex) {
+            indices[indicesIndex++] = pMesh->mFaces[faceIndex].mIndices[faceIndicesIndex];
+        }
+    }
 }

@@ -68,8 +68,13 @@ void DeviceDataBuilder::OnDeviceRestored() {
 }
 
 void DeviceDataBuilder::OnAdd(Mesh* pMesh) {
-    m_meshData[pMesh] = std::make_unique<DeviceData::Mesh>();
-    m_materialData[&pMesh->GetMaterial()] = std::make_unique<DeviceData::Material>();
+    std::unique_ptr<DeviceData::Mesh> pMeshData = std::make_unique<DeviceData::Mesh>();
+    std::unique_ptr<DeviceData::Material>& pMaterialData = m_materialData[&pMesh->GetMaterial()];
+    if (!pMaterialData)
+        pMaterialData = std::make_unique<DeviceData::Material>();
+
+    pMeshData->pMaterialData = pMaterialData.get();
+    m_meshData[pMesh] = std::move(pMeshData);
 
     std::unique_ptr<DeviceData::Texture>& pDiffData = m_textureData[pMesh->GetMaterial().GetDiffuseMapFilePath()];
     if (!pDiffData) {

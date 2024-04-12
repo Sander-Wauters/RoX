@@ -251,7 +251,7 @@ void Renderer::Impl::RenderMeshes() {
         if (!mesh.first->IsVisible())
             continue;
 
-        const size_t instBytes = mesh.first->GetInstances().size() * sizeof(DirectX::XMFLOAT3X4);
+        const size_t instBytes = (mesh.first->GetInstances().size() - mesh.first->GetCulled()) * sizeof(DirectX::XMFLOAT3X4);
         DirectX::GraphicsResource inst = m_pGraphicsMemory->Allocate(instBytes);
         memcpy(inst.Memory(), mesh.first->GetInstances().data(), instBytes);
 
@@ -261,9 +261,7 @@ void Renderer::Impl::RenderMeshes() {
         vertexBufferInst.StrideInBytes = sizeof(DirectX::XMFLOAT3X4);
         pCommandList->IASetVertexBuffers(1, 1, &vertexBufferInst);
 
-        // TODO: Doing an std::unordered_map lookup for every mesh every frame. Bad for performance,
-        // find a way to change this to a std::vector.
-        m_pDeviceDataBuilder->GetMaterialData(&mesh.first->GetMaterial())->pEffect->Apply(pCommandList);
+        mesh.second->pMaterialData->pEffect->Apply(pCommandList);
         mesh.second->pGeometricPrimitive->DrawInstanced(pCommandList, mesh.first->GetInstances().size());
     }
 }

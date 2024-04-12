@@ -1,11 +1,28 @@
 #include "Rox/Camera.h"
 
-Camera::Camera(float fovY, float aspect, float nearZ, float farZ) noexcept {
-    SetFrustum(fovY, aspect, nearZ, farZ);
+Camera::Camera(float fovY, float aspect, float nearZ, float farZ) 
+    noexcept : m_nearZ(nearZ), m_farZ(farZ),
+    m_aspect(aspect), m_fovY(fovY),
+    m_nearWindowHeight(0.f), m_farWindowHeight(0.f),
+    m_orthographic(false), m_outdated(false),
+    m_localXAxis({ 1.f, 0.f, 0.f }),
+    m_localYAxis({ 0.f, 1.f, 0.f }),
+    m_localZAxis({ 0.f, 0.f, 1.f }),
+    m_position({ 0.f, 0.f, 0.f }),
+    m_view({1.f, 0.f, 0.f, 0.f,
+            0.f, 1.f, 0.f, 0.f,
+            0.f, 0.f, 1.f, 0.f,
+            0.f, 0.f, 0.f, 1.f}),
+    m_projection({
+            1.f, 0.f, 0.f, 0.f,
+            0.f, 1.f, 0.f, 0.f,
+            0.f, 0.f, 1.f, 0.f,
+            0.f, 0.f, 0.f, 1.f})
+{
+    SetPerspectiveView(fovY, aspect, nearZ, farZ);
 }
 
 Camera::~Camera() noexcept {
-
 }
 
 void Camera::TranslateAlongLocalXAxis(float distance) noexcept {
@@ -124,16 +141,30 @@ void Camera::PointAt(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3&
     m_outdated = true;
 }
 
-void Camera::SetFrustum(float fovY, float aspect, float nearZ, float farZ) noexcept {
+void Camera::SetPerspectiveView(float fovY, float aspect, float nearZ, float farZ) noexcept {
     m_fovY = fovY;
     m_aspect = aspect;
     m_nearZ = nearZ;
     m_farZ = farZ;
+    m_orthographic = false;
 
     m_nearWindowHeight = 2.0f * m_nearZ * tanf(0.5f * m_fovY);
     m_farWindowHeight = 2.0f * m_farZ * tanf(0.5f * m_fovY);
 
     DirectX::XMMATRIX P = DirectX::XMMatrixPerspectiveFovLH(m_fovY, m_aspect, m_nearZ, m_farZ);
+    DirectX::XMStoreFloat4x4(&m_projection, P);
+}
+
+void Camera::SetOrthographicView(float width, float height, float nearZ, float farZ) noexcept {
+    m_aspect = width/height; 
+    m_nearZ = nearZ;
+    m_farZ = farZ;
+    m_orthographic = true;
+
+    m_nearWindowHeight = 2.0f * m_nearZ * tanf(0.5f * m_fovY);
+    m_farWindowHeight = 2.0f * m_farZ * tanf(0.5f * m_fovY);
+
+    DirectX::XMMATRIX P = DirectX::XMMatrixOrthographicLH(GetNearWindowWidth(), GetNearWindowHeight(), nearZ, farZ);
     DirectX::XMStoreFloat4x4(&m_projection, P);
 }
 
@@ -190,6 +221,10 @@ void Camera::Update() noexcept {
     m_view(3, 3) = 1.0f;
 
     m_outdated = false;
+}
+
+bool Camera::IsOrthographic() const noexcept {
+    return m_orthographic;
 }
 
 const DirectX::XMFLOAT3& Camera::GetPosition() const noexcept {
