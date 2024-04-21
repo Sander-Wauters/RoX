@@ -47,13 +47,13 @@ class Scene {
         std::uint64_t GetTotalVerticesRendered() const noexcept;
 
     private:
-        template<typename T> void NotifyAdd(T* ptr) {
+        template<typename T> void NotifyAdd(std::shared_ptr<T> ptr) {
             for (ISceneObserver* sceneObserver : m_sceneObservers) {
                 sceneObserver->OnAdd(ptr);
             }
         }
 
-        template<typename T> void NotifyRemove(T* ptr) {
+        template<typename T> void NotifyRemove(std::shared_ptr<T> ptr) {
             for (ISceneObserver* sceneObserver : m_sceneObservers) {
                 sceneObserver->OnRemove(ptr);
             }

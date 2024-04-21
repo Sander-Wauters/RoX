@@ -49,6 +49,7 @@ class Renderer::Impl : public IDeviceObserver {
         void Clear();
 
         void RenderMeshes();
+        void RenderOldMeshes();
         void RenderOutlines();
         void RenderSprites();
         void RenderText();
@@ -100,8 +101,7 @@ void Renderer::Impl::Update() {
 }
 
 void Renderer::Impl::Render() {
-    // Don't try to render anything before the first Update
-    // and before a Scene is loaded.
+    // Don't try to render anything before the first Update and before a Scene is loaded.
     if (m_pOwner->m_timer.GetFrameCount() == 0 || !m_pDeviceDataBuilder)
         return;
 
@@ -121,8 +121,7 @@ void Renderer::Impl::Render() {
 
     Clear();
 
-    // Only set the descriptor heap if there are resources.
-    if (m_pDeviceDataBuilder->GetResourceDescriptorCount() > 0) {
+    if (m_pDeviceDataBuilder->HasTextures()) {
         ID3D12DescriptorHeap* heaps[] = { 
             m_pDeviceDataBuilder->GetDescriptorHeap()->Heap(), 
             m_pDeviceDataBuilder->GetStates()->Heap() 
@@ -130,13 +129,12 @@ void Renderer::Impl::Render() {
         pCommandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
     }
 
-    if (m_pDeviceDataBuilder->GetMaterialData().size() > 0) 
+    if (m_pDeviceDataBuilder->HasMaterials() && m_pDeviceDataBuilder->HasTextures()) 
         RenderMeshes();
 
     RenderOutlines();
 
-    // Sprites can only be drawn if the descriptor heaps contains there resources.
-    if (m_pDeviceDataBuilder->GetResourceDescriptorCount() > 0) {
+    if (m_pDeviceDataBuilder->HasTextures()) {
         DirectX::SpriteBatch* pSpriteBatch = m_pDeviceDataBuilder->GetSpriteBatch();
         pSpriteBatch->Begin(pCommandList, DirectX::SpriteSortMode_FrontToBack);
         RenderSprites();
@@ -191,7 +189,7 @@ void Renderer::Impl::OnResuming() {
 }
 
 void Renderer::Impl::OnWindowMoved() {
-    RECT const r = m_pDeviceResources->GetOutputSize();
+    const RECT r = m_pDeviceResources->GetOutputSize();
     m_pDeviceResources->WindowSizeChanged(r.right, r.bottom);
 }
 
@@ -247,11 +245,11 @@ void Renderer::Impl::Clear() {
 void Renderer::Impl::RenderMeshes() {
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
 
-    for (const std::pair<Mesh* const, std::unique_ptr<DeviceData::Mesh>>& mesh : m_pDeviceDataBuilder->GetMeshData()) {
+    for (auto& mesh : m_pDeviceDataBuilder->GetMeshData()) {
         if (!mesh.first->IsVisible())
             continue;
 
-        const size_t instBytes = (mesh.first->GetInstances().size() - mesh.first->GetCulled()) * sizeof(DirectX::XMFLOAT3X4);
+        const size_t instBytes = mesh.first->GetAmountOfVisibleInstances() * sizeof(DirectX::XMFLOAT3X4);
         DirectX::GraphicsResource inst = m_pGraphicsMemory->Allocate(instBytes);
         memcpy(inst.Memory(), mesh.first->GetInstances().data(), instBytes);
 
@@ -261,8 +259,20 @@ void Renderer::Impl::RenderMeshes() {
         vertexBufferInst.StrideInBytes = sizeof(DirectX::XMFLOAT3X4);
         pCommandList->IASetVertexBuffers(1, 1, &vertexBufferInst);
 
-        mesh.second->pMaterialData->pEffect->Apply(pCommandList);
-        mesh.second->pGeometricPrimitive->DrawInstanced(pCommandList, mesh.first->GetInstances().size());
+        for (std::uint64_t i = 0; i < mesh.first->GetMeshParts().size(); ++i) {
+            std::vector<std::unique_ptr<Submesh>>& submeshes = mesh.first->GetMeshParts()[i]->GetSubmeshes();
+            std::vector<std::unique_ptr<SubmeshDeviceData>>& submeshData = mesh.second->meshParts[i]->submeshes;
+            for (std::uint64_t j = 0; j < submeshes.size(); ++j) {
+                auto* pEffect = static_cast<DirectX::NormalMapEffect*>(mesh.second->effects[submeshes[j]->GetMaterialIndex()]->get());
+                pEffect->Apply(pCommandList);
+                submeshData[j]->DrawInstanced(
+                        pCommandList,
+                        submeshes[j]->GetIndexCount(),
+                        mesh.first->GetAmountOfVisibleInstances(),
+                        submeshes[j]->GetStartIndex(),
+                        submeshes[j]->GetVertexOffset());
+            }
+        }
     }
 }
 
@@ -280,23 +290,23 @@ void Renderer::Impl::RenderOutlines() {
         if (!outline.second->IsVisible())
             continue;
 
-        if (std::shared_ptr<Outline::BoundingBody<DirectX::BoundingBox>> p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingBox>>(outline.second)) 
+        if (auto p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingBox>>(outline.second)) 
             Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
-        else if (std::shared_ptr<Outline::BoundingBody<DirectX::BoundingFrustum>> p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingFrustum>>(outline.second)) 
+        else if (auto p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingFrustum>>(outline.second)) 
             Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
-        else if (std::shared_ptr<Outline::BoundingBody<DirectX::BoundingOrientedBox>> p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingOrientedBox>>(outline.second)) 
+        else if (auto p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingOrientedBox>>(outline.second)) 
             Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
-        else if (std::shared_ptr<Outline::BoundingBody<DirectX::BoundingSphere>> p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingSphere>>(outline.second)) 
+        else if (auto p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingSphere>>(outline.second)) 
             Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
-        else if (std::shared_ptr<Outline::Grid> p = std::dynamic_pointer_cast<Outline::Grid>(outline.second))
+        else if (auto p = std::dynamic_pointer_cast<Outline::Grid>(outline.second))
             DrawGrid(pOutlineBatch, p->GetXAxis(), p->GetYAxis(), p->GetOrigin(), p->GetXDivsions(), p->GetYDivsions(), p->GetColor());
-        else if (std::shared_ptr<Outline::Ring> p = std::dynamic_pointer_cast<Outline::Ring>(outline.second))
+        else if (auto p = std::dynamic_pointer_cast<Outline::Ring>(outline.second))
             DrawRing(pOutlineBatch, p->GetOrigin(), p->GetMajorAxis(), p->GetMinorAxis(), p->GetColor());
-        else if (std::shared_ptr<Outline::Ray> p = std::dynamic_pointer_cast<Outline::Ray>(outline.second)) 
+        else if (auto p = std::dynamic_pointer_cast<Outline::Ray>(outline.second)) 
             DrawRay(pOutlineBatch, p->GetOrigin(), p->GetDirection(), p->IsNormalized(), p->GetColor());
-        else if (std::shared_ptr<Outline::Triangle> p = std::dynamic_pointer_cast<Outline::Triangle>(outline.second)) 
+        else if (auto p = std::dynamic_pointer_cast<Outline::Triangle>(outline.second)) 
             DrawTriangle(pOutlineBatch, p->GetPointA(), p->GetPointB(), p->GetPointC(), p->GetColor());
-        else if (std::shared_ptr<Outline::Quad> p = std::dynamic_pointer_cast<Outline::Quad>(outline.second)) 
+        else if (auto p = std::dynamic_pointer_cast<Outline::Quad>(outline.second)) 
             DrawQuad(pOutlineBatch, p->GetPointA(), p->GetPointB(), p->GetPointC(), p->GetPointD(), p->GetColor());
     }
     pOutlineBatch->End();
@@ -305,7 +315,7 @@ void Renderer::Impl::RenderOutlines() {
 void Renderer::Impl::RenderSprites() {
     DirectX::SpriteBatch* pSpriteBatch = m_pDeviceDataBuilder->GetSpriteBatch();
 
-    for (const std::pair<Sprite* const, std::unique_ptr<DeviceData::Texture>>& sprite : m_pDeviceDataBuilder->GetSpriteData()) {
+    for (auto& sprite : m_pDeviceDataBuilder->GetSpriteData()) {
         if (!sprite.first->IsVisible())
             continue;
 
@@ -324,7 +334,7 @@ void Renderer::Impl::RenderSprites() {
         offset.y += sprite.first->GetOffset().y;
 
         pSpriteBatch->Draw(
-                m_pDeviceDataBuilder->GetDescriptorHeap()->GetGpuHandle(sprite.second->DescriptorHeapIndex),
+                m_pDeviceDataBuilder->GetDescriptorHeap()->GetGpuHandle(sprite.second->descriptorHeapIndex),
                 textureSize,
                 offset,
                 nullptr,
@@ -340,7 +350,7 @@ void Renderer::Impl::RenderSprites() {
 void Renderer::Impl::RenderText() {
     DirectX::SpriteBatch* pSpriteBatch = m_pDeviceDataBuilder->GetSpriteBatch();
 
-    for (const std::pair<Text* const, std::unique_ptr<DeviceData::Text>>& text : m_pDeviceDataBuilder->GetTextData()) {
+    for (auto& text : m_pDeviceDataBuilder->GetTextData()) {
         text.second->pSpriteFont->DrawString(
                 pSpriteBatch,
                 text.first->GetContent().c_str(),

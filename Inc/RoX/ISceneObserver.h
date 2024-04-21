@@ -7,13 +7,13 @@
 
 class ISceneObserver {
     public:
-        virtual void OnAdd(Mesh* pMesh) = 0;
-        virtual void OnAdd(Sprite* pSprite) = 0;
-        virtual void OnAdd(Text* pText) = 0;
-        virtual void OnAdd(Outline::Base* pOutline) = 0;
+        virtual void OnAdd(std::shared_ptr<Mesh> pMesh) = 0;
+        virtual void OnAdd(std::shared_ptr<Sprite> pSprite) = 0;
+        virtual void OnAdd(std::shared_ptr<Text> pText) = 0;
+        virtual void OnAdd(std::shared_ptr<Outline::Base> pOutline) = 0;
 
-        virtual void OnRemove(Mesh* pMesh) = 0;
-        virtual void OnRemove(Sprite* pSprite) = 0;
-        virtual void OnRemove(Text* pText) = 0;
-        virtual void OnRemove(Outline::Base* pOutline) = 0;
+        virtual void OnRemove(std::shared_ptr<Mesh> pMesh) = 0;
+        virtual void OnRemove(std::shared_ptr<Sprite> pSprite) = 0;
+        virtual void OnRemove(std::shared_ptr<Text> pText) = 0;
+        virtual void OnRemove(std::shared_ptr<Outline::Base> pOutline) = 0;
 };

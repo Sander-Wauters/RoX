@@ -3,13 +3,19 @@
 ## Major
 
 -   [ ] Add models.
-    -   [ ] Refactor Mesh to have sub-meshes.
-    -   [ ] Add animation, both rigid body and skinned.
+    -   [x] Refactor Mesh to have sub-meshes.
+    -   [x] Make sub-meshes shareable among meshes.
+    -   [ ] Add rigid body animation
+    -   [ ] Add skinned animation.
 
 ## Minor
 
 -   [ ] Add Material properties. (diffuse, roughness, fog, wireframe, ...)
 -   [ ] Add lighting controls.
+-   [x] Remove Type from Mesh and create a factory for this.
+-   [ ] Refactor Outline so it hold the points.
+-   [ ] Vertices and indices are currently stored twice in memory. Once in Submesh and once in SubmeshDeviceData.
+        The client should be able to decide wether or not to keep the data in Submesh after it is loaded into SubmeshDeviceData.
 
 # External libraries
 

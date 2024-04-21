@@ -11,7 +11,7 @@
 void ParseVertices(std::vector<DirectX::VertexPositionNormalTexture>& vertices, const aiMesh* pMesh);
 void ParseIndices(std::vector<std::uint16_t>& indices, const aiMesh* pMesh);
 
-void AssetIO::ImportMeshFromVBO(Mesh& mesh, std::string filePath) {
+void AssetIO::ImportMeshFromVBO(Submesh& mesh, std::string filePath) {
     std::string extension = filePath.substr(filePath.size() - 4);
     if (extension != ".vbo")
         throw std::invalid_argument("Must be a .vbo file");
@@ -31,44 +31,46 @@ void AssetIO::ImportMeshFromVBO(Mesh& mesh, std::string filePath) {
     if (!numIndices)
         throw std::runtime_error("Failed reading numIndices from .vbo file");
 
-    mesh.GetVertices().resize(numVertices);
-    file.read(reinterpret_cast<char*>(mesh.GetVertices().data()), sizeof(DirectX::VertexPositionNormalTexture) * numVertices);
+    mesh.GetVertices().get()->resize(numVertices);
+    file.read(reinterpret_cast<char*>(mesh.GetVertices().get()->data()), sizeof(DirectX::VertexPositionNormalTexture) * numVertices);
 
-    mesh.GetIndices().resize(numIndices);
-    file.read(reinterpret_cast<char*>(mesh.GetIndices().data()), sizeof(std::uint16_t) * numIndices);
+    mesh.GetIndices().get()->resize(numIndices);
+    file.read(reinterpret_cast<char*>(mesh.GetIndices().get()->data()), sizeof(std::uint16_t) * numIndices);
+    mesh.SetIndexCount(mesh.GetIndices()->size());
 
     file.close();
 }
 
-void AssetIO::ExportMeshToVBO(Mesh& mesh, std::string filePath) {
+void AssetIO::ExportMeshToVBO(Submesh& mesh, std::string filePath) {
     std::string extension = filePath.substr(filePath.size() - 4);
     if (extension != ".vbo")
         filePath += ".vbo";
 
-    std::uint32_t numVertices = mesh.GetVertices().size();
-    std::uint32_t numIndices = mesh.GetIndices().size();
+    std::uint32_t numVertices = mesh.GetVertices().get()->size();
+    std::uint32_t numIndices = mesh.GetIndices().get()->size();
    
     std::ofstream file(filePath, std::ofstream::binary);
     file.write(reinterpret_cast<char*>(&numVertices), sizeof(std::uint32_t))
         .write(reinterpret_cast<char*>(&numIndices), sizeof(std::uint32_t))
-        .write(reinterpret_cast<char*>(mesh.GetVertices().data()), sizeof(DirectX::VertexPositionNormalTexture) * numVertices)
-        .write(reinterpret_cast<char*>(mesh.GetIndices().data()), sizeof(std::uint16_t) * numIndices);
+        .write(reinterpret_cast<char*>(mesh.GetVertices().get()->data()), sizeof(DirectX::VertexPositionNormalTexture) * numVertices)
+        .write(reinterpret_cast<char*>(mesh.GetIndices().get()->data()), sizeof(std::uint16_t) * numIndices);
 
     file.close();
 }
 
-void AssetIO::ImportMesh(Mesh& mesh, std::string filePath) {
+void AssetIO::ImportMesh(Submesh& mesh, std::string filePath) {
     Assimp::Importer importer;
     const aiScene* pScene = importer.ReadFile(filePath.c_str(), ASSIMP_LOAD_FLAGS);
 
     if (!pScene)
         throw std::runtime_error("Error parsing '" + filePath + "': " + importer.GetErrorString());
 
-    ParseVertices(mesh.GetVertices(), pScene->mMeshes[0]);
-    ParseIndices(mesh.GetIndices(), pScene->mMeshes[0]);
+    ParseVertices(*mesh.GetVertices().get(), pScene->mMeshes[0]);
+    ParseIndices(*mesh.GetIndices().get(), pScene->mMeshes[0]);
+    mesh.SetIndexCount(mesh.GetIndices()->size());
 }
 
-void AssetIO::ExportMesh(Mesh& mesh, std::string filePath) {
+void AssetIO::ExportMesh(Submesh& mesh, std::string filePath) {
     // TODO
     throw std::runtime_error("ExportMesh() is unsupported");
 }

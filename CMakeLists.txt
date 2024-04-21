@@ -24,6 +24,7 @@ set(SOURCE
     Src/Camera.cpp
     Src/DebugDraw.cpp
     Src/DebugDraw.h
+    Src/DeviceData.cpp
     Src/DeviceData.h
     Src/DeviceDataBuilder.cpp
     Src/DeviceDataBuilder.h
@@ -32,6 +33,7 @@ set(SOURCE
     Src/IDeviceObserver.h
     Src/Material.cpp
     Src/Mesh.cpp
+    Src/MeshFactory.cpp
     Src/Renderer.cpp
     Src/Scene.cpp
     Src/Timer.cpp

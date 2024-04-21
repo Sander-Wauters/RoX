@@ -23,22 +23,25 @@ class DeviceDataBuilder : public IDeviceObserver, public ISceneObserver {
         void OnDeviceLost() override;
         void OnDeviceRestored() override;
 
-        void OnAdd(Mesh* pMesh) override;
-        void OnAdd(Sprite* pSprite) override;
-        void OnAdd(Text* pText) override;
-        void OnAdd(Outline::Base* pOutline) override;
+        void OnAdd(std::shared_ptr<Mesh> pMesh) override;
+        void OnAdd(std::shared_ptr<Sprite> pSprite) override;
+        void OnAdd(std::shared_ptr<Text> pText) override;
+        void OnAdd(std::shared_ptr<Outline::Base> pOutline) override;
 
-        void OnRemove(Mesh* pMesh) override;
-        void OnRemove(Sprite* pSprite) override;
-        void OnRemove(Text* pText) override;
-        void OnRemove(Outline::Base* pOutline) override;
+        void OnRemove(std::shared_ptr<Mesh> pMesh) override;
+        void OnRemove(std::shared_ptr<Sprite> pSprite) override;
+        void OnRemove(std::shared_ptr<Text> pText) override;
+        void OnRemove(std::shared_ptr<Outline::Base> pOutline) override;
 
         void Update();
 
+        bool HasMaterials() const noexcept;
+        bool HasTextures() const noexcept;
+
         void BuildDeviceDependentResources(bool msaaEnabled);
-        void BuildSpriteData(DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void BuildTextData(DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void BuildTextureData(DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void BuildSprites(DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void BuildText(DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void BuildTextures(DirectX::ResourceUploadBatch& resourceUploadBatch);
 
         void BuildRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch, bool msaaEnabled);
         void BuildMeshes(DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch);
@@ -61,13 +64,9 @@ class DeviceDataBuilder : public IDeviceObserver, public ISceneObserver {
         DirectX::BasicEffect* GetOutlineEffect() const noexcept;
         DirectX::PrimitiveBatch<DirectX::VertexPositionColor>* GetOutlineBatch() const noexcept;
 
-        const std::unordered_map<Mesh*, std::unique_ptr<DeviceData::Mesh>>& GetMeshData() const noexcept;
-        const std::unordered_map<const Material*, std::unique_ptr<DeviceData::Material>>& GetMaterialData() const noexcept;
-        const std::unordered_map<Sprite*, std::unique_ptr<DeviceData::Texture>>& GetSpriteData() const noexcept;
-        const std::unordered_map<Text*, std::unique_ptr<DeviceData::Text>>& GetTextData() const noexcept;
-
-        DeviceData::Material* GetMaterialData(const Material* pMaterial) const;
-        DeviceData::Texture* GetTextureData(std::wstring filePath) const;
+        const std::unordered_map<std::shared_ptr<Mesh>, std::unique_ptr<MeshDeviceData>>& GetMeshData() const noexcept;
+        const std::unordered_map<std::shared_ptr<Sprite>, std::unique_ptr<TextureDeviceData>>& GetSpriteData() const noexcept;
+        const std::unordered_map<std::shared_ptr<Text>, std::unique_ptr<TextDeviceData>>& GetTextData() const noexcept;
 
         size_t GetResourceDescriptorCount() const noexcept;
 
@@ -86,12 +85,11 @@ class DeviceDataBuilder : public IDeviceObserver, public ISceneObserver {
 
         std::unique_ptr<DirectX::BasicEffect> m_pOutlineEffect;
         std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>> m_pOutlinePrimitiveBatch;
-        
-        std::unordered_map<Mesh*, std::unique_ptr<DeviceData::Mesh>> m_meshData;
-        std::unordered_map<const Material*, std::unique_ptr<DeviceData::Material>> m_materialData;
-        std::unordered_map<Sprite*, std::unique_ptr<DeviceData::Texture>> m_spriteData;
-        std::unordered_map<Text*, std::unique_ptr<DeviceData::Text>> m_textData;
 
-        std::unordered_map<std::wstring, std::unique_ptr<DeviceData::Texture>> m_textureData;
-        
+        std::unordered_map<std::shared_ptr<Material>, std::unique_ptr<DirectX::IEffect>> m_materialData;
+        std::unordered_map<std::shared_ptr<Mesh>, std::unique_ptr<MeshDeviceData>> m_meshData;
+        std::unordered_map<std::shared_ptr<MeshPart>, std::shared_ptr<MeshPartDeviceData>> m_meshPartData;
+        std::unordered_map<std::wstring, std::unique_ptr<TextureDeviceData>> m_textureData;
+        std::unordered_map<std::shared_ptr<Sprite>, std::unique_ptr<TextureDeviceData>> m_spriteData;
+        std::unordered_map<std::shared_ptr<Text>, std::unique_ptr<TextDeviceData>> m_textData;  
 };

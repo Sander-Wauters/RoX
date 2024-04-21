@@ -22,7 +22,6 @@ class Renderer : public IWindowObserver {
         void Update();
         void Render();
 
-    public:
         void OnActivated() override;
         void OnDeactivated() override;
         void OnSuspending() override;
