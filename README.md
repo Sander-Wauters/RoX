@@ -17,7 +17,9 @@
 -   [ ] Vertices and indices are currently stored twice in memory. Once in Submesh and once in SubmeshDeviceData.
         The client should be able to decide wether or not to keep the data in Submesh after it is loaded into SubmeshDeviceData.
 
-# External libraries
+# Project Setup
+
+## External Libraries
 
 Clone the following libraries in the **Lib** directory.
 
