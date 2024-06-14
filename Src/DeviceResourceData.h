@@ -9,29 +9,22 @@
 #include "Util/pch.h"
 
 #include "RoX/Scene.h"
-#include "RoX/ISceneObserver.h"
 
 #include "IDeviceObserver.h"
 #include "DeviceResources.h"
 #include "DeviceData.h"
 
-class DeviceDataBuilder : public IDeviceObserver, public ISceneObserver {
+class DeviceResourceData : public IDeviceObserver {
     public:
-        DeviceDataBuilder(Scene& scene, const DeviceResources& deviceResources) noexcept;
-        ~DeviceDataBuilder() noexcept;
+        DeviceResourceData(Scene& scene, const DeviceResources& deviceResources) noexcept;
+        ~DeviceResourceData() noexcept;
 
         void OnDeviceLost() override;
         void OnDeviceRestored() override;
 
-        void OnAdd(std::shared_ptr<Mesh> pMesh) override;
-        void OnAdd(std::shared_ptr<Sprite> pSprite) override;
-        void OnAdd(std::shared_ptr<Text> pText) override;
-        void OnAdd(std::shared_ptr<Outline::Base> pOutline) override;
-
-        void OnRemove(std::shared_ptr<Mesh> pMesh) override;
-        void OnRemove(std::shared_ptr<Sprite> pSprite) override;
-        void OnRemove(std::shared_ptr<Text> pText) override;
-        void OnRemove(std::shared_ptr<Outline::Base> pOutline) override;
+        void InitDataFromScene(std::shared_ptr<Mesh> pMesh);
+        void InitDataFromScene(std::shared_ptr<Sprite> pMesh);
+        void InitDataFromScene(std::shared_ptr<Text> pMesh);
 
         void Update();
 

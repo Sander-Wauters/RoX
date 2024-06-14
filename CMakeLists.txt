@@ -26,8 +26,8 @@ set(SOURCE
     Src/DebugDraw.h
     Src/DeviceData.cpp
     Src/DeviceData.h
-    Src/DeviceDataBuilder.cpp
-    Src/DeviceDataBuilder.h
+    Src/DeviceResourceData.cpp
+    Src/DeviceResourceData.h
     Src/DeviceResources.cpp
     Src/DeviceResources.h
     Src/IDeviceObserver.h

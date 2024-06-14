@@ -1,4 +1,4 @@
-#include "DeviceDataBuilder.h"
+#include "DeviceResourceData.h"
 
 #include <unordered_set>
 
@@ -10,7 +10,7 @@
 
 #include "Exceptions/ThrowIfFailed.h"
 
-DeviceDataBuilder::DeviceDataBuilder(Scene& scene, const DeviceResources& deviceResources) 
+DeviceResourceData::DeviceResourceData(Scene& scene, const DeviceResources& deviceResources) 
     noexcept : m_scene(scene), 
     m_deviceResources(deviceResources),
     m_nextDescriptorHeapIndex(0),
@@ -20,26 +20,21 @@ DeviceDataBuilder::DeviceDataBuilder(Scene& scene, const DeviceResources& device
     m_pOutlineEffect(nullptr),
     m_pOutlinePrimitiveBatch(nullptr)
 {
-    m_scene.RegisterSceneObserver(this);
-
     for (auto& mesh : m_scene.GetMeshes()) {
-        OnAdd(mesh.second);
+        InitDataFromScene(mesh.second);
     }
     for (auto& sprite : m_scene.GetSprites()) {
-        OnAdd(sprite.second);
+        InitDataFromScene(sprite.second);
     }
     for (auto& text : m_scene.GetText()) {
-        OnAdd(text.second);
-    }
-    for (auto& outline : m_scene.GetOutlines()) {
-        OnAdd(outline.second);
+        InitDataFromScene(text.second);
     }
 }
 
-DeviceDataBuilder::~DeviceDataBuilder() noexcept {
+DeviceResourceData::~DeviceResourceData() noexcept {
 }
 
-void DeviceDataBuilder::OnDeviceLost() {
+void DeviceResourceData::OnDeviceLost() {
     m_pResourceDescriptors.reset();
     m_pStates.reset();
 
@@ -61,10 +56,10 @@ void DeviceDataBuilder::OnDeviceLost() {
     }
 }
 
-void DeviceDataBuilder::OnDeviceRestored() {
+void DeviceResourceData::OnDeviceRestored() {
 }
 
-void DeviceDataBuilder::OnAdd(std::shared_ptr<Mesh> pMesh) {
+void DeviceResourceData::InitDataFromScene(std::shared_ptr<Mesh> pMesh) {
     std::unique_ptr<MeshDeviceData>& pMeshData = m_meshData[pMesh];
     if (!pMeshData) {
         pMeshData = std::make_unique<MeshDeviceData>();
@@ -103,35 +98,15 @@ void DeviceDataBuilder::OnAdd(std::shared_ptr<Mesh> pMesh) {
     }
 }
 
-void DeviceDataBuilder::OnAdd(std::shared_ptr<Sprite> pSprite) {
+void DeviceResourceData::InitDataFromScene(std::shared_ptr<Sprite> pSprite) {
     m_spriteData[pSprite] = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
 }
 
-void DeviceDataBuilder::OnAdd(std::shared_ptr<Text> pText) {
+void DeviceResourceData::InitDataFromScene(std::shared_ptr<Text> pText) {
     m_textData[pText] = std::make_unique<TextDeviceData>(m_nextDescriptorHeapIndex++);
 }
 
-void DeviceDataBuilder::OnAdd(std::shared_ptr<Outline::Base> pOutline) {
-
-}
-
-void DeviceDataBuilder::OnRemove(std::shared_ptr<Mesh> pMesh) {
-
-}
-
-void DeviceDataBuilder::OnRemove(std::shared_ptr<Sprite> pSprite) {
-
-}
-
-void DeviceDataBuilder::OnRemove(std::shared_ptr<Text> pText) {
-
-}
-
-void DeviceDataBuilder::OnRemove(std::shared_ptr<Outline::Base> pOutline) {
-
-}
-
-void DeviceDataBuilder::Update() {
+void DeviceResourceData::Update() {
     // TODO: Client should be able to decide this.
     // Store the view and projection in the object that the client has access to.
     DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&m_scene.GetCamera().GetView());
@@ -148,15 +123,15 @@ void DeviceDataBuilder::Update() {
     }
 }
 
-bool DeviceDataBuilder::HasMaterials() const noexcept {
+bool DeviceResourceData::HasMaterials() const noexcept {
     return m_materialData.size() > 0;
 }
 
-bool DeviceDataBuilder::HasTextures() const noexcept {
+bool DeviceResourceData::HasTextures() const noexcept {
     return GetResourceDescriptorCount() > 0;
 }
 
-void DeviceDataBuilder::BuildDeviceDependentResources(bool msaaEnabled) {
+void DeviceResourceData::BuildDeviceDependentResources(bool msaaEnabled) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
     m_pResourceDescriptors = std::make_unique<DirectX::DescriptorHeap>(
@@ -179,7 +154,7 @@ void DeviceDataBuilder::BuildDeviceDependentResources(bool msaaEnabled) {
     uploadResourceFinished.wait();
 }
 
-void DeviceDataBuilder::BuildSprites(DirectX::ResourceUploadBatch& resourceUploadBatch) {
+void DeviceResourceData::BuildSprites(DirectX::ResourceUploadBatch& resourceUploadBatch) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
     for (auto& sprite : m_spriteData) {
@@ -190,7 +165,7 @@ void DeviceDataBuilder::BuildSprites(DirectX::ResourceUploadBatch& resourceUploa
     }
 }
 
-void DeviceDataBuilder::BuildText(DirectX::ResourceUploadBatch& resourceUploadBatch) {
+void DeviceResourceData::BuildText(DirectX::ResourceUploadBatch& resourceUploadBatch) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
     for (auto& text : m_textData) {
@@ -207,7 +182,7 @@ void DeviceDataBuilder::BuildText(DirectX::ResourceUploadBatch& resourceUploadBa
     }
 }
 
-void DeviceDataBuilder::BuildTextures(DirectX::ResourceUploadBatch& resourceUploadBatch) {
+void DeviceResourceData::BuildTextures(DirectX::ResourceUploadBatch& resourceUploadBatch) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
     for (auto& texture : m_textureData) {
@@ -222,7 +197,7 @@ void DeviceDataBuilder::BuildTextures(DirectX::ResourceUploadBatch& resourceUplo
     }
 }
 
-void DeviceDataBuilder::BuildRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch, bool msaaEnabled) {
+void DeviceResourceData::BuildRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch, bool msaaEnabled) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
     DirectX::RenderTargetState rtState(
@@ -241,7 +216,7 @@ void DeviceDataBuilder::BuildRenderTargetDependentResources(DirectX::ResourceUpl
     m_pSpriteBatch = std::make_unique<DirectX::SpriteBatch>(pDevice, resourceUploadBatch, pd);
 }
 
-void DeviceDataBuilder::BuildMeshes(DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch) {
+void DeviceResourceData::BuildMeshes(DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
     OutputDebugString("====================================================\n");
     for(auto& meshPart : m_meshPartData) {
@@ -282,7 +257,7 @@ void DeviceDataBuilder::BuildMeshes(DirectX::RenderTargetState& renderTargetStat
     }
 }
 
-void DeviceDataBuilder::BuildMaterials(DirectX::RenderTargetState& renderTargetState) {
+void DeviceResourceData::BuildMaterials(DirectX::RenderTargetState& renderTargetState) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
     const D3D12_INPUT_ELEMENT_DESC inputElements[] = {
@@ -317,7 +292,7 @@ void DeviceDataBuilder::BuildMaterials(DirectX::RenderTargetState& renderTargetS
 
 }
 
-void DeviceDataBuilder::BuildOutlines(DirectX::RenderTargetState& renderTargetState) {
+void DeviceResourceData::BuildOutlines(DirectX::RenderTargetState& renderTargetState) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
     m_pOutlinePrimitiveBatch = std::make_unique<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>>(pDevice);
@@ -338,17 +313,17 @@ void DeviceDataBuilder::BuildOutlines(DirectX::RenderTargetState& renderTargetSt
     m_pOutlineEffect = std::make_unique<DirectX::BasicEffect>(pDevice, DirectX::EffectFlags::VertexColor, pd);
 }
 
-void DeviceDataBuilder::BuildWindowSizeDependentResources() {
+void DeviceResourceData::BuildWindowSizeDependentResources() {
     D3D12_VIEWPORT viewport = m_deviceResources.GetScreenViewport();
     m_pSpriteBatch->SetViewport(viewport);
 }
 
-bool DeviceDataBuilder::CompareFileExtension(std::wstring filePath, std::wstring valid) {
+bool DeviceResourceData::CompareFileExtension(std::wstring filePath, std::wstring valid) {
     std::wstring extension = filePath.substr(filePath.size() - valid.size());
     return extension == valid;
 }
 
-void DeviceDataBuilder::CreateTextureFromFile(std::wstring filePath, ID3D12Resource** pTexture, DirectX::ResourceUploadBatch& resourceUploadBatch){
+void DeviceResourceData::CreateTextureFromFile(std::wstring filePath, ID3D12Resource** pTexture, DirectX::ResourceUploadBatch& resourceUploadBatch){
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
     bool isDDS = CompareFileExtension(filePath, L".dds");
@@ -365,43 +340,43 @@ void DeviceDataBuilder::CreateTextureFromFile(std::wstring filePath, ID3D12Resou
     }
 }
 
-Scene& DeviceDataBuilder::GetScene() const noexcept {
+Scene& DeviceResourceData::GetScene() const noexcept {
     return m_scene;
 }
 
-DirectX::DescriptorHeap* DeviceDataBuilder::GetDescriptorHeap() const noexcept {
+DirectX::DescriptorHeap* DeviceResourceData::GetDescriptorHeap() const noexcept {
     return m_pResourceDescriptors.get();
 }
 
-DirectX::CommonStates* DeviceDataBuilder::GetStates() const noexcept {
+DirectX::CommonStates* DeviceResourceData::GetStates() const noexcept {
     return m_pStates.get();
 }
 
-DirectX::SpriteBatch* DeviceDataBuilder::GetSpriteBatch() const noexcept {
+DirectX::SpriteBatch* DeviceResourceData::GetSpriteBatch() const noexcept {
     return m_pSpriteBatch.get();
 }
 
-DirectX::BasicEffect* DeviceDataBuilder::GetOutlineEffect() const noexcept {
+DirectX::BasicEffect* DeviceResourceData::GetOutlineEffect() const noexcept {
     return m_pOutlineEffect.get();
 }
 
-DirectX::PrimitiveBatch<DirectX::VertexPositionColor>* DeviceDataBuilder::GetOutlineBatch() const noexcept {
+DirectX::PrimitiveBatch<DirectX::VertexPositionColor>* DeviceResourceData::GetOutlineBatch() const noexcept {
     return m_pOutlinePrimitiveBatch.get();
 }
 
-const std::unordered_map<std::shared_ptr<Mesh>, std::unique_ptr<MeshDeviceData>>& DeviceDataBuilder::GetMeshData() const noexcept {
+const std::unordered_map<std::shared_ptr<Mesh>, std::unique_ptr<MeshDeviceData>>& DeviceResourceData::GetMeshData() const noexcept {
     return m_meshData;
 }
 
-const std::unordered_map<std::shared_ptr<Sprite>, std::unique_ptr<TextureDeviceData>>& DeviceDataBuilder::GetSpriteData() const noexcept {
+const std::unordered_map<std::shared_ptr<Sprite>, std::unique_ptr<TextureDeviceData>>& DeviceResourceData::GetSpriteData() const noexcept {
     return m_spriteData;
 }
 
-const std::unordered_map<std::shared_ptr<Text>, std::unique_ptr<TextDeviceData>>& DeviceDataBuilder::GetTextData() const noexcept {
+const std::unordered_map<std::shared_ptr<Text>, std::unique_ptr<TextDeviceData>>& DeviceResourceData::GetTextData() const noexcept {
     return m_textData;
 }
 
-size_t DeviceDataBuilder::GetResourceDescriptorCount() const noexcept {
+size_t DeviceResourceData::GetResourceDescriptorCount() const noexcept {
     return m_spriteData.size() + m_textData.size() + m_textureData.size(); 
 }
 

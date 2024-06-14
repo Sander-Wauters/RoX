@@ -10,7 +10,6 @@
 #include "Sprite.h"
 #include "Text.h"
 #include "Outline.h"
-#include "ISceneObserver.h"
 
 class Scene {
     public:
@@ -28,8 +27,6 @@ class Scene {
         void RemoveText(std::string name);
         void RemoveOutline(std::string name);
 
-        void RegisterSceneObserver(ISceneObserver* pSceneObserver) noexcept;
-
         Camera& GetCamera() const noexcept;
 
         const std::shared_ptr<Mesh>& GetMesh(std::string name) const;
@@ -46,18 +43,6 @@ class Scene {
         std::uint64_t GetTotalVerticesLoaded() const noexcept;
         std::uint64_t GetTotalVerticesRendered() const noexcept;
 
-    private:
-        template<typename T> void NotifyAdd(std::shared_ptr<T> ptr) {
-            for (ISceneObserver* sceneObserver : m_sceneObservers) {
-                sceneObserver->OnAdd(ptr);
-            }
-        }
-
-        template<typename T> void NotifyRemove(std::shared_ptr<T> ptr) {
-            for (ISceneObserver* sceneObserver : m_sceneObservers) {
-                sceneObserver->OnRemove(ptr);
-            }
-        }
 
     private:
         Camera& m_camera;
@@ -65,7 +50,5 @@ class Scene {
         std::unordered_map<std::string, std::shared_ptr<Sprite>> m_sprites;
         std::unordered_map<std::string, std::shared_ptr<Text>> m_text;
         std::unordered_map<std::string, std::shared_ptr<Outline::Base>> m_outlines;
-
-        std::unordered_set<ISceneObserver*> m_sceneObservers;
 };
 

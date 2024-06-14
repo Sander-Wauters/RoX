@@ -5,8 +5,7 @@ Scene::Scene(Camera& camera)
     m_meshes({}),
     m_sprites({}),
     m_text({}),
-    m_outlines({}),
-    m_sceneObservers({})
+    m_outlines({})
 {}
 
 Scene::~Scene() noexcept {
@@ -14,70 +13,50 @@ Scene::~Scene() noexcept {
 
 void Scene::Add(std::shared_ptr<Mesh> pMesh) {
     std::shared_ptr<Mesh>& entry = m_meshes[pMesh->GetName()];
-    if (!entry) {
+    if (!entry) 
         entry = pMesh;
-        NotifyAdd<Mesh>(pMesh);
-    }
     else
         throw std::invalid_argument("Scene already contains this mesh.");
 }
 
 void Scene::Add(std::shared_ptr<Sprite> pSprite) {
     std::shared_ptr<Sprite>& entry = m_sprites[pSprite->GetName()];
-    if (!entry) {
+    if (!entry)
         entry = pSprite;
-        NotifyAdd<Sprite>(pSprite);
-    }
     else
         throw std::invalid_argument("Scene already contains this sprite.");
 }
 
 void Scene::Add(std::shared_ptr<Text> pText) {
     std::shared_ptr<Text>& entry = m_text[pText->GetName()];
-    if (!entry) {
+    if (!entry) 
         entry = pText;
-        NotifyAdd<Text>(pText);
-    }
     else
         throw std::invalid_argument("Scene already contains this text.");
 }
 
 void Scene::Add(std::shared_ptr<Outline::Base> pOutline) {
     std::shared_ptr<Outline::Base>& entry = m_outlines[pOutline->GetName()];
-    if (!entry) {
+    if (!entry) 
         entry = pOutline;
-        NotifyAdd<Outline::Base>(pOutline);
-    }
     else
         throw std::invalid_argument("Scene already contains this outline.");
 }
 
 void Scene::RemoveMesh(std::string name) {
-    std::shared_ptr<Mesh>& ptr = m_meshes.at(name);
-    if (m_meshes.erase(name))
-        NotifyRemove<Mesh>(ptr);
+    m_meshes.erase(name);
 }
 
 void Scene::RemoveSprite(std::string name) {
-    std::shared_ptr<Sprite>& ptr = m_sprites.at(name);
-    if (m_sprites.erase(name))
-        NotifyRemove<Sprite>(ptr);
+    m_sprites.erase(name);
 }
 
 void Scene::RemoveText(std::string name) {
-    std::shared_ptr<Text>& ptr = m_text.at(name);
-    if (m_text.erase(name))
-        NotifyRemove<Text>(ptr);
+    m_text.erase(name);
 }
 
 void Scene::RemoveOutline(std::string name) {
-    std::shared_ptr<Outline::Base> ptr = m_outlines.at(name);
-    if (m_outlines.erase(name))
-        NotifyRemove<Outline::Base>(ptr);
-}
-
-void Scene::RegisterSceneObserver(ISceneObserver* pSceneObserver) noexcept {
-    m_sceneObservers.insert(pSceneObserver);
+    m_outlines.erase(name);
 }
 
 Camera& Scene::GetCamera() const noexcept {
