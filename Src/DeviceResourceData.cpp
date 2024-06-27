@@ -20,8 +20,8 @@ DeviceResourceData::DeviceResourceData(Scene& scene, const DeviceResources& devi
     m_pOutlineEffect(nullptr),
     m_pOutlinePrimitiveBatch(nullptr)
 {
-    for (auto& mesh : m_scene.GetMeshes()) {
-        InitDataFromScene(mesh.second);
+    for (auto& model : m_scene.GetModels()) {
+        InitDataFromScene(model.second);
     }
     for (auto& sprite : m_scene.GetSprites()) {
         InitDataFromScene(sprite.second);
@@ -59,31 +59,31 @@ void DeviceResourceData::OnDeviceLost() {
 void DeviceResourceData::OnDeviceRestored() {
 }
 
-void DeviceResourceData::InitDataFromScene(std::shared_ptr<Mesh> pMesh) {
-    std::unique_ptr<MeshDeviceData>& pMeshData = m_meshData[pMesh];
-    if (!pMeshData) {
-        pMeshData = std::make_unique<MeshDeviceData>();
+void DeviceResourceData::InitDataFromScene(std::shared_ptr<Model> pModel) {
+    std::unique_ptr<ModelDeviceData>& pModelData = m_modelData[pModel];
+    if (!pModelData) {
+        pModelData = std::make_unique<ModelDeviceData>();
 
-        pMeshData->meshParts.reserve(pMesh->GetMeshParts().size());
-        for (auto& pMeshPart : pMesh->GetMeshParts()) {
-            std::shared_ptr<MeshPartDeviceData>& pMeshPartData = m_meshPartData[pMeshPart];
-            if (!pMeshPartData) {
-                pMeshPartData = std::make_shared<MeshPartDeviceData>();
+        pModelData->meshes.reserve(pModel->GetMeshes().size());
+        for (auto& pMesh : pModel->GetMeshes()) {
+            std::shared_ptr<MeshDeviceData>& pMeshData = m_meshData[pMesh];
+            if (!pMeshData) {
+                pMeshData = std::make_shared<MeshDeviceData>();
 
-                pMeshPartData->submeshes.reserve(pMeshPart->GetSubmeshes().size());
-                for (std::uint64_t i = 0; i < pMeshPart->GetSubmeshes().size(); ++i) {
-                    pMeshPartData->submeshes.push_back(std::make_unique<SubmeshDeviceData>());
+                pMeshData->submeshes.reserve(pMesh->GetSubmeshes().size());
+                for (std::uint64_t i = 0; i < pMesh->GetSubmeshes().size(); ++i) {
+                    pMeshData->submeshes.push_back(std::make_unique<SubmeshDeviceData>());
                 }
             }
-            pMeshData->meshParts.push_back(pMeshPartData);
+            pModelData->meshes.push_back(pMeshData);
         }
-        pMeshData->meshParts.shrink_to_fit();
+        pModelData->meshes.shrink_to_fit();
 
-        pMeshData->effects.reserve(pMesh->GetMaterials().size());
-        for (auto& pMaterial : pMesh->GetMaterials()) {
+        pModelData->effects.reserve(pModel->GetMaterials().size());
+        for (auto& pMaterial : pModel->GetMaterials()) {
             std::unique_ptr<DirectX::IEffect>& pEffect = m_materialData[pMaterial];
             if (!pEffect) {
-                pMeshData->effects.push_back(&pEffect);
+                pModelData->effects.push_back(&pEffect);
 
                 std::unique_ptr<TextureDeviceData>& pDiffData = m_textureData[pMaterial->GetDiffuseMapFilePath()];
                 if (!pDiffData)
@@ -94,7 +94,7 @@ void DeviceResourceData::InitDataFromScene(std::shared_ptr<Mesh> pMesh) {
                     pNormData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
             }
         }
-        pMeshData->effects.shrink_to_fit();
+        pModelData->effects.shrink_to_fit();
     }
 }
 
@@ -115,11 +115,11 @@ void DeviceResourceData::Update() {
     m_pOutlineEffect->SetView(view);
     m_pOutlineEffect->SetProjection(projection);
 
-    for (auto& pEffect : m_materialData) {
-        auto* effect = static_cast<DirectX::NormalMapEffect*>(pEffect.second.get());
-
-        effect->SetView(view);
-        effect->SetProjection(projection);
+    for (auto& pMaterial : m_materialData) {
+        if (auto pEffect = dynamic_cast<DirectX::IEffectMatrices*>(pMaterial.second.get())) {
+            pEffect->SetView(view);
+            pEffect->SetProjection(projection);
+        }
     }
 }
 
@@ -203,12 +203,13 @@ void DeviceResourceData::BuildRenderTargetDependentResources(DirectX::ResourceUp
     DirectX::RenderTargetState rtState(
             m_deviceResources.GetBackBufferFormat(), 
             m_deviceResources.GetDepthBufferFormat());
+
     if (msaaEnabled) {
         rtState.sampleDesc.Count = DeviceResources::MSAA_COUNT;
         rtState.sampleDesc.Quality = DeviceResources::MSAA_QUALITY;
     }
 
-    BuildMeshes(rtState, resourceUploadBatch);
+    BuildModels(rtState, resourceUploadBatch);
     BuildMaterials(rtState);
     BuildOutlines(rtState);
 
@@ -216,44 +217,38 @@ void DeviceResourceData::BuildRenderTargetDependentResources(DirectX::ResourceUp
     m_pSpriteBatch = std::make_unique<DirectX::SpriteBatch>(pDevice, resourceUploadBatch, pd);
 }
 
-void DeviceResourceData::BuildMeshes(DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch) {
+void DeviceResourceData::BuildModels(DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
-    OutputDebugString("====================================================\n");
-    for(auto& meshPart : m_meshPartData) {
-        std::string debug = meshPart.first->GetName() + "\n";
-        OutputDebugString(debug.c_str());
-        for (std::uint64_t i = 0; i < meshPart.first->GetSubmeshes().size(); ++i) {
-            debug = "   " + meshPart.first->GetSubmeshes()[i]->GetName() + "\n";
-            OutputDebugString(debug.c_str());
-            SubmeshDeviceData* pSubmesh = meshPart.second->submeshes[i].get();
-            std::vector<DirectX::VertexPositionNormalTexture>* pVertices = meshPart.first->GetSubmeshes()[i]->GetVertices().get();
-            std::vector<std::uint16_t>* pIndices = meshPart.first->GetSubmeshes()[i]->GetIndices().get();
+    for(auto& mesh : m_meshData) {
+        for (std::uint64_t submeshIndex = 0; submeshIndex < mesh.first->GetNumSubmeshes(); ++submeshIndex) {
+            Submesh* pSubmesh = mesh.first->GetSubmeshes()[submeshIndex].get();
+            SubmeshDeviceData* pSubmeshDeviceData = mesh.second->submeshes[submeshIndex].get();
 
-            if (pVertices->size() >= USHRT_MAX)
+            if (pSubmesh->GetNumVertices() >= USHRT_MAX)
                 throw std::invalid_argument("Too many vertices for a 16-bit index buffer");
-            if (pIndices->size() > UINT32_MAX)
+            if (pSubmesh->GetNumIndices() > UINT32_MAX)
                 throw std::invalid_argument("Too many indices");
 
-            std::uint64_t sizeInBytes = static_cast<std::uint32_t>(pVertices->size()) * sizeof(DirectX::VertexPositionNormalTexture);
+            std::uint32_t sizeInBytes = static_cast<std::uint32_t>(pSubmesh->GetNumVertices()) * sizeof(DirectX::VertexPositionNormalTexture);
             if (sizeInBytes > static_cast<std::uint32_t>(D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u))
                 throw std::invalid_argument("VB too large for DirectX 12");
 
-            pSubmesh->vertexBufferSize = sizeInBytes;      
-            pSubmesh->vertexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(sizeInBytes, 16, DirectX::GraphicsMemory::TAG_VERTEX);
-            memcpy(pSubmesh->vertexBuffer.Memory(), pVertices->data(), sizeInBytes);
+            pSubmeshDeviceData->vertexBufferSize = sizeInBytes;      
+            pSubmeshDeviceData->vertexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(sizeInBytes, 16, DirectX::GraphicsMemory::TAG_VERTEX);
+            memcpy(pSubmeshDeviceData->vertexBuffer.Memory(), pSubmesh->GetVertices()->data(), sizeInBytes);
 
-            sizeInBytes = static_cast<std::uint32_t>(pIndices->size()) * sizeof(std::uint16_t);
+            sizeInBytes = static_cast<std::uint32_t>(pSubmesh->GetNumIndices()) * sizeof(std::uint16_t);
             if (sizeInBytes > static_cast<std::uint32_t>(D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u))
                 throw std::invalid_argument("IB too large for DirectX 12");
 
-            pSubmesh->indexBufferSize = sizeInBytes;
-            pSubmesh->indexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(sizeInBytes, 16, DirectX::GraphicsMemory::TAG_INDEX);
-            memcpy(pSubmesh->indexBuffer.Memory(), pIndices->data(), sizeInBytes);
+            pSubmeshDeviceData->indexBufferSize = sizeInBytes;
+            pSubmeshDeviceData->indexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(sizeInBytes, 16, DirectX::GraphicsMemory::TAG_INDEX);
+            memcpy(pSubmeshDeviceData->indexBuffer.Memory(), pSubmesh->GetIndices()->data(), sizeInBytes);
         }
     }
 
-    for (auto& mesh : m_meshData) {
-        mesh.second->LoadStaticBuffers(pDevice, resourceUploadBatch);
+    for (auto& model : m_modelData) {
+        model.second->LoadStaticBuffers(pDevice, resourceUploadBatch);
     }
 }
 
@@ -271,23 +266,37 @@ void DeviceResourceData::BuildMaterials(DirectX::RenderTargetState& renderTarget
 
     const D3D12_INPUT_LAYOUT_DESC layout = { inputElements, static_cast<UINT>(std::size(inputElements)) };
 
-    DirectX::EffectPipelineStateDescription pd(
-            &layout,
-            DirectX::CommonStates::Opaque,
-            DirectX::CommonStates::DepthDefault,
-            DirectX::CommonStates::CullCounterClockwise,
-            renderTargetState);
+    for (auto& material : m_materialData) {
+        std::uint32_t flags = material.first->GetFlags();
+        std::unique_ptr<DirectX::NormalMapEffect> pEffect;
 
-    for (auto& effect : m_materialData) {
-        auto pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Instancing, pd);
+        if (flags & RenderFlags::Instancing) {
+            DirectX::EffectPipelineStateDescription pd(
+                    &layout,
+                    DirectX::CommonStates::Opaque,
+                    DirectX::CommonStates::DepthDefault,
+                    DirectX::CommonStates::CullCounterClockwise,
+                    renderTargetState);
+            pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Instancing, pd);
+        } else {
+            DirectX::EffectPipelineStateDescription pd(
+                    &DirectX::VertexPositionNormalTexture::InputLayout,
+                    DirectX::CommonStates::Opaque,
+                    DirectX::CommonStates::DepthDefault,
+                    DirectX::CommonStates::CullCounterClockwise,
+                    renderTargetState);
+
+            pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting | DirectX::EffectFlags::Texture, pd);
+        }
+
         pEffect->EnableDefaultLighting();
         pEffect->SetTexture(
-                m_pResourceDescriptors->GetGpuHandle(m_textureData.at(effect.first->GetDiffuseMapFilePath())->descriptorHeapIndex),
+                m_pResourceDescriptors->GetGpuHandle(m_textureData.at(material.first->GetDiffuseMapFilePath())->descriptorHeapIndex),
                 m_pStates->AnisotropicWrap());
         pEffect->SetNormalTexture(
-                m_pResourceDescriptors->GetGpuHandle(m_textureData.at(effect.first->GetNormalMapFilePath())->descriptorHeapIndex));
+                m_pResourceDescriptors->GetGpuHandle(m_textureData.at(material.first->GetNormalMapFilePath())->descriptorHeapIndex));
 
-        effect.second = std::move(pEffect);
+        material.second = std::move(pEffect);
     }
 
 }
@@ -364,8 +373,8 @@ DirectX::PrimitiveBatch<DirectX::VertexPositionColor>* DeviceResourceData::GetOu
     return m_pOutlinePrimitiveBatch.get();
 }
 
-const std::unordered_map<std::shared_ptr<Mesh>, std::unique_ptr<MeshDeviceData>>& DeviceResourceData::GetMeshData() const noexcept {
-    return m_meshData;
+const std::unordered_map<std::shared_ptr<Model>, std::unique_ptr<ModelDeviceData>>& DeviceResourceData::GetModelData() const noexcept {
+    return m_modelData;
 }
 
 const std::unordered_map<std::shared_ptr<Sprite>, std::unique_ptr<TextureDeviceData>>& DeviceResourceData::GetSpriteData() const noexcept {

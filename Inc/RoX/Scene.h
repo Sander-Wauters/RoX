@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "Camera.h"
-#include "Mesh.h"
+#include "Model.h"
 #include "Material.h"
 #include "Sprite.h"
 #include "Text.h"
@@ -17,7 +17,7 @@ class Scene {
         ~Scene() noexcept;
 
     public:
-        void Add(std::shared_ptr<Mesh> pMesh);
+        void Add(std::shared_ptr<Model> pModel);
         void Add(std::shared_ptr<Sprite> pSprite);
         void Add(std::shared_ptr<Text> pText);
         void Add(std::shared_ptr<Outline::Base> pOutline);
@@ -29,12 +29,12 @@ class Scene {
 
         Camera& GetCamera() const noexcept;
 
-        const std::shared_ptr<Mesh>& GetMesh(std::string name) const;
+        const std::shared_ptr<Model>& GetModel(std::string name) const;
         const std::shared_ptr<Sprite>& GetSprite(std::string name) const;
         const std::shared_ptr<Text>& GetText(std::string name) const;
         const std::shared_ptr<Outline::Base>& GetOutline(std::string name) const;
 
-        const std::unordered_map<std::string, std::shared_ptr<Mesh>>& GetMeshes() const noexcept;
+        const std::unordered_map<std::string, std::shared_ptr<Model>>& GetModels() const noexcept;
         const std::unordered_map<std::string, std::shared_ptr<Sprite>>& GetSprites() const noexcept;
         const std::unordered_map<std::string, std::shared_ptr<Text>>& GetText() const noexcept;
         const std::unordered_map<std::string, std::shared_ptr<Outline::Base>>& GetOutlines() const noexcept;
@@ -46,7 +46,7 @@ class Scene {
 
     private:
         Camera& m_camera;
-        std::unordered_map<std::string, std::shared_ptr<Mesh>> m_meshes;
+        std::unordered_map<std::string, std::shared_ptr<Model>> m_models;
         std::unordered_map<std::string, std::shared_ptr<Sprite>> m_sprites;
         std::unordered_map<std::string, std::shared_ptr<Text>> m_text;
         std::unordered_map<std::string, std::shared_ptr<Outline::Base>> m_outlines;

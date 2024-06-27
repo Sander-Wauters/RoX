@@ -2,7 +2,7 @@
 
 Scene::Scene(Camera& camera) 
     noexcept : m_camera(camera),
-    m_meshes({}),
+    m_models({}),
     m_sprites({}),
     m_text({}),
     m_outlines({})
@@ -11,8 +11,8 @@ Scene::Scene(Camera& camera)
 Scene::~Scene() noexcept {
 }
 
-void Scene::Add(std::shared_ptr<Mesh> pMesh) {
-    std::shared_ptr<Mesh>& entry = m_meshes[pMesh->GetName()];
+void Scene::Add(std::shared_ptr<Model> pMesh) {
+    std::shared_ptr<Model>& entry = m_models[pMesh->GetName()];
     if (!entry) 
         entry = pMesh;
     else
@@ -44,7 +44,7 @@ void Scene::Add(std::shared_ptr<Outline::Base> pOutline) {
 }
 
 void Scene::RemoveMesh(std::string name) {
-    m_meshes.erase(name);
+    m_models.erase(name);
 }
 
 void Scene::RemoveSprite(std::string name) {
@@ -63,8 +63,8 @@ Camera& Scene::GetCamera() const noexcept {
     return m_camera;
 }
 
-const std::shared_ptr<Mesh>& Scene::GetMesh(std::string name) const {
-    return m_meshes.at(name);
+const std::shared_ptr<Model>& Scene::GetModel(std::string name) const {
+    return m_models.at(name);
 }
 
 const std::shared_ptr<Sprite>& Scene::GetSprite(std::string name) const {
@@ -79,8 +79,8 @@ const std::shared_ptr<Outline::Base>& Scene::GetOutline(std::string name) const 
     return m_outlines.at(name); 
 }
 
-const std::unordered_map<std::string, std::shared_ptr<Mesh>>& Scene::GetMeshes() const noexcept {
-    return m_meshes;
+const std::unordered_map<std::string, std::shared_ptr<Model>>& Scene::GetModels() const noexcept {
+    return m_models;
 }
 
 const std::unordered_map<std::string, std::shared_ptr<Sprite>>& Scene::GetSprites() const noexcept {
@@ -98,18 +98,22 @@ const std::unordered_map<std::string, std::shared_ptr<Outline::Base>>& Scene::Ge
 
 std::uint64_t Scene::GetTotalInstanceCount() const noexcept {
     std::uint64_t count = 0;
-    for (auto& mesh : m_meshes) {
-        count += mesh.second->GetAmountOfVisibleInstances();
+    for (auto& model : m_models) {
+        for (auto& mesh : model.second->GetMeshes()) {
+            for (auto& submesh : mesh->GetSubmeshes()) {
+                count += submesh->GetNumVisibleInstances();
+            }
+        }
     } 
     return count;
 }
 
 std::uint64_t Scene::GetTotalVerticesLoaded() const noexcept {
     std::uint64_t count = 0;
-    for (auto& mesh : m_meshes) {
-        for (auto& meshPart : mesh.second->GetMeshParts()) {
-            for (auto& submesh : meshPart->GetSubmeshes()) {
-                count += submesh->GetVertices().get()->size();
+    for (auto& model : m_models) {
+        for (auto& mesh : model.second->GetMeshes()) {
+            for (auto& submesh : mesh->GetSubmeshes()) {
+                count += submesh->GetNumVertices();
             }
         }
     }
@@ -118,10 +122,10 @@ std::uint64_t Scene::GetTotalVerticesLoaded() const noexcept {
 
 std::uint64_t Scene::GetTotalVerticesRendered() const noexcept {
     std::uint64_t count = 0;
-    for (auto& mesh : m_meshes) {
-        for (auto& meshPart : mesh.second->GetMeshParts()) {
-            for (auto& submesh : meshPart->GetSubmeshes()) {
-                count += submesh->GetVertices().get()->size() * mesh.second->GetAmountOfVisibleInstances();
+    for (auto& model : m_models) {
+        for (auto& mesh : model.second->GetMeshes()) {
+            for (auto& submesh : mesh->GetSubmeshes()) {
+                count += submesh->GetNumVertices() * submesh->GetNumVisibleInstances();
             }
         }
     }

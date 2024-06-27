@@ -6,7 +6,11 @@
 #include <Effects.h>
 #include <SpriteFont.h>
 
+#include "RoX/Model.h"
+
 #include "Util/pch.h"
+
+struct ModelDeviceData;
 
 struct TextureDeviceData {
     TextureDeviceData(std::uint32_t heapIndex) noexcept;
@@ -22,46 +26,44 @@ struct TextDeviceData {
     std::unique_ptr<DirectX::SpriteFont> pSpriteFont;
 };
 
-class SubmeshDeviceData {
-    public:
-        SubmeshDeviceData() noexcept;
+struct SubmeshDeviceData {
+    SubmeshDeviceData() noexcept;
 
-        void Draw(ID3D12GraphicsCommandList* pCommandList) const;
-        void DrawInstanced(
-                ID3D12GraphicsCommandList* pCommandList, 
-                std::uint32_t indexCount, 
-                std::uint32_t instanceCount, 
-                std::uint32_t startIndex, 
-                std::uint32_t vertexOffset, 
-                std::uint32_t startInstance = 0) const;
+    void PrepareForDraw(ID3D12GraphicsCommandList* pCommandList) const;
 
-        std::uint32_t vertexStride;
-        std::uint32_t indexBufferSize;
-        std::uint32_t vertexBufferSize;
+    void Draw(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh) const;
+    void Draw(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh, DirectX::IEffect* pEffect) const;
 
-        D3D_PRIMITIVE_TOPOLOGY primitiveType;
-        DXGI_FORMAT indexFormat;
-        DirectX::SharedGraphicsResource indexBuffer;
-        DirectX::SharedGraphicsResource vertexBuffer;
-        Microsoft::WRL::ComPtr<ID3D12Resource> staticIndexBuffer;
-        Microsoft::WRL::ComPtr<ID3D12Resource> staticVertexBuffer;
-        std::shared_ptr<std::vector<D3D12_INPUT_ELEMENT_DESC>> pVbDecl;
+    void DrawInstanced(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh) const;
+    void DrawInstanced(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh, DirectX::IEffect* pEffect) const;
+
+    DirectX::IEffect* GetEffect(ModelDeviceData* pModel, Submesh* pSubmesh) const;
+
+    std::uint32_t vertexStride;
+    std::uint32_t indexBufferSize;
+    std::uint32_t vertexBufferSize;
+
+    D3D_PRIMITIVE_TOPOLOGY primitiveType;
+    DXGI_FORMAT indexFormat;
+    DirectX::SharedGraphicsResource indexBuffer;
+    DirectX::SharedGraphicsResource vertexBuffer;
+    Microsoft::WRL::ComPtr<ID3D12Resource> staticIndexBuffer;
+    Microsoft::WRL::ComPtr<ID3D12Resource> staticVertexBuffer;
+    std::shared_ptr<std::vector<D3D12_INPUT_ELEMENT_DESC>> pVbDecl;
 };
 
-class MeshPartDeviceData {
-    public:
-        MeshPartDeviceData() = default;
+struct MeshDeviceData {
+    MeshDeviceData() = default;
 
-        std::vector<std::unique_ptr<SubmeshDeviceData>> submeshes;
+    std::vector<std::unique_ptr<SubmeshDeviceData>> submeshes;
 };
 
-class MeshDeviceData {
-    public:
-        MeshDeviceData() = default;
+struct ModelDeviceData {
+    ModelDeviceData() = default;
 
-        std::vector<std::unique_ptr<DirectX::IEffect>*> effects;
-        std::vector<std::shared_ptr<MeshPartDeviceData>> meshParts;
+    std::vector<std::unique_ptr<DirectX::IEffect>*> effects;
+    std::vector<std::shared_ptr<MeshDeviceData>> meshes;
 
-        void LoadStaticBuffers(ID3D12Device* pDevice, DirectX::ResourceUploadBatch& resourceUploadBatch, bool keepMemory = false);
+    void LoadStaticBuffers(ID3D12Device* pDevice, DirectX::ResourceUploadBatch& resourceUploadBatch, bool keepMemory = false);
 };
 

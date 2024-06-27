@@ -245,32 +245,43 @@ void Renderer::Impl::Clear() {
 void Renderer::Impl::RenderMeshes() {
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
 
-    for (auto& mesh : m_pDeviceResourceData->GetMeshData()) {
-        if (!mesh.first->IsVisible())
+    for (auto& model : m_pDeviceResourceData->GetModelData()) {
+        if (!model.first->IsVisible())
             continue;
 
-        const size_t instBytes = mesh.first->GetAmountOfVisibleInstances() * sizeof(DirectX::XMFLOAT3X4);
-        DirectX::GraphicsResource inst = m_pGraphicsMemory->Allocate(instBytes);
-        memcpy(inst.Memory(), mesh.first->GetInstances().data(), instBytes);
+        for (std::uint64_t meshIndex = 0; meshIndex < model.first->GetNumMeshes(); ++meshIndex) {
+            Mesh* pMesh = model.first->GetMeshes()[meshIndex].get();
+            MeshDeviceData* pMeshData = model.second->meshes[meshIndex].get();
 
-        D3D12_VERTEX_BUFFER_VIEW vertexBufferInst = {};
-        vertexBufferInst.BufferLocation = inst.GpuAddress();
-        vertexBufferInst.SizeInBytes = static_cast<UINT>(instBytes);
-        vertexBufferInst.StrideInBytes = sizeof(DirectX::XMFLOAT3X4);
-        pCommandList->IASetVertexBuffers(1, 1, &vertexBufferInst);
+            if (!pMesh->IsVisible())
+                continue;
 
-        for (std::uint64_t i = 0; i < mesh.first->GetMeshParts().size(); ++i) {
-            std::vector<std::unique_ptr<Submesh>>& submeshes = mesh.first->GetMeshParts()[i]->GetSubmeshes();
-            std::vector<std::unique_ptr<SubmeshDeviceData>>& submeshData = mesh.second->meshParts[i]->submeshes;
-            for (std::uint64_t j = 0; j < submeshes.size(); ++j) {
-                auto* pEffect = static_cast<DirectX::NormalMapEffect*>(mesh.second->effects[submeshes[j]->GetMaterialIndex()]->get());
-                pEffect->Apply(pCommandList);
-                submeshData[j]->DrawInstanced(
-                        pCommandList,
-                        submeshes[j]->GetIndexCount(),
-                        mesh.first->GetAmountOfVisibleInstances(),
-                        submeshes[j]->GetStartIndex(),
-                        submeshes[j]->GetVertexOffset());
+            for (std::uint64_t submeshIndex = 0; submeshIndex < pMesh->GetNumSubmeshes(); ++submeshIndex) {
+                Submesh* pSubmesh = pMesh->GetSubmeshes()[submeshIndex].get();
+                SubmeshDeviceData* pSubmeshData = pMeshData->submeshes[submeshIndex].get();
+
+                if (!pSubmesh->IsVisible())
+                    continue;
+
+                DirectX::IEffect* pEffect = pSubmeshData->GetEffect(model.second.get(), pSubmesh);
+
+                std::uint32_t flags = pSubmesh->GetMaterial(model.first.get())->GetFlags();
+
+                if (flags & RenderFlags::Instancing) {
+                    const size_t instBytes = pSubmesh->GetNumVisibleInstances() * sizeof(DirectX::XMFLOAT3X4);
+                    DirectX::GraphicsResource inst = m_pGraphicsMemory->Allocate(instBytes);
+                    memcpy(inst.Memory(), pSubmesh->GetInstances().data(), instBytes);
+
+                    D3D12_VERTEX_BUFFER_VIEW vertexBufferInst = {};
+                    vertexBufferInst.BufferLocation = inst.GpuAddress();
+                    vertexBufferInst.SizeInBytes = static_cast<UINT>(instBytes);
+                    vertexBufferInst.StrideInBytes = sizeof(DirectX::XMFLOAT3X4);
+                    pCommandList->IASetVertexBuffers(1, 1, &vertexBufferInst);
+
+                    pSubmeshData->DrawInstanced(pCommandList, pSubmesh, pEffect);
+                } else {
+                    pSubmeshData->Draw(pCommandList, pSubmesh, pEffect);
+                }
             }
         }
     }

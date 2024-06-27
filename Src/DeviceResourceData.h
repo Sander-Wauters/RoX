@@ -22,9 +22,9 @@ class DeviceResourceData : public IDeviceObserver {
         void OnDeviceLost() override;
         void OnDeviceRestored() override;
 
-        void InitDataFromScene(std::shared_ptr<Mesh> pMesh);
-        void InitDataFromScene(std::shared_ptr<Sprite> pMesh);
-        void InitDataFromScene(std::shared_ptr<Text> pMesh);
+        void InitDataFromScene(std::shared_ptr<Model> pModel);
+        void InitDataFromScene(std::shared_ptr<Sprite> pSprite);
+        void InitDataFromScene(std::shared_ptr<Text> pText);
 
         void Update();
 
@@ -37,7 +37,7 @@ class DeviceResourceData : public IDeviceObserver {
         void BuildTextures(DirectX::ResourceUploadBatch& resourceUploadBatch);
 
         void BuildRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch, bool msaaEnabled);
-        void BuildMeshes(DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void BuildModels(DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch);
         void BuildMaterials(DirectX::RenderTargetState& renderTargetState);
         void BuildOutlines(DirectX::RenderTargetState& renderTargetState);
 
@@ -57,7 +57,7 @@ class DeviceResourceData : public IDeviceObserver {
         DirectX::BasicEffect* GetOutlineEffect() const noexcept;
         DirectX::PrimitiveBatch<DirectX::VertexPositionColor>* GetOutlineBatch() const noexcept;
 
-        const std::unordered_map<std::shared_ptr<Mesh>, std::unique_ptr<MeshDeviceData>>& GetMeshData() const noexcept;
+        const std::unordered_map<std::shared_ptr<Model>, std::unique_ptr<ModelDeviceData>>& GetModelData() const noexcept;
         const std::unordered_map<std::shared_ptr<Sprite>, std::unique_ptr<TextureDeviceData>>& GetSpriteData() const noexcept;
         const std::unordered_map<std::shared_ptr<Text>, std::unique_ptr<TextDeviceData>>& GetTextData() const noexcept;
 
@@ -80,8 +80,8 @@ class DeviceResourceData : public IDeviceObserver {
         std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>> m_pOutlinePrimitiveBatch;
 
         std::unordered_map<std::shared_ptr<Material>, std::unique_ptr<DirectX::IEffect>> m_materialData;
-        std::unordered_map<std::shared_ptr<Mesh>, std::unique_ptr<MeshDeviceData>> m_meshData;
-        std::unordered_map<std::shared_ptr<MeshPart>, std::shared_ptr<MeshPartDeviceData>> m_meshPartData;
+        std::unordered_map<std::shared_ptr<Model>, std::unique_ptr<ModelDeviceData>> m_modelData;
+        std::unordered_map<std::shared_ptr<Mesh>, std::shared_ptr<MeshDeviceData>> m_meshData;
         std::unordered_map<std::wstring, std::unique_ptr<TextureDeviceData>> m_textureData;
         std::unordered_map<std::shared_ptr<Sprite>, std::unique_ptr<TextureDeviceData>> m_spriteData;
         std::unordered_map<std::shared_ptr<Text>, std::unique_ptr<TextDeviceData>> m_textData;  

@@ -30,18 +30,7 @@ SubmeshDeviceData::SubmeshDeviceData::SubmeshDeviceData()
     indexFormat(DXGI_FORMAT_R16_UINT)
 {}
 
-void SubmeshDeviceData::Draw(ID3D12GraphicsCommandList* pCommandList) const {
-
-}
-
-void SubmeshDeviceData::DrawInstanced(
-        ID3D12GraphicsCommandList* pCommandList, 
-        std::uint32_t indexCount, 
-        std::uint32_t instanceCount, 
-        std::uint32_t startIndex, 
-        std::uint32_t vertexOffset, 
-        std::uint32_t startInstance) const 
-{
+void SubmeshDeviceData::PrepareForDraw(ID3D12GraphicsCommandList* pCommandList) const {
     if (!indexBufferSize || !vertexBufferSize) 
         throw std::runtime_error("Submesh is missing values for vertex and/or index buffer size: vertexBufferSize=" + std::to_string(vertexBufferSize) + "; indexBufferSize=" + std::to_string(indexBufferSize));
     if (!staticIndexBuffer && !indexBuffer)
@@ -62,23 +51,57 @@ void SubmeshDeviceData::DrawInstanced(
     pCommandList->IASetIndexBuffer(&ibv);
 
     pCommandList->IASetPrimitiveTopology(primitiveType);
-    pCommandList->DrawIndexedInstanced(indexCount, instanceCount, startIndex, vertexOffset, startInstance);
 }
 
-// ---------------------------------------------------------------- //
-//                          MeshPartDeviceData
-// ---------------------------------------------------------------- //
+void SubmeshDeviceData::Draw(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh) const {
+    assert(pSubmesh != nullptr);
+    
+    PrepareForDraw(pCommandList);
+    pCommandList->DrawIndexedInstanced(pSubmesh->GetIndexCount(), 1, pSubmesh->GetStartIndex(), pSubmesh->GetVertexOffset(), 0);
+}
 
+void SubmeshDeviceData::Draw(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh, DirectX::IEffect* pEffect) const {
+    assert(pEffect != nullptr);
+    
+    if (auto pEffectMatrices = dynamic_cast<DirectX::NormalMapEffect*>(pEffect))
+        pEffectMatrices->SetWorld(DirectX::XMLoadFloat3x4(&pSubmesh->GetInstances()[0]));
+    
+    pEffect->Apply(pCommandList);
+    Draw(pCommandList, pSubmesh);
+}
 
+void SubmeshDeviceData::DrawInstanced(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh) const {
+    assert(pSubmesh != nullptr);
+
+    PrepareForDraw(pCommandList);
+    pCommandList->DrawIndexedInstanced(pSubmesh->GetIndexCount(), pSubmesh->GetNumVisibleInstances(), pSubmesh->GetStartIndex(), pSubmesh->GetVertexOffset(), 0);
+}
+
+void SubmeshDeviceData::DrawInstanced(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh, DirectX::IEffect* pEffect) const {
+    assert(pEffect != nullptr);
+
+    pEffect->Apply(pCommandList);
+    DrawInstanced(pCommandList, pSubmesh);
+}
+
+DirectX::IEffect* SubmeshDeviceData::GetEffect(ModelDeviceData* pModel, Submesh* pSubmesh) const {
+    return pModel->effects[pSubmesh->GetMaterialIndex()]->get();
+}
 
 // ---------------------------------------------------------------- //
 //                          MeshDeviceData
 // ---------------------------------------------------------------- //
 
-void MeshDeviceData::LoadStaticBuffers(ID3D12Device* pDevice, DirectX::ResourceUploadBatch& resourceUploadBatch, bool keepMemory) {
+
+
+// ---------------------------------------------------------------- //
+//                          ModelDeviceData
+// ---------------------------------------------------------------- //
+
+void ModelDeviceData::LoadStaticBuffers(ID3D12Device* pDevice, DirectX::ResourceUploadBatch& resourceUploadBatch, bool keepMemory) {
     std::set<SubmeshDeviceData*> uniqueSubmeshes;
-    for (const auto& part : meshParts) {
-        for (const auto& submesh : part->submeshes) {
+    for (const auto& mesh : meshes) {
+        for (const auto& submesh : mesh->submeshes) {
             uniqueSubmeshes.insert(submesh.get());
         }
     }

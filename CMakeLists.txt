@@ -32,8 +32,8 @@ set(SOURCE
     Src/DeviceResources.h
     Src/IDeviceObserver.h
     Src/Material.cpp
-    Src/Mesh.cpp
-    Src/MeshFactory.cpp
+    Src/Model.cpp
+    Src/SubmeshFactory.cpp
     Src/Renderer.cpp
     Src/Scene.cpp
     Src/Timer.cpp
