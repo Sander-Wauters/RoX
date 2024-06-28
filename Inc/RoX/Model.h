@@ -127,6 +127,8 @@ class Model {
                 std::shared_ptr<Material> pMaterial,
                 bool visible = true);
 
+        Model(Model& other);
+
         void Add(std::shared_ptr<Material> pMaterial) noexcept;
         void Add(std::shared_ptr<Mesh> pMeshPart) noexcept;
 

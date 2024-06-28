@@ -15,6 +15,16 @@
 #include "DeviceData.h"
 
 class DeviceResourceData : public IDeviceObserver {
+    private:
+        static constexpr D3D12_INPUT_ELEMENT_DESC InstancedInputElements[] = {
+            { "SV_Position", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
+            { "NORMAL",      0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
+            { "TEXCOORD",    0, DXGI_FORMAT_R32G32_FLOAT,       0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
+            { "InstMatrix",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+            { "InstMatrix",  1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+            { "InstMatrix",  2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+        };
+
     public:
         DeviceResourceData(Scene& scene, const DeviceResources& deviceResources) noexcept;
         ~DeviceResourceData() noexcept;
@@ -44,6 +54,12 @@ class DeviceResourceData : public IDeviceObserver {
         void BuildWindowSizeDependentResources();
 
     private:
+        D3D12_INPUT_LAYOUT_DESC InputLayout(std::uint32_t flags) const noexcept;
+        D3D12_BLEND_DESC BlendDesc(std::uint32_t flags) const noexcept;
+        D3D12_DEPTH_STENCIL_DESC DepthStencilDesc(std::uint32_t flags) const noexcept;
+        D3D12_RASTERIZER_DESC RasterizerDesc(std::uint32_t flags) const noexcept;
+        D3D12_GPU_DESCRIPTOR_HANDLE SemplerDesc(std::uint32_t flags) const noexcept;
+
         bool CompareFileExtension(std::wstring filePath, std::wstring valid);
         void CreateTextureFromFile(std::wstring filePath, ID3D12Resource** pTexture, DirectX::ResourceUploadBatch& resourceUploadBatch);
 

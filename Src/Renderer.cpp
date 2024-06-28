@@ -185,7 +185,6 @@ void Renderer::Impl::OnSuspending() {
 
 void Renderer::Impl::OnResuming() {
     // Game is being power-resumed (or returning from minimize).
-    m_pOwner->m_timer.ResetElapsedTime();
 }
 
 void Renderer::Impl::OnWindowMoved() {
@@ -267,7 +266,7 @@ void Renderer::Impl::RenderMeshes() {
 
                 std::uint32_t flags = pSubmesh->GetMaterial(model.first.get())->GetFlags();
 
-                if (flags & RenderFlags::Instancing) {
+                if (flags & RenderFlags::Effect::Instancing) {
                     const size_t instBytes = pSubmesh->GetNumVisibleInstances() * sizeof(DirectX::XMFLOAT3X4);
                     DirectX::GraphicsResource inst = m_pGraphicsMemory->Allocate(instBytes);
                     memcpy(inst.Memory(), pSubmesh->GetInstances().data(), instBytes);

@@ -255,41 +255,29 @@ void DeviceResourceData::BuildModels(DirectX::RenderTargetState& renderTargetSta
 void DeviceResourceData::BuildMaterials(DirectX::RenderTargetState& renderTargetState) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
-    const D3D12_INPUT_ELEMENT_DESC inputElements[] = {
-        { "SV_Position", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
-        { "NORMAL",      0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
-        { "TEXCOORD",    0, DXGI_FORMAT_R32G32_FLOAT,       0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
-        { "InstMatrix",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-        { "InstMatrix",  1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-        { "InstMatrix",  2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-    };
-
-    const D3D12_INPUT_LAYOUT_DESC layout = { inputElements, static_cast<UINT>(std::size(inputElements)) };
-
     for (auto& material : m_materialData) {
         std::uint32_t flags = material.first->GetFlags();
         std::unique_ptr<DirectX::NormalMapEffect> pEffect;
 
-        if (flags & RenderFlags::Instancing) {
-            DirectX::EffectPipelineStateDescription pd(
-                    &layout,
-                    DirectX::CommonStates::Opaque,
-                    DirectX::CommonStates::DepthDefault,
-                    DirectX::CommonStates::CullCounterClockwise,
-                    renderTargetState);
-            pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Instancing, pd);
-        } else {
-            DirectX::EffectPipelineStateDescription pd(
-                    &DirectX::VertexPositionNormalTexture::InputLayout,
-                    DirectX::CommonStates::Opaque,
-                    DirectX::CommonStates::DepthDefault,
-                    DirectX::CommonStates::CullCounterClockwise,
-                    renderTargetState);
+        const D3D12_INPUT_LAYOUT_DESC inputLayout = InputLayout(flags);
+        DirectX::EffectPipelineStateDescription pd(
+                &inputLayout,
+                BlendDesc(flags),
+                DepthStencilDesc(flags),
+                RasterizerDesc(flags),
+                renderTargetState);
 
+        if (flags & RenderFlags::Effect::Instancing)
+            pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Instancing, pd);
+        else
             pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting | DirectX::EffectFlags::Texture, pd);
-        }
+
+        pEffect->SetColorAndAlpha(material.first->GetDiffuseColor());
+        pEffect->SetEmissiveColor(material.first->GetEmissiveColor());
+        pEffect->SetSpecularColor(material.first->GetSpecularColor());
 
         pEffect->EnableDefaultLighting();
+
         pEffect->SetTexture(
                 m_pResourceDescriptors->GetGpuHandle(m_textureData.at(material.first->GetDiffuseMapFilePath())->descriptorHeapIndex),
                 m_pStates->AnisotropicWrap());
@@ -325,6 +313,70 @@ void DeviceResourceData::BuildOutlines(DirectX::RenderTargetState& renderTargetS
 void DeviceResourceData::BuildWindowSizeDependentResources() {
     D3D12_VIEWPORT viewport = m_deviceResources.GetScreenViewport();
     m_pSpriteBatch->SetViewport(viewport);
+}
+
+D3D12_INPUT_LAYOUT_DESC DeviceResourceData::InputLayout(std::uint32_t flags) const noexcept {
+    if (flags & RenderFlags::Effect::Instancing)
+        return { InstancedInputElements, static_cast<UINT>(std::size(InstancedInputElements)) };
+    return DirectX::VertexPositionNormalTexture::InputLayout;
+}
+
+D3D12_BLEND_DESC DeviceResourceData::BlendDesc(std::uint32_t flags) const noexcept {
+    if (flags & RenderFlags::BlendState::Opaque)
+        return DirectX::CommonStates::Opaque;
+    if (flags & RenderFlags::BlendState::AlphaBlend)
+        return DirectX::CommonStates::AlphaBlend;
+    if (flags & RenderFlags::BlendState::Additive)
+        return DirectX::CommonStates::Additive;
+    if (flags & RenderFlags::BlendState::NonPremultiplied)
+        return DirectX::CommonStates::NonPremultiplied;
+
+    return DirectX::CommonStates::Opaque;
+}
+
+D3D12_DEPTH_STENCIL_DESC DeviceResourceData::DepthStencilDesc(std::uint32_t flags) const noexcept {
+    if (flags & RenderFlags::DepthStencilState::None)    
+        return DirectX::CommonStates::DepthNone;
+    if (flags & RenderFlags::DepthStencilState::Default)    
+        return DirectX::CommonStates::DepthDefault;
+    if (flags & RenderFlags::DepthStencilState::Read)    
+        return DirectX::CommonStates::DepthRead;
+    if (flags & RenderFlags::DepthStencilState::ReverseZ)    
+        return DirectX::CommonStates::DepthReverseZ;
+    if (flags & RenderFlags::DepthStencilState::ReadReverseZ)    
+        return DirectX::CommonStates::DepthReadReverseZ;
+
+    return DirectX::CommonStates::DepthDefault;
+}
+
+D3D12_RASTERIZER_DESC DeviceResourceData::RasterizerDesc(std::uint32_t flags) const noexcept {
+    if (flags & RenderFlags::RasterizerState::CullNone)
+        return DirectX::CommonStates::CullNone;
+    if (flags & RenderFlags::RasterizerState::CullClockwise)
+        return DirectX::CommonStates::CullClockwise;
+    if (flags & RenderFlags::RasterizerState::CullCounterClockwise)
+        return DirectX::CommonStates::CullCounterClockwise;
+    if (flags & RenderFlags::RasterizerState::Wireframe)
+        return DirectX::CommonStates::Wireframe;
+
+    return DirectX::CommonStates::CullCounterClockwise;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE DeviceResourceData::SemplerDesc(std::uint32_t flags) const noexcept {
+    if (flags & RenderFlags::SamplerState::PointWrap)
+        return m_pStates->PointWrap();
+    if (flags & RenderFlags::SamplerState::PointClamp)
+        return m_pStates->PointClamp();
+    if (flags & RenderFlags::SamplerState::LinearWrap)
+        return m_pStates->LinearWrap();
+    if (flags & RenderFlags::SamplerState::LinearClamp)
+        return m_pStates->LinearClamp();
+    if (flags & RenderFlags::SamplerState::AnisotropicWrap)
+        return m_pStates->AnisotropicWrap();
+    if (flags & RenderFlags::SamplerState::AnisotropicClamp)
+        return m_pStates->AnisotropicClamp();
+
+    return m_pStates->AnisotropicWrap();
 }
 
 bool DeviceResourceData::CompareFileExtension(std::wstring filePath, std::wstring valid) {

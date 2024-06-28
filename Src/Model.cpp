@@ -189,6 +189,24 @@ Model::Model(
     m_materials.push_back(std::move(pMaterial));
 }
 
+Model::Model(Model& other) :
+    m_name(other.GetName()),
+    m_materials(other.GetMaterials()),
+    m_meshes(other.GetMeshes()),
+    m_bones(other.GetBones())
+{
+    if (other.GetNumBones() > 0) {
+        if (other.GetBoneMatrices()) {
+            m_boneMatrices = Bone::MakeArray(other.GetNumBones());
+            memcpy(m_boneMatrices.get(), other.GetBoneMatrices(), sizeof(DirectX::XMMATRIX) * other.GetNumBones());
+        }
+        if (other.GetInverseBindPoseMatrices()) {
+            m_inverseBindPoseMatrices = Bone::MakeArray(other.GetNumBones());
+            memcpy(m_inverseBindPoseMatrices.get(), other.GetInverseBindPoseMatrices(), sizeof(DirectX::XMMATRIX) * other.GetNumBones());
+        }
+    }
+}
+
 void Model::Add(std::shared_ptr<Material> pMaterial) noexcept {
     m_materials.push_back(pMaterial); 
 }
