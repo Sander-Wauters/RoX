@@ -13,6 +13,8 @@ add_subdirectory(Lib/assimp)
 add_subdirectory(Lib/DirectXTK12)
 
 set(SOURCE
+    Lib/imgui
+
     Src/Exceptions/DXException.cpp
     Src/Exceptions/ThrowIfFailed.h
 

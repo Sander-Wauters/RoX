@@ -279,7 +279,11 @@ void Renderer::Impl::RenderMeshes() {
 
                     pSubmeshData->DrawInstanced(pCommandList, pSubmesh, pEffect);
                 } else {
-                    pSubmeshData->Draw(pCommandList, pSubmesh, pEffect);
+                    DirectX::XMMATRIX world = DirectX::XMLoadFloat3x4(&pSubmesh->GetInstances()[0]);
+                    if (pMesh->GetBoneIndex() != Bone::INVALID_INDEX && model.first->GetBoneMatrices() != nullptr) 
+                        world = DirectX::XMMatrixMultiply(model.first->GetBoneMatrices()->get()[pMesh->GetBoneIndex()], world);
+
+                    pSubmeshData->Draw(pCommandList, pSubmesh, pEffect, world);
                 }
             }
         }

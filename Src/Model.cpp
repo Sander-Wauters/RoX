@@ -137,6 +137,7 @@ void Submesh::SetVisible(bool visible) noexcept {
 
 Mesh::Mesh(const std::string name, bool visible) 
     noexcept : m_name(name),
+    m_boneIndex(Bone::INVALID_INDEX),
     m_visible(visible)
 {}
 

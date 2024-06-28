@@ -31,8 +31,7 @@ struct SubmeshDeviceData {
 
     void PrepareForDraw(ID3D12GraphicsCommandList* pCommandList) const;
 
-    void Draw(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh) const;
-    void Draw(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh, DirectX::IEffect* pEffect) const;
+    void Draw(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh, DirectX::IEffect* pEffect, DirectX::XMMATRIX world) const;
 
     void DrawInstanced(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh) const;
     void DrawInstanced(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh, DirectX::IEffect* pEffect) const;

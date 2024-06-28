@@ -53,21 +53,15 @@ void SubmeshDeviceData::PrepareForDraw(ID3D12GraphicsCommandList* pCommandList) 
     pCommandList->IASetPrimitiveTopology(primitiveType);
 }
 
-void SubmeshDeviceData::Draw(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh) const {
-    assert(pSubmesh != nullptr);
-    
-    PrepareForDraw(pCommandList);
-    pCommandList->DrawIndexedInstanced(pSubmesh->GetIndexCount(), 1, pSubmesh->GetStartIndex(), pSubmesh->GetVertexOffset(), 0);
-}
-
-void SubmeshDeviceData::Draw(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh, DirectX::IEffect* pEffect) const {
+void SubmeshDeviceData::Draw(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh, DirectX::IEffect* pEffect, DirectX::XMMATRIX world) const {
     assert(pEffect != nullptr);
     
     if (auto pEffectMatrices = dynamic_cast<DirectX::NormalMapEffect*>(pEffect))
-        pEffectMatrices->SetWorld(DirectX::XMLoadFloat3x4(&pSubmesh->GetInstances()[0]));
+        pEffectMatrices->SetWorld(world);
     
     pEffect->Apply(pCommandList);
-    Draw(pCommandList, pSubmesh);
+    PrepareForDraw(pCommandList);
+    pCommandList->DrawIndexedInstanced(pSubmesh->GetIndexCount(), 1, pSubmesh->GetStartIndex(), pSubmesh->GetVertexOffset(), 0);
 }
 
 void SubmeshDeviceData::DrawInstanced(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh) const {
