@@ -1,6 +1,10 @@
 #pragma once
 
+#include <functional>
+
 #include "RoX/IWindowObserver.h"
+
+#include "../../Lib/ImGui/Inc/ImGui/imgui.h"
 
 #include "Timer.h"
 #include "Scene.h"
@@ -21,6 +25,7 @@ class Renderer : public IWindowObserver {
 
         void Update();
         void Render();
+        void Render(const std::function<void()>& renderImGui);
 
         void OnActivated() override;
         void OnDeactivated() override;

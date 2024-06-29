@@ -13,7 +13,7 @@
 DeviceResourceData::DeviceResourceData(Scene& scene, const DeviceResources& deviceResources) 
     noexcept : m_scene(scene), 
     m_deviceResources(deviceResources),
-    m_nextDescriptorHeapIndex(0),
+    m_nextDescriptorHeapIndex(1),
     m_pResourceDescriptors(nullptr),
     m_pStates(nullptr),
     m_pSpriteBatch(nullptr),
@@ -405,6 +405,14 @@ Scene& DeviceResourceData::GetScene() const noexcept {
     return m_scene;
 }
 
+D3D12_CPU_DESCRIPTOR_HANDLE DeviceResourceData::GetImGuiCpuDescHandle() const {
+    return m_pResourceDescriptors->GetCpuHandle(ImGuiDescriptorIndex);
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE DeviceResourceData::GetImGuiGpuDescHandle() const {
+    return m_pResourceDescriptors->GetGpuHandle(ImGuiDescriptorIndex);
+}
+
 DirectX::DescriptorHeap* DeviceResourceData::GetDescriptorHeap() const noexcept {
     return m_pResourceDescriptors.get();
 }
@@ -438,7 +446,7 @@ const std::unordered_map<std::shared_ptr<Text>, std::unique_ptr<TextDeviceData>>
 }
 
 size_t DeviceResourceData::GetResourceDescriptorCount() const noexcept {
-    return m_spriteData.size() + m_textData.size() + m_textureData.size(); 
+    return m_spriteData.size() + m_textData.size() + m_textureData.size() + 1; // +1 for ImGui font texture's.
 }
 
 

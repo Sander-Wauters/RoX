@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdint>
 #include <exception>
+#include <functional>
 
 #include "../../Src/Util/pch.h"
 
@@ -20,7 +21,7 @@ class Timer {
         void ResetElapsedTime();
 
         // Update timer state, calling the specified Update function the appropriate number of times.
-        template<typename TUpdate> void Tick(const TUpdate& update) {
+        void Tick(const std::function<void()>& update) {
             // Query the current time.
             LARGE_INTEGER currentTime;
 

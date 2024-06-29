@@ -1,6 +1,9 @@
+#include "RoX/Window.h"
+
 #include <tuple>
 
-#include "RoX/Window.h"
+#include "ImGuiBackends/imgui_impl_win32.h"
+
 #include "util/Logger.h"
 #include "Exceptions/ThrowIfFailed.h"
 
@@ -132,7 +135,11 @@ LRESULT Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
     static bool s_in_suspend = false;
     static bool s_minimized = false;
     static bool s_fullscreen = false; // Set s_fullscreen to true if defaulting to fullscreen.
-                                      //
+                                      
+    extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND mhwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+    if (ImGui_ImplWin32_WndProcHandler(m_hwnd, msg, wParam, lParam))
+        return true;
+
     switch (msg) {
         case WM_PAINT:
             if (s_in_sizemove) {
@@ -221,6 +228,7 @@ LRESULT Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             break;
 
         case WM_DESTROY:
+            ImGui_ImplWin32_Shutdown();
             PostQuitMessage(0);
             return 0;
 

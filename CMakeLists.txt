@@ -11,10 +11,9 @@ set(ASSIMP_INSTALL OFF CACHE BOOL "Assimp install" FORCE)
 
 add_subdirectory(Lib/assimp)
 add_subdirectory(Lib/DirectXTK12)
+add_subdirectory(Lib/ImGui)
 
 set(SOURCE
-    Lib/imgui
-
     Src/Exceptions/DXException.cpp
     Src/Exceptions/ThrowIfFailed.h
 
@@ -46,6 +45,7 @@ include_directories(
     Inc 
     Lib/assimp/include
     Lib/DirectXTK12/Inc
+    Lib/ImGui/Inc
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE})
@@ -57,6 +57,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     runtimeobject.lib
     DirectXTK12
     assimp
+    ImGui
 )
 
 #--------------- Build HLSL shaders ---------------#

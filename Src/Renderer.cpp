@@ -7,6 +7,10 @@
 #include <SpriteBatch.h>
 #include <DirectXHelpers.h>
 
+#include <ImGui/imgui.h>
+#include <ImGuiBackends/imgui_impl_dx12.h>
+#include <ImGuiBackends/imgui_impl_win32.h>
+
 #include "Util/pch.h"
 
 #include "DebugDraw.h"
@@ -30,7 +34,7 @@ class Renderer::Impl : public IDeviceObserver {
         void Load(Scene& scene);
 
         void Update();
-        void Render();
+        void Render(const std::function<void()>& renderImGui);
 
         void OnDeviceLost() override;
         void OnDeviceRestored() override;
@@ -82,25 +86,40 @@ Renderer::Impl::Impl(Renderer* pOwner)
 Renderer::Impl::~Impl() noexcept {
     if (m_pDeviceResources)
         m_pDeviceResources->WaitForGpu();
+
+    ImGui_ImplDX12_Shutdown();
+    ImGui::DestroyContext();
 }
 void Renderer::Impl::Initialize(HWND window, int width, int height) {
     m_pDeviceResources->SetWindow(window, width, height);
     m_pDeviceResources->CreateDeviceResources();
     m_pDeviceResources->CreateWindowSizeDependentResources();
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    ImGui_ImplWin32_Init(window);
 }
 
 void Renderer::Impl::Load(Scene& scene) {
     m_pDeviceResourceData = std::make_unique<DeviceResourceData>(scene, *m_pDeviceResources.get());
     CreateDeviceDependentResources();
     CreateWindowSizeDependentResources();
+    ImGui_ImplDX12_Init(m_pDeviceResources->GetDevice(), 
+            m_pDeviceResources->GetBackBufferCount(),
+            m_pDeviceResources->GetBackBufferFormat(),
+            m_pDeviceResourceData->GetDescriptorHeap()->Heap(),
+            m_pDeviceResourceData->GetImGuiCpuDescHandle(),
+            m_pDeviceResourceData->GetImGuiGpuDescHandle());
 }
 
 void Renderer::Impl::Update() {
-    if (m_pDeviceResourceData)
+    if (m_pDeviceResourceData) 
         m_pDeviceResourceData->Update();
 }
 
-void Renderer::Impl::Render() {
+void Renderer::Impl::Render(const std::function<void()>& renderImGui) {
     // Don't try to render anything before the first Update and before a Scene is loaded.
     if (m_pOwner->m_timer.GetFrameCount() == 0 || !m_pDeviceResourceData)
         return;
@@ -141,7 +160,7 @@ void Renderer::Impl::Render() {
         RenderText();
         pSpriteBatch->End();
     }
-
+    
     // Show the new frame.
     if (m_msaaEnabled) {
         CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -155,6 +174,14 @@ void Renderer::Impl::Render() {
 
         m_pDeviceResources->Present(D3D12_RESOURCE_STATE_RESOLVE_DEST);
     } else {
+        ImGui_ImplDX12_NewFrame();
+        ImGui_ImplWin32_NewFrame();
+        ImGui::NewFrame();
+
+        renderImGui();
+
+        ImGui::Render();
+        ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), pCommandList);
         m_pDeviceResources->Present();
     }
 
@@ -164,9 +191,11 @@ void Renderer::Impl::Render() {
 void Renderer::Impl::OnDeviceLost() {
     m_pGraphicsMemory.reset();
     m_pDeviceResourceData->OnDeviceLost();
+    ImGui_ImplDX12_InvalidateDeviceObjects();
 }
 
 void Renderer::Impl::OnDeviceRestored() {
+    ImGui_ImplDX12_CreateDeviceObjects();
     CreateDeviceDependentResources();
     CreateWindowSizeDependentResources();
 }
@@ -416,7 +445,8 @@ Renderer::Renderer(Renderer&& moveFrom) noexcept : m_timer(moveFrom.m_timer), m_
 void Renderer::Initialize(HWND window, int width, int height) { m_pImpl->Initialize(window, width, height); }
 void Renderer::Load(Scene& scene) { m_pImpl->Load(scene); }
 void Renderer::Update() { m_pImpl->Update(); }
-void Renderer::Render() { m_pImpl->Render(); }
+void Renderer::Render() { m_pImpl->Render([&](){}); }
+void Renderer::Render(const std::function<void()>& renderImGui) { m_pImpl->Render(renderImGui); }
 void Renderer::OnActivated() { m_pImpl->OnActivated(); }
 void Renderer::OnDeactivated() { m_pImpl->OnDeactivated(); }
 void Renderer::OnSuspending() { m_pImpl->OnSuspending(); }

@@ -25,6 +25,8 @@ class DeviceResourceData : public IDeviceObserver {
             { "InstMatrix",  2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
         };
 
+        static constexpr std::uint32_t ImGuiDescriptorIndex = 0;
+
     public:
         DeviceResourceData(Scene& scene, const DeviceResources& deviceResources) noexcept;
         ~DeviceResourceData() noexcept;
@@ -52,7 +54,7 @@ class DeviceResourceData : public IDeviceObserver {
         void BuildOutlines(DirectX::RenderTargetState& renderTargetState);
 
         void BuildWindowSizeDependentResources();
-
+    
     private:
         D3D12_INPUT_LAYOUT_DESC InputLayout(std::uint32_t flags) const noexcept;
         D3D12_BLEND_DESC BlendDesc(std::uint32_t flags) const noexcept;
@@ -65,6 +67,9 @@ class DeviceResourceData : public IDeviceObserver {
 
     public:
         Scene& GetScene() const noexcept;
+
+        D3D12_CPU_DESCRIPTOR_HANDLE GetImGuiCpuDescHandle() const;
+        D3D12_GPU_DESCRIPTOR_HANDLE GetImGuiGpuDescHandle() const;
 
         DirectX::DescriptorHeap* GetDescriptorHeap() const noexcept;
         DirectX::CommonStates* GetStates() const noexcept;
