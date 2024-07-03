@@ -42,22 +42,26 @@ namespace RenderFlags {
        constexpr std::uint32_t Lighting =              0x00200000;
        constexpr std::uint32_t PerPixelLighting =      0x00400000;
        constexpr std::uint32_t Texture =               0x00800000;
-       constexpr std::uint32_t Instancing =            0x01000000;
+       constexpr std::uint32_t Instanced =             0x01000000;
        constexpr std::uint32_t Specular =              0x02000000;
-       constexpr std::uint32_t Reset =                 !(None + Fog + Lighting + PerPixelLighting + Texture + Instancing, + Specular);
+       constexpr std::uint32_t Skinned =               0x04000000;
+       constexpr std::uint32_t Reset =                 !(None + Fog + Lighting + PerPixelLighting + Texture + Instanced, + Specular + Skinned);
    }
 
    constexpr std::uint32_t Default = BlendState::Opaque |  DepthStencilState::Default | 
        RasterizerState::CullCounterClockwise | SamplerState::AnisotropicWrap | Effect::Lighting | Effect::Texture;
 
-   constexpr std::uint32_t DefaultWireframe = BlendState::Opaque |  DepthStencilState::Default | 
+   constexpr std::uint32_t Skinned = BlendState::Opaque |  DepthStencilState::Default | 
+       RasterizerState::CullCounterClockwise | SamplerState::AnisotropicWrap | Effect::Lighting | Effect::Texture | Effect::Skinned;
+
+   constexpr std::uint32_t Wireframe = BlendState::Opaque |  DepthStencilState::Default | 
        RasterizerState::Wireframe | SamplerState::AnisotropicWrap | Effect::Lighting | Effect::Texture;
 
-   constexpr std::uint32_t DefaultInstancing = BlendState::Opaque |  DepthStencilState::Default | 
-       RasterizerState::CullCounterClockwise | SamplerState::AnisotropicWrap | Effect::Instancing | Effect::Lighting | Effect::Texture;
+   constexpr std::uint32_t Instanced = BlendState::Opaque |  DepthStencilState::Default | 
+       RasterizerState::CullCounterClockwise | SamplerState::AnisotropicWrap | Effect::Instanced | Effect::Lighting | Effect::Texture;
 
-   constexpr std::uint32_t DefaultWireframeInstancing = BlendState::Opaque |  DepthStencilState::Default | 
-       RasterizerState::Wireframe | SamplerState::AnisotropicWrap | Effect::Instancing | Effect::Lighting | Effect::Texture;
+   constexpr std::uint32_t WireframeInstanced = BlendState::Opaque |  DepthStencilState::Default | 
+       RasterizerState::Wireframe | SamplerState::AnisotropicWrap | Effect::Instanced | Effect::Lighting | Effect::Texture;
 }
 
 class Material {

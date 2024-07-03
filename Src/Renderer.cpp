@@ -95,6 +95,8 @@ void Renderer::Impl::Initialize(HWND window, int width, int height) {
     m_pDeviceResources->CreateDeviceResources();
     m_pDeviceResources->CreateWindowSizeDependentResources();
 
+    m_pGraphicsMemory = std::make_unique<DirectX::GraphicsMemory>(m_pDeviceResources->GetDevice());
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -276,6 +278,10 @@ void Renderer::Impl::RenderMeshes() {
     for (auto& model : m_pDeviceResourceData->GetModelData()) {
         if (!model.first->IsVisible())
             continue;
+        if (model.first->IsSkinned()) {
+            model.second->DrawSkinned(pCommandList, *model.first.get());
+            continue;
+        }
 
         for (std::uint64_t meshIndex = 0; meshIndex < model.first->GetNumMeshes(); ++meshIndex) {
             Mesh* pMesh = model.first->GetMeshes()[meshIndex].get();
@@ -291,11 +297,11 @@ void Renderer::Impl::RenderMeshes() {
                 if (!pSubmesh->IsVisible())
                     continue;
 
-                DirectX::IEffect* pEffect = pSubmeshData->GetEffect(model.second.get(), pSubmesh);
+                DirectX::IEffect* pEffect = model.second->effects[pSubmesh->GetMaterialIndex()]->get();
 
                 std::uint32_t flags = pSubmesh->GetMaterial(model.first.get())->GetFlags();
 
-                if (flags & RenderFlags::Effect::Instancing) {
+                if (flags & RenderFlags::Effect::Instanced) {
                     const size_t instBytes = pSubmesh->GetNumVisibleInstances() * sizeof(DirectX::XMFLOAT3X4);
                     DirectX::GraphicsResource inst = m_pGraphicsMemory->Allocate(instBytes);
                     memcpy(inst.Memory(), pSubmesh->GetInstances().data(), instBytes);
@@ -306,13 +312,19 @@ void Renderer::Impl::RenderMeshes() {
                     vertexBufferInst.StrideInBytes = sizeof(DirectX::XMFLOAT3X4);
                     pCommandList->IASetVertexBuffers(1, 1, &vertexBufferInst);
 
-                    pSubmeshData->DrawInstanced(pCommandList, pSubmesh, pEffect);
+                    pEffect->Apply(pCommandList);
+                    pSubmeshData->DrawInstanced(pCommandList, pSubmesh);
                 } else {
                     DirectX::XMMATRIX world = DirectX::XMLoadFloat3x4(&pSubmesh->GetInstances()[0]);
                     if (pMesh->GetBoneIndex() != Bone::INVALID_INDEX && model.first->GetBoneMatrices() != nullptr) 
-                        world = DirectX::XMMatrixMultiply(model.first->GetBoneMatrices()->get()[pMesh->GetBoneIndex()], world);
+                        world = DirectX::XMMatrixMultiply(model.first->GetBoneMatrices()[pMesh->GetBoneIndex()], world);
 
-                    pSubmeshData->Draw(pCommandList, pSubmesh, pEffect, world);
+                    auto iMatrices = dynamic_cast<DirectX::IEffectMatrices*>(pEffect);
+                    if (iMatrices)
+                        iMatrices->SetWorld(DirectX::XMLoadFloat3x4(&pSubmesh->GetInstances()[0]));
+                    pEffect->Apply(pCommandList);
+
+                    pSubmeshData->Draw(pCommandList, pSubmesh);
                 }
             }
         }
@@ -421,7 +433,6 @@ void Renderer::Impl::CreateDeviceDependentResources() {
         throw std::runtime_error("Shader Model 6.0 is not supported!");
     }
 
-    m_pGraphicsMemory = std::make_unique<DirectX::GraphicsMemory>(pDevice);
     if (m_pDeviceResourceData)
         m_pDeviceResourceData->BuildDeviceDependentResources(m_msaaEnabled);
 }

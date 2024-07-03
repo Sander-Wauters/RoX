@@ -34,9 +34,11 @@ set(SOURCE
     Src/IDeviceObserver.h
     Src/Material.cpp
     Src/Model.cpp
-    Src/SubmeshFactory.cpp
     Src/Renderer.cpp
     Src/Scene.cpp
+    Src/SubmeshDeviceData.cpp
+    Src/SubmeshDeviceData.h
+    Src/SubmeshFactory.cpp
     Src/Timer.cpp
     Src/Window.cpp
 )

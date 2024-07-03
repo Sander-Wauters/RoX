@@ -60,6 +60,7 @@ void DeviceResourceData::OnDeviceRestored() {
 }
 
 void DeviceResourceData::InitDataFromScene(std::shared_ptr<Model> pModel) {
+    ID3D12Device* pDevice = m_deviceResources.GetDevice();
     std::unique_ptr<ModelDeviceData>& pModelData = m_modelData[pModel];
     if (!pModelData) {
         pModelData = std::make_unique<ModelDeviceData>();
@@ -72,7 +73,8 @@ void DeviceResourceData::InitDataFromScene(std::shared_ptr<Model> pModel) {
 
                 pMeshData->submeshes.reserve(pMesh->GetSubmeshes().size());
                 for (std::uint64_t i = 0; i < pMesh->GetSubmeshes().size(); ++i) {
-                    pMeshData->submeshes.push_back(std::make_unique<SubmeshDeviceData>());
+                    Submesh* pSubmesh = pMesh->GetSubmeshes()[i].get();
+                    pMeshData->submeshes.push_back(std::make_unique<SubmeshDeviceData>(pDevice, pSubmesh));
                 }
             }
             pModelData->meshes.push_back(pMeshData);
@@ -219,34 +221,6 @@ void DeviceResourceData::BuildRenderTargetDependentResources(DirectX::ResourceUp
 
 void DeviceResourceData::BuildModels(DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
-    for(auto& mesh : m_meshData) {
-        for (std::uint64_t submeshIndex = 0; submeshIndex < mesh.first->GetNumSubmeshes(); ++submeshIndex) {
-            Submesh* pSubmesh = mesh.first->GetSubmeshes()[submeshIndex].get();
-            SubmeshDeviceData* pSubmeshDeviceData = mesh.second->submeshes[submeshIndex].get();
-
-            if (pSubmesh->GetNumVertices() >= USHRT_MAX)
-                throw std::invalid_argument("Too many vertices for a 16-bit index buffer");
-            if (pSubmesh->GetNumIndices() > UINT32_MAX)
-                throw std::invalid_argument("Too many indices");
-
-            std::uint32_t sizeInBytes = static_cast<std::uint32_t>(pSubmesh->GetNumVertices()) * sizeof(DirectX::VertexPositionNormalTexture);
-            if (sizeInBytes > static_cast<std::uint32_t>(D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u))
-                throw std::invalid_argument("VB too large for DirectX 12");
-
-            pSubmeshDeviceData->vertexBufferSize = sizeInBytes;      
-            pSubmeshDeviceData->vertexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(sizeInBytes, 16, DirectX::GraphicsMemory::TAG_VERTEX);
-            memcpy(pSubmeshDeviceData->vertexBuffer.Memory(), pSubmesh->GetVertices()->data(), sizeInBytes);
-
-            sizeInBytes = static_cast<std::uint32_t>(pSubmesh->GetNumIndices()) * sizeof(std::uint16_t);
-            if (sizeInBytes > static_cast<std::uint32_t>(D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u))
-                throw std::invalid_argument("IB too large for DirectX 12");
-
-            pSubmeshDeviceData->indexBufferSize = sizeInBytes;
-            pSubmeshDeviceData->indexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(sizeInBytes, 16, DirectX::GraphicsMemory::TAG_INDEX);
-            memcpy(pSubmeshDeviceData->indexBuffer.Memory(), pSubmesh->GetIndices()->data(), sizeInBytes);
-        }
-    }
-
     for (auto& model : m_modelData) {
         model.second->LoadStaticBuffers(pDevice, resourceUploadBatch);
     }
@@ -267,8 +241,10 @@ void DeviceResourceData::BuildMaterials(DirectX::RenderTargetState& renderTarget
                 RasterizerDesc(flags),
                 renderTargetState);
 
-        if (flags & RenderFlags::Effect::Instancing)
+        if (flags & RenderFlags::Effect::Instanced)
             pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Instancing, pd);
+        else if (flags & RenderFlags::Effect::Skinned) 
+            pEffect = std::make_unique<DirectX::SkinnedNormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting | DirectX::EffectFlags::Texture, pd);
         else
             pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting | DirectX::EffectFlags::Texture, pd);
 
@@ -316,8 +292,10 @@ void DeviceResourceData::BuildWindowSizeDependentResources() {
 }
 
 D3D12_INPUT_LAYOUT_DESC DeviceResourceData::InputLayout(std::uint32_t flags) const noexcept {
-    if (flags & RenderFlags::Effect::Instancing)
+    if (flags & RenderFlags::Effect::Instanced)
         return { InstancedInputElements, static_cast<UINT>(std::size(InstancedInputElements)) };
+    if (flags & RenderFlags::Effect::Skinned)
+        return { SkinnedInputElements, static_cast<UINT>(std::size(SkinnedInputElements)) };
     return DirectX::VertexPositionNormalTexture::InputLayout;
 }
 

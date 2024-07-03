@@ -21,7 +21,7 @@ class Bone {
 
         using TransformArray = std::unique_ptr<DirectX::XMMATRIX[], aligned_deleter>;
 
-        static TransformArray MakeArray(size_t count) {
+        static TransformArray MakeArray(std::uint64_t count) {
             void* temp = _aligned_malloc(sizeof(DirectX::XMMATRIX) * count, 16);
             if (!temp)
                 throw std::bad_alloc();
@@ -31,6 +31,8 @@ class Bone {
         std::string GetName() const noexcept;
 
         std::uint32_t GetParentIndex() const noexcept;
+        std::uint64_t GetNumChildren() const noexcept;
+        std::vector<std::uint32_t>& GetChildIndices() noexcept;
 
         void SetParentIndex(std::uint32_t index) noexcept;
 
@@ -38,6 +40,7 @@ class Bone {
         const std::string m_name;
 
         std::uint32_t m_parentIndex;
+        std::vector<std::uint32_t> m_childIndices;
 };
 
 class Submesh {
@@ -132,6 +135,9 @@ class Model {
         void Add(std::shared_ptr<Material> pMaterial) noexcept;
         void Add(std::shared_ptr<Mesh> pMeshPart) noexcept;
 
+        void MakeBoneMatricesArray(std::uint64_t count);
+        void MakeInverseBoneMatricesArray(std::uint64_t count);
+
     public:
         std::string GetName() const noexcept;
 
@@ -141,10 +147,11 @@ class Model {
         std::vector<std::shared_ptr<Material>>& GetMaterials() noexcept;
         std::vector<std::shared_ptr<Mesh>>& GetMeshes() noexcept;
         std::vector<Bone>& GetBones() noexcept;
-        Bone::TransformArray* GetBoneMatrices() noexcept;
-        Bone::TransformArray* GetInverseBindPoseMatrices() noexcept;
+        DirectX::XMMATRIX* GetBoneMatrices() noexcept;
+        DirectX::XMMATRIX* GetInverseBindPoseMatrices() noexcept;
 
         bool IsVisible() const noexcept;
+        bool IsSkinned() const noexcept;
 
         void SetVisible(bool visible) noexcept;
     

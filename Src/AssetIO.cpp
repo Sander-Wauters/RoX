@@ -9,22 +9,62 @@
 
 #define ASSIMP_LOAD_FLAGS (aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_JoinIdenticalVertices | aiProcess_ConvertToLeftHanded)
 
+using BoneNameToAiBone = std::unordered_map<std::string, const aiBone*>;
+
 std::string GetNameFromFilePath(std::string filePath) {
     std::string baseName = filePath.substr(filePath.find_last_of("/") + 1);
     size_t extension(baseName.find_last_of("."));
     return baseName.substr(0, extension);
 }
 
-void ParseBones(std::vector<Bone>& bones, std::unordered_map<std::string, std::uint8_t>& ids, const aiNode* pNode) {
-    for (int i = 0; i < pNode->mNumChildren; ++i) {
-        std::uint8_t& id = ids[pNode->mName.C_Str()];
-        if (!id)
-            id = ids.size() - 1;
-        Bone bone(pNode->mName.C_Str());
-        bones.push_back(bone);
-        ParseBones(bones, ids, pNode->mChildren[i]);
-    } 
+DirectX::XMMATRIX GetTransformFromAiBone(const aiBone* pBone) {
+    return {
+        pBone->mOffsetMatrix.a1, pBone->mOffsetMatrix.a2, pBone->mOffsetMatrix.a3, pBone->mOffsetMatrix.a4,
+        pBone->mOffsetMatrix.b1, pBone->mOffsetMatrix.b2, pBone->mOffsetMatrix.b3, pBone->mOffsetMatrix.b4,
+        pBone->mOffsetMatrix.c1, pBone->mOffsetMatrix.c2, pBone->mOffsetMatrix.c3, pBone->mOffsetMatrix.c4,
+        pBone->mOffsetMatrix.d1, pBone->mOffsetMatrix.d2, pBone->mOffsetMatrix.d3, pBone->mOffsetMatrix.d4
+    };
 }
+
+void ParseBoneNameToAiBone(const aiScene* pScene, BoneNameToAiBone& boneNameToAiBone) {
+    for (int meshIndex = 0; meshIndex < pScene->mNumMeshes; ++meshIndex) {
+        const aiMesh* pMesh = pScene->mMeshes[meshIndex];
+        for (int boneIndex = 0; boneIndex < pMesh->mNumBones; ++boneIndex) {
+            const aiBone* pBone = pMesh->mBones[boneIndex];
+            boneNameToAiBone[pBone->mName.C_Str()] = pBone;
+        }
+    }
+}
+
+void ParseBonesRecursive(const aiNode* pNode, BoneNameToAiBone& boneNameToAiBone, Model& model, std::uint32_t parentIndex) {
+    std::uint32_t index = parentIndex;
+
+    if (boneNameToAiBone.find(pNode->mName.C_Str()) != boneNameToAiBone.end()) {
+        Bone bone(pNode->mName.C_Str(), parentIndex);
+        model.GetBones().push_back(bone);
+
+        index = model.GetNumBones() - 1;
+        model.GetBoneMatrices()[index] = GetTransformFromAiBone(boneNameToAiBone.at(pNode->mName.C_Str()));
+        DirectX::XMVECTOR determinant = DirectX::XMMatrixDeterminant(model.GetBoneMatrices()[index]);
+        model.GetInverseBindPoseMatrices()[index] = DirectX::XMMatrixInverse(&determinant, model.GetBoneMatrices()[index]);
+
+        if (parentIndex >= 0 && parentIndex < model.GetNumBones()) 
+            model.GetBones()[parentIndex].GetChildIndices().push_back(index);
+    }
+
+    for (int i = 0; i < pNode->mNumChildren; ++i) {
+        ParseBonesRecursive(pNode->mChildren[i], boneNameToAiBone, model, index);
+    }
+}
+
+void ParseBones(const aiScene* pScene, Model& model) {
+    BoneNameToAiBone boneNameToAiBone;
+    ParseBoneNameToAiBone(pScene, boneNameToAiBone);
+    model.MakeBoneMatricesArray(boneNameToAiBone.size());
+    model.MakeInverseBoneMatricesArray(boneNameToAiBone.size());
+    ParseBonesRecursive(pScene->mRootNode, boneNameToAiBone, model, -1); 
+}
+
 
 void ParseVertices(std::vector<DirectX::VertexPositionNormalTexture>& vertices, const aiMesh* pMesh) {
     printf("Parsing vertices...\n");
@@ -152,7 +192,7 @@ void AssetIO::ExportMesh(Mesh* pMeshPart, std::string filePath) {
     throw std::runtime_error("ExportMesh() not yet implemented");
 }
 
-std::shared_ptr<Model> AssetIO::ImportMesh(std::string filePath, std::shared_ptr<Material> pMaterial) {
+std::shared_ptr<Model> AssetIO::ImportModel(std::string filePath, std::shared_ptr<Material> pMaterial) {
     Assimp::Importer importer;
     const aiScene* pScene = importer.ReadFile(filePath.c_str(), ASSIMP_LOAD_FLAGS);
 
@@ -167,11 +207,12 @@ std::shared_ptr<Model> AssetIO::ImportMesh(std::string filePath, std::shared_ptr
         pMesh->Add(std::move(submesh));
     }
     pModel->Add(pMesh);
+    ParseBones(pScene, *pModel.get());
 
     return pModel;
 }
 
-void AssetIO::ExportMesh(Model* pMesh, std::string filePath) {
+void AssetIO::ExportModel(Model* pMesh, std::string filePath) {
     // TODO
     throw std::runtime_error("ExportMesh() not yet implemented");
 }

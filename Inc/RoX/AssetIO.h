@@ -12,7 +12,7 @@ namespace AssetIO {
     std::shared_ptr<Mesh> ImportMesh(std::string filePath);
     void ExportMesh(Mesh* pMeshPart, std::string filePath);
 
-    std::shared_ptr<Model> ImportMesh(std::string filePath, std::shared_ptr<Material> pMaterial);
-    void ExportMesh(Model* pMesh, std::string filePath);
+    std::shared_ptr<Model> ImportModel(std::string filePath, std::shared_ptr<Material> pMaterial);
+    void ExportModel(Model* pMesh, std::string filePath);
 };
 

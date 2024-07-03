@@ -9,6 +9,7 @@
 #include "RoX/Model.h"
 
 #include "Util/pch.h"
+#include "SubmeshDeviceData.h"
 
 struct ModelDeviceData;
 
@@ -26,31 +27,6 @@ struct TextDeviceData {
     std::unique_ptr<DirectX::SpriteFont> pSpriteFont;
 };
 
-struct SubmeshDeviceData {
-    SubmeshDeviceData() noexcept;
-
-    void PrepareForDraw(ID3D12GraphicsCommandList* pCommandList) const;
-
-    void Draw(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh, DirectX::IEffect* pEffect, DirectX::XMMATRIX world) const;
-
-    void DrawInstanced(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh) const;
-    void DrawInstanced(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh, DirectX::IEffect* pEffect) const;
-
-    DirectX::IEffect* GetEffect(ModelDeviceData* pModel, Submesh* pSubmesh) const;
-
-    std::uint32_t vertexStride;
-    std::uint32_t indexBufferSize;
-    std::uint32_t vertexBufferSize;
-
-    D3D_PRIMITIVE_TOPOLOGY primitiveType;
-    DXGI_FORMAT indexFormat;
-    DirectX::SharedGraphicsResource indexBuffer;
-    DirectX::SharedGraphicsResource vertexBuffer;
-    Microsoft::WRL::ComPtr<ID3D12Resource> staticIndexBuffer;
-    Microsoft::WRL::ComPtr<ID3D12Resource> staticVertexBuffer;
-    std::shared_ptr<std::vector<D3D12_INPUT_ELEMENT_DESC>> pVbDecl;
-};
-
 struct MeshDeviceData {
     MeshDeviceData() = default;
 
@@ -60,9 +36,10 @@ struct MeshDeviceData {
 struct ModelDeviceData {
     ModelDeviceData() = default;
 
+    void DrawSkinned(ID3D12GraphicsCommandList* pCommandList, Model& model);
+    void LoadStaticBuffers(ID3D12Device* pDevice, DirectX::ResourceUploadBatch& resourceUploadBatch, bool keepMemory = false);
+
     std::vector<std::unique_ptr<DirectX::IEffect>*> effects;
     std::vector<std::shared_ptr<MeshDeviceData>> meshes;
-
-    void LoadStaticBuffers(ID3D12Device* pDevice, DirectX::ResourceUploadBatch& resourceUploadBatch, bool keepMemory = false);
 };
 

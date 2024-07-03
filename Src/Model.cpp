@@ -24,6 +24,14 @@ std::uint32_t Bone::GetParentIndex() const noexcept {
     return m_parentIndex;
 }
 
+std::uint64_t Bone::GetNumChildren() const noexcept {
+    return m_childIndices.size();
+}
+
+std::vector<std::uint32_t>& Bone::GetChildIndices() noexcept {
+    return m_childIndices;
+}
+
 void Bone::SetParentIndex(std::uint32_t index) noexcept {
     m_parentIndex = index;
 }
@@ -216,6 +224,14 @@ void Model::Add(std::shared_ptr<Mesh> pMesh) noexcept {
     m_meshes.push_back(pMesh);
 }
 
+void Model::MakeBoneMatricesArray(std::uint64_t count) {
+    m_boneMatrices = Bone::MakeArray(count);
+}
+
+void Model::MakeInverseBoneMatricesArray(std::uint64_t count) {
+    m_inverseBindPoseMatrices = Bone::MakeArray(count);
+}
+
 std::string Model::GetName() const noexcept {
     return m_name;
 }
@@ -240,16 +256,27 @@ std::vector<Bone>& Model::GetBones() noexcept {
     return m_bones;
 }
 
-Bone::TransformArray* Model::GetBoneMatrices() noexcept {
-    return &m_boneMatrices;
+DirectX::XMMATRIX* Model::GetBoneMatrices() noexcept {
+    return m_boneMatrices.get();
 }
 
-Bone::TransformArray* Model::GetInverseBindPoseMatrices() noexcept {
-    return &m_inverseBindPoseMatrices;
+DirectX::XMMATRIX* Model::GetInverseBindPoseMatrices() noexcept {
+    return m_inverseBindPoseMatrices.get();
 }
 
 bool Model::IsVisible() const noexcept {
     return m_visible;
+}
+
+bool Model::IsSkinned() const noexcept {
+    bool isSkinned = true;
+    for (const std::shared_ptr<Mesh>& pMesh : m_meshes) {
+        for (const std::unique_ptr<Submesh>& pSubmesh : pMesh->GetSubmeshes()) {
+            std::uint32_t flags = m_materials[pSubmesh->GetMaterialIndex()]->GetFlags();
+            isSkinned = flags & RenderFlags::Effect::Skinned;
+        }
+    }
+    return isSkinned;
 }
 
 void Model::SetVisible(bool visible) noexcept {
