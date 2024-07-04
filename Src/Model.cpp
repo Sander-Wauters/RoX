@@ -244,6 +244,10 @@ std::uint64_t Model::GetNumMeshes() const noexcept {
     return m_meshes.size();
 }
 
+std::uint64_t Model::GetNumMaterials() const noexcept {
+    return m_materials.size();
+}
+
 std::vector<std::shared_ptr<Material>>& Model::GetMaterials() noexcept {
     return m_materials;
 }

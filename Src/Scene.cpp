@@ -98,8 +98,8 @@ const std::unordered_map<std::string, std::shared_ptr<Outline::Base>>& Scene::Ge
 
 std::uint64_t Scene::GetTotalInstanceCount() const noexcept {
     std::uint64_t count = 0;
-    for (auto& model : m_models) {
-        for (auto& mesh : model.second->GetMeshes()) {
+    for (auto& modelPair : m_models) {
+        for (auto& mesh : modelPair.second->GetMeshes()) {
             for (auto& submesh : mesh->GetSubmeshes()) {
                 count += submesh->GetNumVisibleInstances();
             }
@@ -110,8 +110,8 @@ std::uint64_t Scene::GetTotalInstanceCount() const noexcept {
 
 std::uint64_t Scene::GetTotalVerticesLoaded() const noexcept {
     std::uint64_t count = 0;
-    for (auto& model : m_models) {
-        for (auto& mesh : model.second->GetMeshes()) {
+    for (auto& modelPair : m_models) {
+        for (auto& mesh : modelPair.second->GetMeshes()) {
             for (auto& submesh : mesh->GetSubmeshes()) {
                 count += submesh->GetNumVertices();
             }
@@ -122,8 +122,8 @@ std::uint64_t Scene::GetTotalVerticesLoaded() const noexcept {
 
 std::uint64_t Scene::GetTotalVerticesRendered() const noexcept {
     std::uint64_t count = 0;
-    for (auto& model : m_models) {
-        for (auto& mesh : model.second->GetMeshes()) {
+    for (auto& modelPair : m_models) {
+        for (auto& mesh : modelPair.second->GetMeshes()) {
             for (auto& submesh : mesh->GetSubmeshes()) {
                 count += submesh->GetNumVertices() * submesh->GetNumVisibleInstances();
             }

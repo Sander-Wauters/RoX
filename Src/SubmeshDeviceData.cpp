@@ -33,6 +33,13 @@ SubmeshDeviceData::SubmeshDeviceData(ID3D12Device* pDevice, Submesh* pSubmesh) :
     memcpy(m_indexBuffer.Memory(), pSubmesh->GetIndices()->data(), sizeInBytes);
 }
 
+void SubmeshDeviceData::OnDeviceLost() noexcept {
+    m_indexBuffer.Reset();
+    m_vertexBuffer.Reset();
+    m_staticIndexBuffer.Reset();
+    m_staticVertexBuffer.Reset();
+}
+
 void SubmeshDeviceData::PrepareForDraw(ID3D12GraphicsCommandList* pCommandList) const {
     if (!m_indexBufferSize || !m_vertexBufferSize) 
         throw std::runtime_error("Submesh is missing values for vertex and/or index buffer size: vertexBufferSize=" + std::to_string(m_vertexBufferSize) + "; indexBufferSize=" + std::to_string(m_indexBufferSize));
@@ -82,20 +89,12 @@ DirectX::SharedGraphicsResource& SubmeshDeviceData::GetVertexBuffer() noexcept {
     return m_vertexBuffer;
 }
 
-ID3D12Resource* SubmeshDeviceData::GetStaticIndexBuffer() noexcept {
-    return m_staticIndexBuffer.Get();
+Microsoft::WRL::ComPtr<ID3D12Resource>& SubmeshDeviceData::GetStaticIndexBuffer() noexcept {
+    return m_staticIndexBuffer;
 }
 
-ID3D12Resource* SubmeshDeviceData::GetStaticVertexBuffer() noexcept {
-    return m_staticVertexBuffer.Get();
-}
-
-ID3D12Resource** SubmeshDeviceData::GetAddressOfStaticIndexBuffer() noexcept {
-    return m_staticIndexBuffer.GetAddressOf();
-}
-
-ID3D12Resource** SubmeshDeviceData::GetAddressOfStaticVertexBuffer() noexcept {
-    return m_staticVertexBuffer.GetAddressOf();
+Microsoft::WRL::ComPtr<ID3D12Resource>& SubmeshDeviceData::GetStaticVertexBuffer() noexcept {
+    return m_staticVertexBuffer;
 }
 
 void SubmeshDeviceData::SetIndexBufferSize(std::uint32_t size) noexcept {

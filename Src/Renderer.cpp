@@ -275,31 +275,31 @@ void Renderer::Impl::Clear() {
 void Renderer::Impl::RenderMeshes() {
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
 
-    for (auto& model : m_pDeviceResourceData->GetModelData()) {
-        if (!model.first->IsVisible())
+    for (const ModelPair& modelPair : m_pDeviceResourceData->GetModelData()) {
+        if (!modelPair.first->IsVisible())
             continue;
-        if (model.first->IsSkinned()) {
-            model.second->DrawSkinned(pCommandList, *model.first.get());
+        if (modelPair.first->IsSkinned()) {
+            modelPair.second->DrawSkinned(pCommandList, modelPair.first.get());
             continue;
         }
 
-        for (std::uint64_t meshIndex = 0; meshIndex < model.first->GetNumMeshes(); ++meshIndex) {
-            Mesh* pMesh = model.first->GetMeshes()[meshIndex].get();
-            MeshDeviceData* pMeshData = model.second->meshes[meshIndex].get();
+        for (std::uint64_t meshIndex = 0; meshIndex < modelPair.first->GetNumMeshes(); ++meshIndex) {
+            Mesh* pMesh = modelPair.first->GetMeshes()[meshIndex].get();
+            MeshDeviceData* pMeshData = modelPair.second->GetMeshes()[meshIndex];
 
             if (!pMesh->IsVisible())
                 continue;
 
             for (std::uint64_t submeshIndex = 0; submeshIndex < pMesh->GetNumSubmeshes(); ++submeshIndex) {
                 Submesh* pSubmesh = pMesh->GetSubmeshes()[submeshIndex].get();
-                SubmeshDeviceData* pSubmeshData = pMeshData->submeshes[submeshIndex].get();
+                SubmeshDeviceData* pSubmeshData = pMeshData->GetSubmeshes()[submeshIndex].get();
 
                 if (!pSubmesh->IsVisible())
                     continue;
 
-                DirectX::IEffect* pEffect = model.second->effects[pSubmesh->GetMaterialIndex()]->get();
+                DirectX::IEffect* pEffect = modelPair.second->GetEffects()[pSubmesh->GetMaterialIndex()]->get();
 
-                std::uint32_t flags = pSubmesh->GetMaterial(model.first.get())->GetFlags();
+                std::uint32_t flags = pSubmesh->GetMaterial(modelPair.first.get())->GetFlags();
 
                 if (flags & RenderFlags::Effect::Instanced) {
                     const size_t instBytes = pSubmesh->GetNumVisibleInstances() * sizeof(DirectX::XMFLOAT3X4);
@@ -316,8 +316,8 @@ void Renderer::Impl::RenderMeshes() {
                     pSubmeshData->DrawInstanced(pCommandList, pSubmesh);
                 } else {
                     DirectX::XMMATRIX world = DirectX::XMLoadFloat3x4(&pSubmesh->GetInstances()[0]);
-                    if (pMesh->GetBoneIndex() != Bone::INVALID_INDEX && model.first->GetBoneMatrices() != nullptr) 
-                        world = DirectX::XMMatrixMultiply(model.first->GetBoneMatrices()[pMesh->GetBoneIndex()], world);
+                    if (pMesh->GetBoneIndex() != Bone::INVALID_INDEX && modelPair.first->GetBoneMatrices() != nullptr) 
+                        world = DirectX::XMMatrixMultiply(modelPair.first->GetBoneMatrices()[pMesh->GetBoneIndex()], world);
 
                     auto iMatrices = dynamic_cast<DirectX::IEffectMatrices*>(pEffect);
                     if (iMatrices)
@@ -341,27 +341,27 @@ void Renderer::Impl::RenderOutlines() {
     pOutlineEffect->SetWorld(DirectX::XMMatrixIdentity());
     pOutlineEffect->Apply(pCommandList);
 
-    for (const std::pair<std::string const, std::shared_ptr<Outline::Base>>& outline : m_pDeviceResourceData->GetScene().GetOutlines()) {
-        if (!outline.second->IsVisible())
+    for (const std::pair<std::string const, std::shared_ptr<Outline::Base>>& outlinePair : m_pDeviceResourceData->GetScene().GetOutlines()) {
+        if (!outlinePair.second->IsVisible())
             continue;
 
-        if (auto p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingBox>>(outline.second)) 
+        if (auto p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingBox>>(outlinePair.second)) 
             Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
-        else if (auto p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingFrustum>>(outline.second)) 
+        else if (auto p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingFrustum>>(outlinePair.second)) 
             Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
-        else if (auto p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingOrientedBox>>(outline.second)) 
+        else if (auto p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingOrientedBox>>(outlinePair.second)) 
             Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
-        else if (auto p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingSphere>>(outline.second)) 
+        else if (auto p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingSphere>>(outlinePair.second)) 
             Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
-        else if (auto p = std::dynamic_pointer_cast<Outline::Grid>(outline.second))
+        else if (auto p = std::dynamic_pointer_cast<Outline::Grid>(outlinePair.second))
             DrawGrid(pOutlineBatch, p->GetXAxis(), p->GetYAxis(), p->GetOrigin(), p->GetXDivsions(), p->GetYDivsions(), p->GetColor());
-        else if (auto p = std::dynamic_pointer_cast<Outline::Ring>(outline.second))
+        else if (auto p = std::dynamic_pointer_cast<Outline::Ring>(outlinePair.second))
             DrawRing(pOutlineBatch, p->GetOrigin(), p->GetMajorAxis(), p->GetMinorAxis(), p->GetColor());
-        else if (auto p = std::dynamic_pointer_cast<Outline::Ray>(outline.second)) 
+        else if (auto p = std::dynamic_pointer_cast<Outline::Ray>(outlinePair.second)) 
             DrawRay(pOutlineBatch, p->GetOrigin(), p->GetDirection(), p->IsNormalized(), p->GetColor());
-        else if (auto p = std::dynamic_pointer_cast<Outline::Triangle>(outline.second)) 
+        else if (auto p = std::dynamic_pointer_cast<Outline::Triangle>(outlinePair.second)) 
             DrawTriangle(pOutlineBatch, p->GetPointA(), p->GetPointB(), p->GetPointC(), p->GetColor());
-        else if (auto p = std::dynamic_pointer_cast<Outline::Quad>(outline.second)) 
+        else if (auto p = std::dynamic_pointer_cast<Outline::Quad>(outlinePair.second)) 
             DrawQuad(pOutlineBatch, p->GetPointA(), p->GetPointB(), p->GetPointC(), p->GetPointD(), p->GetColor());
     }
     pOutlineBatch->End();
@@ -370,52 +370,52 @@ void Renderer::Impl::RenderOutlines() {
 void Renderer::Impl::RenderSprites() {
     DirectX::SpriteBatch* pSpriteBatch = m_pDeviceResourceData->GetSpriteBatch();
 
-    for (auto& sprite : m_pDeviceResourceData->GetSpriteData()) {
-        if (!sprite.first->IsVisible())
+    for (const SpritePair& spritePair : m_pDeviceResourceData->GetSpriteData()) {
+        if (!spritePair.first->IsVisible())
             continue;
 
-        DirectX::XMUINT2 textureSize = DirectX::GetTextureSize(sprite.second->pTexture.Get());
+        DirectX::XMUINT2 textureSize = DirectX::GetTextureSize(spritePair.second->GetTexture().Get());
 
-        DirectX::XMFLOAT2 origin = { -sprite.first->GetOrigin().x, -sprite.first->GetOrigin().y };
+        DirectX::XMFLOAT2 origin = { -spritePair.first->GetOrigin().x, -spritePair.first->GetOrigin().y };
         origin.x += (float)textureSize.x / 2;
         origin.y += (float)textureSize.y / 2;
 
         DirectX::XMFLOAT2 offset;
         offset.x = (float)textureSize.x / 2;
         offset.y = (float)textureSize.y / 2;
-        offset.x *= sprite.first->GetScale().x;
-        offset.y *= sprite.first->GetScale().y;
-        offset.x += sprite.first->GetOffset().x;
-        offset.y += sprite.first->GetOffset().y;
+        offset.x *= spritePair.first->GetScale().x;
+        offset.y *= spritePair.first->GetScale().y;
+        offset.x += spritePair.first->GetOffset().x;
+        offset.y += spritePair.first->GetOffset().y;
 
         pSpriteBatch->Draw(
-                m_pDeviceResourceData->GetDescriptorHeap()->GetGpuHandle(sprite.second->descriptorHeapIndex),
+                m_pDeviceResourceData->GetDescriptorHeap()->GetGpuHandle(spritePair.second->GetHeapIndex()),
                 textureSize,
                 offset,
                 nullptr,
-                sprite.first->GetColor(),
-                sprite.first->GetAngle(),
+                spritePair.first->GetColor(),
+                spritePair.first->GetAngle(),
                 origin,
-                sprite.first->GetScale(),
+                spritePair.first->GetScale(),
                 DirectX::SpriteEffects_None,
-                sprite.first->GetLayer());
+                spritePair.first->GetLayer());
     }
 }
 
 void Renderer::Impl::RenderText() {
     DirectX::SpriteBatch* pSpriteBatch = m_pDeviceResourceData->GetSpriteBatch();
 
-    for (auto& text : m_pDeviceResourceData->GetTextData()) {
-        text.second->pSpriteFont->DrawString(
+    for (const TextPair& textPair : m_pDeviceResourceData->GetTextData()) {
+        textPair.second->GetSpriteFont()->DrawString(
                 pSpriteBatch,
-                text.first->GetContent().c_str(),
-                text.first->GetOffset(),
-                text.first->GetColor(),
-                text.first->GetAngle(),
-                { -text.first->GetOrigin().x, -text.first->GetOrigin().y },
-                text.first->GetScale(),
+                textPair.first->GetContent().c_str(),
+                textPair.first->GetOffset(),
+                textPair.first->GetColor(),
+                textPair.first->GetAngle(),
+                { -textPair.first->GetOrigin().x, -textPair.first->GetOrigin().y },
+                textPair.first->GetScale(),
                 DirectX::SpriteEffects_None,
-                text.first->GetLayer());
+                textPair.first->GetLayer());
     }
 }
 

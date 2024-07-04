@@ -143,6 +143,7 @@ class Model {
 
         std::uint64_t GetNumBones() const noexcept;
         std::uint64_t GetNumMeshes() const noexcept;
+        std::uint64_t GetNumMaterials() const noexcept;
 
         std::vector<std::shared_ptr<Material>>& GetMaterials() noexcept;
         std::vector<std::shared_ptr<Mesh>>& GetMeshes() noexcept;

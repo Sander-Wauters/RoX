@@ -12,6 +12,8 @@ class SubmeshDeviceData {
     public:
         SubmeshDeviceData(ID3D12Device* pDevice, Submesh* pSubmesh);
 
+        void OnDeviceLost() noexcept;
+
         void PrepareForDraw(ID3D12GraphicsCommandList* pCommandList) const;
 
         void Draw(ID3D12GraphicsCommandList* pCommandList, Submesh* pSubmesh) const;
@@ -24,10 +26,8 @@ class SubmeshDeviceData {
         DirectX::SharedGraphicsResource& GetIndexBuffer() noexcept;
         DirectX::SharedGraphicsResource& GetVertexBuffer() noexcept;
 
-        ID3D12Resource* GetStaticIndexBuffer() noexcept;
-        ID3D12Resource* GetStaticVertexBuffer() noexcept;
-        ID3D12Resource** GetAddressOfStaticIndexBuffer() noexcept;
-        ID3D12Resource** GetAddressOfStaticVertexBuffer() noexcept;
+        Microsoft::WRL::ComPtr<ID3D12Resource>& GetStaticIndexBuffer() noexcept;
+        Microsoft::WRL::ComPtr<ID3D12Resource>& GetStaticVertexBuffer() noexcept;
 
         void SetIndexBufferSize(std::uint32_t size) noexcept;
         void SetVertexBufferSize(std::uint32_t size) noexcept;

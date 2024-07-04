@@ -25,20 +25,26 @@ set(SOURCE
     Src/Camera.cpp
     Src/DebugDraw.cpp
     Src/DebugDraw.h
-    Src/DeviceData.cpp
-    Src/DeviceData.h
+    #Src/DeviceData.cpp
+    #Src/DeviceData.h
     Src/DeviceResourceData.cpp
     Src/DeviceResourceData.h
     Src/DeviceResources.cpp
     Src/DeviceResources.h
     Src/IDeviceObserver.h
     Src/Material.cpp
+    Src/MeshDeviceData.cpp
+    Src/MeshDeviceData.h
     Src/Model.cpp
+    Src/ModelDeviceData.cpp
+    Src/ModelDeviceData.h
     Src/Renderer.cpp
     Src/Scene.cpp
     Src/SubmeshDeviceData.cpp
     Src/SubmeshDeviceData.h
     Src/SubmeshFactory.cpp
+    Src/TextDeviceData.h
+    Src/TextureDeviceData.h
     Src/Timer.cpp
     Src/Window.cpp
 )

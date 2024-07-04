@@ -12,11 +12,21 @@
 
 #include "IDeviceObserver.h"
 #include "DeviceResources.h"
-#include "DeviceData.h"
+#include "ModelDeviceData.h"
+#include "MeshDeviceData.h"
+#include "TextureDeviceData.h"
+#include "TextDeviceData.h"
+
+using MaterialPair = std::pair<const std::shared_ptr<Material>, std::unique_ptr<DirectX::IEffect>>;
+using ModelPair    = std::pair<const std::shared_ptr<Model>,    std::unique_ptr<ModelDeviceData>>;
+using MeshPair     = std::pair<const std::shared_ptr<Mesh>,     std::unique_ptr<MeshDeviceData>>; 
+using TexturePair  = std::pair<const std::wstring,              std::unique_ptr<TextureDeviceData>>;
+using SpritePair   = std::pair<const std::shared_ptr<Sprite>,   std::unique_ptr<TextureDeviceData>>;
+using TextPair     = std::pair<const std::shared_ptr<Text>,     std::unique_ptr<TextDeviceData>>;
 
 class DeviceResourceData : public IDeviceObserver {
     private:
-        static constexpr D3D12_INPUT_ELEMENT_DESC InstancedInputElements[] = {
+        static constexpr D3D12_INPUT_ELEMENT_DESC c_InstancedInputElements[] = {
             { "SV_Position", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
             { "NORMAL",      0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
             { "TEXCOORD",    0, DXGI_FORMAT_R32G32_FLOAT,       0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
@@ -25,7 +35,7 @@ class DeviceResourceData : public IDeviceObserver {
             { "InstMatrix",  2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
         };
 
-        static constexpr D3D12_INPUT_ELEMENT_DESC SkinnedInputElements[] ={
+        static constexpr D3D12_INPUT_ELEMENT_DESC c_SkinnedInputElements[] ={
            { "SV_Position",  0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
            { "NORMAL",       0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
            { "COLOR",        0, DXGI_FORMAT_B8G8R8A8_UNORM,  0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -36,7 +46,7 @@ class DeviceResourceData : public IDeviceObserver {
            { "BLENDWEIGHT",  0, DXGI_FORMAT_R8G8B8A8_UNORM,  0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         };
 
-        static constexpr std::uint32_t ImGuiDescriptorIndex = 0;
+        static constexpr std::uint32_t c_ImGuiDescriptorIndex = 0;
 
     public:
         DeviceResourceData(Scene& scene, const DeviceResources& deviceResources) noexcept;
@@ -45,9 +55,9 @@ class DeviceResourceData : public IDeviceObserver {
         void OnDeviceLost() override;
         void OnDeviceRestored() override;
 
-        void InitDataFromScene(std::shared_ptr<Model> pModel);
-        void InitDataFromScene(std::shared_ptr<Sprite> pSprite);
-        void InitDataFromScene(std::shared_ptr<Text> pText);
+        void Add(std::shared_ptr<Model> pModel);
+        void Add(std::shared_ptr<Sprite> pSprite);
+        void Add(std::shared_ptr<Text> pText);
 
         void Update();
 
@@ -55,14 +65,14 @@ class DeviceResourceData : public IDeviceObserver {
         bool HasTextures() const noexcept;
 
         void BuildDeviceDependentResources(bool msaaEnabled);
-        void BuildSprites(DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void BuildText(DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void BuildTextures(DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void BuildSprite(ID3D12Device* pDevice, SpritePair& spritePair, DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void BuildText(ID3D12Device* pDevice, TextPair& textPair, DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void BuildTexture(ID3D12Device* pDevice, TexturePair& texturePair, DirectX::ResourceUploadBatch& resourceUploadBatch);
 
         void BuildRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch, bool msaaEnabled);
-        void BuildModels(DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void BuildMaterials(DirectX::RenderTargetState& renderTargetState);
-        void BuildOutlines(DirectX::RenderTargetState& renderTargetState);
+        void BuildModel(ID3D12Device* pDevice, ModelPair& modelPair, DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void BuildMaterial(ID3D12Device* pDevice, MaterialPair& materialPair, DirectX::RenderTargetState& renderTargetState);
+        void BuildOutlines(ID3D12Device* pDevice, DirectX::RenderTargetState& renderTargetState);
 
         void BuildWindowSizeDependentResources();
     
@@ -111,10 +121,10 @@ class DeviceResourceData : public IDeviceObserver {
         std::unique_ptr<DirectX::BasicEffect> m_pOutlineEffect;
         std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>> m_pOutlinePrimitiveBatch;
 
-        std::unordered_map<std::shared_ptr<Material>, std::unique_ptr<DirectX::IEffect>> m_materialData;
-        std::unordered_map<std::shared_ptr<Model>, std::unique_ptr<ModelDeviceData>> m_modelData;
-        std::unordered_map<std::shared_ptr<Mesh>, std::shared_ptr<MeshDeviceData>> m_meshData;
-        std::unordered_map<std::wstring, std::unique_ptr<TextureDeviceData>> m_textureData;
-        std::unordered_map<std::shared_ptr<Sprite>, std::unique_ptr<TextureDeviceData>> m_spriteData;
-        std::unordered_map<std::shared_ptr<Text>, std::unique_ptr<TextDeviceData>> m_textData;  
+        std::unordered_map<std::shared_ptr<Material>, std::unique_ptr<DirectX::IEffect>>  m_materialData;
+        std::unordered_map<std::shared_ptr<Model>,    std::unique_ptr<ModelDeviceData>>   m_modelData;
+        std::unordered_map<std::shared_ptr<Mesh>,     std::unique_ptr<MeshDeviceData>>    m_meshData;
+        std::unordered_map<std::wstring,              std::unique_ptr<TextureDeviceData>> m_textureData;
+        std::unordered_map<std::shared_ptr<Sprite>,   std::unique_ptr<TextureDeviceData>> m_spriteData;
+        std::unordered_map<std::shared_ptr<Text>,     std::unique_ptr<TextDeviceData>>    m_textData;  
 };
