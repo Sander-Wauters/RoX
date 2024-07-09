@@ -45,7 +45,7 @@ namespace RenderFlags {
        constexpr std::uint32_t Instanced =             0x01000000;
        constexpr std::uint32_t Specular =              0x02000000;
        constexpr std::uint32_t Skinned =               0x04000000;
-       constexpr std::uint32_t Reset =                 !(None + Fog + Lighting + PerPixelLighting + Texture + Instanced, + Specular + Skinned);
+       constexpr std::uint32_t Reset =                 !(None + Fog + Lighting + PerPixelLighting + Texture + Instanced + Specular + Skinned);
    }
 
    constexpr std::uint32_t Default = BlendState::Opaque |  DepthStencilState::Default | 

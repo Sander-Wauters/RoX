@@ -2,10 +2,13 @@
 
 #include <DirectXHelpers.h>
 
+#include "RoX/VertexTypes.h"
+
 #include "Exceptions/ThrowIfFailed.h"
 
 SubmeshDeviceData::SubmeshDeviceData(ID3D12Device* pDevice, Submesh* pSubmesh) :
-    m_vertexStride(sizeof(DirectX::VertexPositionNormalTexture)),
+    //m_vertexStride(sizeof(DirectX::VertexPositionNormalTexture)),
+    m_vertexStride(sizeof(VertexPositionNormalTextureSkinning)),
     m_indexBufferSize(0),
     m_vertexBufferSize(0),
     m_primitiveType(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST),
@@ -16,13 +19,14 @@ SubmeshDeviceData::SubmeshDeviceData(ID3D12Device* pDevice, Submesh* pSubmesh) :
     if (pSubmesh->GetNumIndices() > UINT32_MAX)
         throw std::invalid_argument("Too many indices");
 
-    std::uint32_t sizeInBytes = static_cast<std::uint32_t>(pSubmesh->GetNumVertices()) * sizeof(DirectX::VertexPositionNormalTexture);
+    //std::uint32_t sizeInBytes = static_cast<std::uint32_t>(pSubmesh->GetNumVertices()) * sizeof(DirectX::VertexPositionNormalTexture);
+    std::uint32_t sizeInBytes = static_cast<std::uint32_t>(pSubmesh->GetVerticesA()->size()) * sizeof(VertexPositionNormalTextureSkinning);
     if (sizeInBytes > static_cast<std::uint32_t>(D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u))
         throw std::invalid_argument("VB too large for DirectX 12");
 
     m_vertexBufferSize = sizeInBytes;      
     m_vertexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(sizeInBytes, 16, DirectX::GraphicsMemory::TAG_VERTEX);
-    memcpy(m_vertexBuffer.Memory(), pSubmesh->GetVertices()->data(), sizeInBytes);
+    memcpy(m_vertexBuffer.Memory(), pSubmesh->GetVerticesA()->data(), sizeInBytes);
 
     sizeInBytes = static_cast<std::uint32_t>(pSubmesh->GetNumIndices()) * sizeof(std::uint16_t);
     if (sizeInBytes > static_cast<std::uint32_t>(D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u))

@@ -5,6 +5,7 @@
 
 #include "../../Lib/DirectXTK12/Inc/VertexTypes.h"
 
+#include "VertexTypes.h"
 #include "Material.h"
 
 class Model;
@@ -64,6 +65,7 @@ class Submesh {
 
         std::shared_ptr<Material> GetMaterial(Model* pModel) const;
         std::shared_ptr<std::vector<DirectX::VertexPositionNormalTexture>> GetVertices() const noexcept;
+        std::shared_ptr<std::vector<VertexPositionNormalTextureSkinning>> GetVerticesA() const noexcept { return m_pVerticesA; }
         std::shared_ptr<std::vector<std::uint16_t>> GetIndices() const noexcept;
 
         bool IsVisible() const noexcept;
@@ -73,6 +75,9 @@ class Submesh {
         void SetIndexCount(std::uint32_t count) noexcept;
         void SetStartIndex(std::uint32_t index) noexcept;
         void SetVertexOffset(std::uint32_t offset) noexcept;
+        void SetVertices(std::shared_ptr<std::vector<DirectX::VertexPositionNormalTexture>> vertices) noexcept;
+        void SetVerticesA(std::shared_ptr<std::vector<VertexPositionNormalTextureSkinning>> vertices) noexcept { m_pVerticesA = std::move(vertices); }
+        void SetIndices(std::shared_ptr<std::vector<std::uint16_t>> indices) noexcept;
         void SetVisible(bool visible) noexcept;
 
     private:
@@ -88,6 +93,7 @@ class Submesh {
         std::uint32_t m_vertexOffset;
 
         std::shared_ptr<std::vector<DirectX::VertexPositionNormalTexture>> m_pVertices; 
+        std::shared_ptr<std::vector<VertexPositionNormalTextureSkinning>> m_pVerticesA; 
         std::shared_ptr<std::vector<std::uint16_t>> m_pIndices;
 
         bool m_visible;

@@ -8,6 +8,8 @@
 #include <WICTextureLoader.h>
 #include <DirectXHelpers.h>
 
+#include "RoX/VertexTypes.h"
+
 #include "Exceptions/ThrowIfFailed.h"
 
 DeviceResourceData::DeviceResourceData(Scene& scene, const DeviceResources& deviceResources) 
@@ -226,7 +228,7 @@ void DeviceResourceData::BuildMaterial(ID3D12Device* pDevice, MaterialPair& mate
     if (flags & RenderFlags::Effect::Instanced)
         pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Instancing, pd);
     else if (flags & RenderFlags::Effect::Skinned) 
-        pEffect = std::make_unique<DirectX::SkinnedNormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting | DirectX::EffectFlags::Texture, pd);
+        pEffect = std::make_unique<DirectX::SkinnedNormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting, pd);
     else
         pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting | DirectX::EffectFlags::Texture, pd);
 
@@ -273,7 +275,9 @@ D3D12_INPUT_LAYOUT_DESC DeviceResourceData::InputLayout(std::uint32_t flags) con
     if (flags & RenderFlags::Effect::Instanced)
         return { c_InstancedInputElements, static_cast<UINT>(std::size(c_InstancedInputElements)) };
     if (flags & RenderFlags::Effect::Skinned)
-        return { c_SkinnedInputElements, static_cast<UINT>(std::size(c_SkinnedInputElements)) };
+        return VertexPositionNormalTextureSkinning::InputLayout;
+        //return { c_SkinnedInputElements, static_cast<UINT>(std::size(c_SkinnedInputElements)) };
+
     return DirectX::VertexPositionNormalTexture::InputLayout;
 }
 

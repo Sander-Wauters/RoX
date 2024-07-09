@@ -39,32 +39,33 @@ namespace Outline {
     };
 
     template<typename T> class BoundingBody : public Base {
-        static_assert(
-                std::is_base_of<DirectX::BoundingBox, T>::value ||
-                std::is_base_of<DirectX::BoundingFrustum, T>::value ||
-                std::is_base_of<DirectX::BoundingOrientedBox, T>::value ||
-                std::is_base_of<DirectX::BoundingSphere, T>::value,
-                "T must either be a DirectX::BoundingBox, DirectX::BoundingFrustum, DirectX::BoundingOrientedBox or DirectX::BoundingSphere"
-                );
+        private:
+            static_assert(
+                    std::is_base_of<DirectX::BoundingBox, T>::value ||
+                    std::is_base_of<DirectX::BoundingFrustum, T>::value ||
+                    std::is_base_of<DirectX::BoundingOrientedBox, T>::value ||
+                    std::is_base_of<DirectX::BoundingSphere, T>::value,
+                    "T must either be a DirectX::BoundingBox, DirectX::BoundingFrustum, DirectX::BoundingOrientedBox or DirectX::BoundingSphere"
+                    );
 
         public:
-        BoundingBody(
-                const std::string name,
-                T& bounds,
-                DirectX::XMVECTOR color = DirectX::Colors::White,
-                bool visible = true
-                ) noexcept :
-            Base(name, color, visible),
-            m_bounds(bounds)
-            {}
+            BoundingBody(
+                    const std::string name,
+                    T& bounds,
+                    DirectX::XMVECTOR color = DirectX::Colors::White,
+                    bool visible = true
+                    ) noexcept :
+                Base(name, color, visible),
+                m_bounds(bounds)
+                {}
 
         public:
-        const T& GetBounds() const noexcept { return m_bounds; }
+            const T& GetBounds() const noexcept { return m_bounds; }
 
-        void SetBounds(T& bounds) noexcept { m_bounds = bounds; }
+            void SetBounds(T& bounds) noexcept { m_bounds = bounds; }
 
         private:
-        T& m_bounds;
+            T& m_bounds;
     };
 
     class Grid : public Base {

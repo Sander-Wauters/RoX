@@ -1,1 +1,1 @@
-1 effect per geometry might be overkill. Per texture might be better.
+mesh should how the vertices and indices not submesh

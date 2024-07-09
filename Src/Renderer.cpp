@@ -150,7 +150,7 @@ void Renderer::Impl::Render(const std::function<void()>& renderImGui) {
         pCommandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
     }
 
-    if (m_pDeviceResourceData->HasMaterials() && m_pDeviceResourceData->HasTextures()) 
+    if (m_pDeviceResourceData->HasMaterials() && m_pDeviceResourceData->HasTextures())
         RenderMeshes();
 
     RenderOutlines();
@@ -176,6 +176,7 @@ void Renderer::Impl::Render(const std::function<void()>& renderImGui) {
 
         m_pDeviceResources->Present(D3D12_RESOURCE_STATE_RESOLVE_DEST);
     } else {
+        // ImGui doesn't support MSAA.
         ImGui_ImplDX12_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
@@ -321,7 +322,7 @@ void Renderer::Impl::RenderMeshes() {
 
                     auto iMatrices = dynamic_cast<DirectX::IEffectMatrices*>(pEffect);
                     if (iMatrices)
-                        iMatrices->SetWorld(DirectX::XMLoadFloat3x4(&pSubmesh->GetInstances()[0]));
+                        iMatrices->SetWorld(world);
                     pEffect->Apply(pCommandList);
 
                     pSubmeshData->Draw(pCommandList, pSubmesh);

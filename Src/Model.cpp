@@ -135,6 +135,15 @@ void Submesh::SetVertexOffset(std::uint32_t offset) noexcept {
     m_vertexOffset = offset;
 }
 
+void Submesh::SetVertices(std::shared_ptr<std::vector<DirectX::VertexPositionNormalTexture>> vertices) noexcept {
+    m_pVertices = std::move(vertices);
+}
+
+void Submesh::SetIndices(std::shared_ptr<std::vector<std::uint16_t>> indices) noexcept {
+    m_pIndices = std::move(indices);
+    m_indexCount = m_pIndices->size();
+}
+
 void Submesh::SetVisible(bool visible) noexcept {
     m_visible = visible;
 }

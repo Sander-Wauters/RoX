@@ -46,5 +46,4 @@ class SubmeshDeviceData {
         DirectX::SharedGraphicsResource m_vertexBuffer;
         Microsoft::WRL::ComPtr<ID3D12Resource> m_staticIndexBuffer;
         Microsoft::WRL::ComPtr<ID3D12Resource> m_staticVertexBuffer;
-        std::shared_ptr<std::vector<D3D12_INPUT_ELEMENT_DESC>> m_pVbDecl;
 };
