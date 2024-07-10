@@ -217,7 +217,7 @@ void DeviceResourceData::BuildMaterial(ID3D12Device* pDevice, MaterialPair& mate
     std::uint32_t flags = materialPair.first->GetFlags();
     std::unique_ptr<DirectX::NormalMapEffect> pEffect;
 
-    const D3D12_INPUT_LAYOUT_DESC inputLayout = InputLayout(flags);
+    D3D12_INPUT_LAYOUT_DESC inputLayout = InputLayout(materialPair.first->GetFlags());
     DirectX::EffectPipelineStateDescription pd(
             &inputLayout,
             BlendDesc(flags),
@@ -271,14 +271,13 @@ void DeviceResourceData::BuildWindowSizeDependentResources() {
     m_pSpriteBatch->SetViewport(viewport);
 }
 
-D3D12_INPUT_LAYOUT_DESC DeviceResourceData::InputLayout(std::uint32_t flags) const noexcept {
+D3D12_INPUT_LAYOUT_DESC DeviceResourceData::InputLayout(std::uint32_t flags) const {
     if (flags & RenderFlags::Effect::Instanced)
-        return { c_InstancedInputElements, static_cast<UINT>(std::size(c_InstancedInputElements)) };
+        return VertexPositionNormalTexture::InputLayoutInstancing;
     if (flags & RenderFlags::Effect::Skinned)
         return VertexPositionNormalTextureSkinning::InputLayout;
-        //return { c_SkinnedInputElements, static_cast<UINT>(std::size(c_SkinnedInputElements)) };
-
-    return DirectX::VertexPositionNormalTexture::InputLayout;
+    
+    return VertexPositionNormalTexture::InputLayout;
 }
 
 D3D12_BLEND_DESC DeviceResourceData::BlendDesc(std::uint32_t flags) const noexcept {

@@ -24,7 +24,7 @@ std::uint32_t Bone::GetParentIndex() const noexcept {
     return m_parentIndex;
 }
 
-std::uint64_t Bone::GetNumChildren() const noexcept {
+std::uint32_t Bone::GetNumChildren() const noexcept {
     return m_childIndices.size();
 }
 
@@ -52,8 +52,6 @@ Submesh::Submesh(const std::string name, std::uint32_t materialIndex, bool visib
     m_indexCount(0),
     m_startIndex(0),
     m_vertexOffset(0),
-    m_pVertices(std::make_shared<std::vector<DirectX::VertexPositionNormalTexture>>()),
-    m_pIndices(std::make_shared<std::vector<std::uint16_t>>()),
     m_visible(visible)
 {}
 
@@ -61,20 +59,12 @@ std::string Submesh::GetName() const noexcept {
     return m_name;
 }
 
-std::uint64_t Submesh::GetNumCulled() const noexcept {
+std::uint32_t Submesh::GetNumCulled() const noexcept {
     return m_numCulled;
 }
 
-std::uint64_t Submesh::GetNumVisibleInstances() const noexcept {
+std::uint32_t Submesh::GetNumVisibleInstances() const noexcept {
     return m_instances.size() - m_numCulled;
-}
-
-std::uint64_t Submesh::GetNumVertices() const noexcept {
-    return m_pVertices->size();
-}
-
-std::uint64_t Submesh::GetNumIndices() const noexcept {
-    return m_pIndices->size();
 }
 
 std::vector<DirectX::XMFLOAT3X4>& Submesh::GetInstances() noexcept {
@@ -101,19 +91,11 @@ std::shared_ptr<Material> Submesh::GetMaterial(Model* pModel) const {
     return pModel->GetMaterials()[m_materialIndex];
 }
 
-std::shared_ptr<std::vector<DirectX::VertexPositionNormalTexture>> Submesh::GetVertices() const noexcept {
-    return m_pVertices;
-}
-
-std::shared_ptr<std::vector<std::uint16_t>> Submesh::GetIndices() const noexcept {
-    return m_pIndices;
-}
-
 bool Submesh::IsVisible() const noexcept {
     return m_visible;
 }
 
-void Submesh::SetNumberCulled(std::uint64_t amount) {
+void Submesh::SetNumberCulled(std::uint32_t amount) {
     if (amount > m_instances.size())
         throw std::invalid_argument("Amount is greater than m_instances.size()");
     m_numCulled = amount;
@@ -133,15 +115,6 @@ void Submesh::SetStartIndex(std::uint32_t index) noexcept {
 
 void Submesh::SetVertexOffset(std::uint32_t offset) noexcept {
     m_vertexOffset = offset;
-}
-
-void Submesh::SetVertices(std::shared_ptr<std::vector<DirectX::VertexPositionNormalTexture>> vertices) noexcept {
-    m_pVertices = std::move(vertices);
-}
-
-void Submesh::SetIndices(std::shared_ptr<std::vector<std::uint16_t>> indices) noexcept {
-    m_pIndices = std::move(indices);
-    m_indexCount = m_pIndices->size();
 }
 
 void Submesh::SetVisible(bool visible) noexcept {
@@ -170,8 +143,16 @@ std::uint32_t Mesh::GetBoneIndex() const noexcept {
     return m_boneIndex;
 }
 
-std::uint64_t Mesh::GetNumSubmeshes() const noexcept {
+std::uint32_t Mesh::GetNumSubmeshes() const noexcept {
     return m_submeshes.size();
+}
+
+std::uint32_t Mesh::GetNumVertices() const noexcept {
+    return m_vertices.size();
+}
+
+std::uint32_t Mesh::GetNumIndices() const noexcept {
+    return m_indices.size();
 }
 
 std::vector<std::uint32_t>& Mesh::GetBoneInfluences() noexcept {
@@ -182,6 +163,14 @@ std::vector<std::unique_ptr<Submesh>>& Mesh::GetSubmeshes() noexcept {
     return m_submeshes;
 }
 
+std::vector<VertexPositionNormalTexture>& Mesh::GetVertices() noexcept {
+    return m_vertices;
+}
+
+std::vector<std::uint16_t>& Mesh::GetIndices() noexcept {
+    return m_indices;
+}
+
 bool Mesh::IsVisible() const noexcept {
     return m_visible;
 }
@@ -190,8 +179,74 @@ void Mesh::SetBoneIndex(std::uint32_t boneIndex) noexcept {
     m_boneIndex = boneIndex;
 }
 
+void Mesh::SetVisible(bool visible) noexcept {
+    m_visible = visible;
+}
+
 // ---------------------------------------------------------------- //
-//                          Mesh
+//                          SkinnedMesh
+// ---------------------------------------------------------------- //
+
+SkinnedMesh::SkinnedMesh(const std::string name, bool visible) 
+    noexcept : m_name(name),
+    m_boneIndex(Bone::INVALID_INDEX),
+    m_visible(visible)
+{}
+
+void SkinnedMesh::Add(std::unique_ptr<Submesh> pSubmesh) noexcept {
+    m_submeshes.push_back(std::move(pSubmesh));
+}
+
+std::string SkinnedMesh::GetName() const noexcept {
+    return m_name;
+}
+
+std::uint32_t SkinnedMesh::GetBoneIndex() const noexcept {
+    return m_boneIndex;
+}
+
+std::uint32_t SkinnedMesh::GetNumSubmeshes() const noexcept {
+    return m_submeshes.size();
+}
+
+std::uint32_t SkinnedMesh::GetNumVertices() const noexcept {
+    return m_vertices.size();
+}
+
+std::uint32_t SkinnedMesh::GetNumIndices() const noexcept {
+    return m_indices.size();
+}
+
+std::vector<std::uint32_t>& SkinnedMesh::GetBoneInfluences() noexcept {
+    return m_boneInfluences;
+}
+
+std::vector<std::unique_ptr<Submesh>>& SkinnedMesh::GetSubmeshes() noexcept {
+    return m_submeshes;
+}
+
+std::vector<VertexPositionNormalTextureSkinning>& SkinnedMesh::GetVertices() noexcept {
+    return m_vertices;
+}
+
+std::vector<std::uint16_t>& SkinnedMesh::GetIndices() noexcept {
+    return m_indices;
+}
+
+bool SkinnedMesh::IsVisible() const noexcept {
+    return m_visible;
+}
+
+void SkinnedMesh::SetBoneIndex(std::uint32_t boneIndex) noexcept {
+    m_boneIndex = boneIndex;
+}
+
+void SkinnedMesh::SetVisible(bool visible) noexcept {
+    m_visible = visible;
+}
+
+// ---------------------------------------------------------------- //
+//                          Model
 // ---------------------------------------------------------------- //
 
 Model::Model(
@@ -229,7 +284,7 @@ void Model::Add(std::shared_ptr<Material> pMaterial) noexcept {
     m_materials.push_back(pMaterial); 
 }
 
-void Model::Add(std::shared_ptr<Mesh> pMesh) noexcept {
+void Model::Add(std::shared_ptr<IMesh> pMesh) noexcept {
     m_meshes.push_back(pMesh);
 }
 
@@ -245,15 +300,15 @@ std::string Model::GetName() const noexcept {
     return m_name;
 }
 
-std::uint64_t Model::GetNumBones() const noexcept {
+std::uint32_t Model::GetNumBones() const noexcept {
     return m_bones.size();
 }
 
-std::uint64_t Model::GetNumMeshes() const noexcept {
+std::uint32_t Model::GetNumMeshes() const noexcept {
     return m_meshes.size();
 }
 
-std::uint64_t Model::GetNumMaterials() const noexcept {
+std::uint32_t Model::GetNumMaterials() const noexcept {
     return m_materials.size();
 }
 
@@ -261,7 +316,7 @@ std::vector<std::shared_ptr<Material>>& Model::GetMaterials() noexcept {
     return m_materials;
 }
 
-std::vector<std::shared_ptr<Mesh>>& Model::GetMeshes() noexcept {
+std::vector<std::shared_ptr<IMesh>>& Model::GetMeshes() noexcept {
     return m_meshes;
 }
 
@@ -283,11 +338,10 @@ bool Model::IsVisible() const noexcept {
 
 bool Model::IsSkinned() const noexcept {
     bool isSkinned = true;
-    for (const std::shared_ptr<Mesh>& pMesh : m_meshes) {
-        for (const std::unique_ptr<Submesh>& pSubmesh : pMesh->GetSubmeshes()) {
-            std::uint32_t flags = m_materials[pSubmesh->GetMaterialIndex()]->GetFlags();
-            isSkinned = flags & RenderFlags::Effect::Skinned;
-        }
+    for (const std::shared_ptr<IMesh>& pMesh : m_meshes) {
+        auto pSkinnedMesh = dynamic_cast<SkinnedMesh*>(pMesh.get());
+        if (!pSkinnedMesh)
+            isSkinned = false;
     }
     return isSkinned;
 }

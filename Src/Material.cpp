@@ -4,7 +4,7 @@ Material::Material(
         const std::string name,
         const std::wstring diffuseMapFilePath,
         const std::wstring normalMapFilePath,
-        std::uint32_t flags) 
+        std::uint32_t flags)
     noexcept : m_name(name),
     m_diffuseMapFilePath(diffuseMapFilePath),
     m_normalMapFilePath(normalMapFilePath),

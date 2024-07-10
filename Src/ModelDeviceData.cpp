@@ -7,7 +7,7 @@
 #include "Exceptions/ThrowIfFailed.h"
 
 ModelDeviceData::ModelDeviceData(ID3D12Device* pDevice, Model* pModel, 
-        std::unordered_map<std::shared_ptr<Mesh>, std::unique_ptr<MeshDeviceData>>& sharedMeshes) 
+        std::unordered_map<std::shared_ptr<IMesh>, std::unique_ptr<MeshDeviceData>>& sharedMeshes) 
 {
     m_meshes.reserve(pModel->GetNumMeshes()); 
     for (std::uint64_t i = 0; i < pModel->GetNumMeshes(); ++i) {
@@ -25,7 +25,9 @@ void ModelDeviceData::DrawSkinned(ID3D12GraphicsCommandList* pCommandList, Model
 
     Bone::TransformArray temp;
     for (std::uint64_t meshIndex = 0; meshIndex < pModel->GetNumMeshes(); ++meshIndex) {
-        Mesh* pMesh = pModel->GetMeshes()[meshIndex].get();
+        IMesh* pMesh = pModel->GetMeshes()[meshIndex].get();
+
+        m_meshes[meshIndex]->PrepareForDraw(pCommandList);
 
         for (std::uint64_t submeshIndex = 0; submeshIndex < pMesh->GetNumSubmeshes(); ++submeshIndex) {
             Submesh* pSubmesh = pMesh->GetSubmeshes()[submeshIndex].get();
@@ -64,94 +66,91 @@ void ModelDeviceData::DrawSkinned(ID3D12GraphicsCommandList* pCommandList, Model
             }
 
             pEffect->Apply(pCommandList);
-            m_meshes[meshIndex]->GetSubmeshes()[submeshIndex]->PrepareForDraw(pCommandList);
             pCommandList->DrawIndexedInstanced(pSubmesh->GetIndexCount(), 1, pSubmesh->GetStartIndex(), pSubmesh->GetVertexOffset(), 0);
         }
     }
 }
 
 void ModelDeviceData::LoadStaticBuffers(ID3D12Device* pDevice, DirectX::ResourceUploadBatch& resourceUploadBatch, bool keepMemory) {
-    std::set<SubmeshDeviceData*> uniqueSubmeshes;
+    std::set<MeshDeviceData*> uniqueMeshes;
     for (MeshDeviceData* pMeshData : m_meshes) {
-        for (const std::unique_ptr<SubmeshDeviceData>& submesh : pMeshData->GetSubmeshes()) {
-            uniqueSubmeshes.insert(submesh.get());
-        }
+        uniqueMeshes.insert(pMeshData);
     }
 
     const CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
 
-    for (auto it = uniqueSubmeshes.cbegin(); it != uniqueSubmeshes.cend(); ++it) {
-        SubmeshDeviceData* pSubmeshData = *it;
+    for (auto it = uniqueMeshes.cbegin(); it != uniqueMeshes.cend(); ++it) {
+        MeshDeviceData* pMeshData = *it;
 
-        if (!pSubmeshData->GetStaticVertexBuffer()) {
-            if (!pSubmeshData->GetVertexBuffer())
-                std::runtime_error("Submesh is missing vertex buffer");
+        if (!pMeshData->GetStaticVertexBuffer()) {
+            if (!pMeshData->GetVertexBuffer())
+                std::runtime_error("Mesh is missing vertex buffer");
 
-            pSubmeshData->SetVertexBufferSize(static_cast<std::uint32_t>(pSubmeshData->GetVertexBuffer().Size()));
+            pMeshData->SetVertexBufferSize(static_cast<std::uint32_t>(pMeshData->GetVertexBuffer().Size()));
 
-            auto const desc = CD3DX12_RESOURCE_DESC::Buffer(pSubmeshData->GetVertexBuffer().Size());
+            auto const desc = CD3DX12_RESOURCE_DESC::Buffer(pMeshData->GetVertexBuffer().Size());
             ThrowIfFailed(pDevice->CreateCommittedResource(
                         &heapProperties, D3D12_HEAP_FLAG_NONE, &desc, DirectX::c_initialCopyTargetState, nullptr,
-                        IID_GRAPHICS_PPV_ARGS(pSubmeshData->GetStaticVertexBuffer().GetAddressOf())));
+                        IID_GRAPHICS_PPV_ARGS(pMeshData->GetStaticVertexBuffer().GetAddressOf())));
 
-            resourceUploadBatch.Upload(pSubmeshData->GetStaticVertexBuffer().Get(), pSubmeshData->GetVertexBuffer());
-            resourceUploadBatch.Transition(pSubmeshData->GetStaticVertexBuffer().Get(),
+            resourceUploadBatch.Upload(pMeshData->GetStaticVertexBuffer().Get(), pMeshData->GetVertexBuffer());
+            resourceUploadBatch.Transition(pMeshData->GetStaticVertexBuffer().Get(),
                     D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
-            for (auto sit = std::next(it); sit != uniqueSubmeshes.cend(); ++sit) {
-                SubmeshDeviceData* pSharedSubMesh = *sit;
-                assert(pSharedSubMesh != pSubmeshData);
+            for (auto sit = std::next(it); sit != uniqueMeshes.cend(); ++sit) {
+                MeshDeviceData* pSharedMesh = *sit;
+                assert(pSharedMesh != pMeshData);
 
-                if (pSharedSubMesh->GetStaticVertexBuffer())
+                if (pSharedMesh->GetStaticVertexBuffer())
                     continue;
 
-                if (pSharedSubMesh->GetVertexBuffer() == pSubmeshData->GetVertexBuffer()) {
-                    pSharedSubMesh->SetVertexBufferSize(pSubmeshData->GetVertexBufferSize());
-                    pSharedSubMesh->SetStaticVertexBuffer(pSubmeshData->GetStaticVertexBuffer().Get());
+                if (pSharedMesh->GetVertexBuffer() == pMeshData->GetVertexBuffer()) {
+                    pSharedMesh->SetVertexBufferSize(pMeshData->GetVertexBufferSize());
+                    pSharedMesh->SetStaticVertexBuffer(pMeshData->GetStaticVertexBuffer().Get());
 
                     if (!keepMemory)
-                        pSharedSubMesh->GetVertexBuffer().Reset();
+                        pSharedMesh->GetVertexBuffer().Reset();
                 }
             }
 
             if (!keepMemory)
-                pSubmeshData->GetVertexBuffer().Reset();
+                pMeshData->GetVertexBuffer().Reset();
         }
 
-        if (!pSubmeshData->GetStaticIndexBuffer()) {
-            if (!pSubmeshData->GetIndexBuffer())
+        if (!pMeshData->GetStaticIndexBuffer()) {
+            if (!pMeshData->GetIndexBuffer())
                 std::runtime_error("Submesh is missing index buffer");
 
-            pSubmeshData->SetIndexBufferSize(static_cast<std::uint32_t>(pSubmeshData->GetIndexBuffer().Size()));
-            auto const desc = CD3DX12_RESOURCE_DESC::Buffer(pSubmeshData->GetIndexBuffer().Size());
+            pMeshData->SetIndexBufferSize(static_cast<std::uint32_t>(pMeshData->GetIndexBuffer().Size()));
+            auto const desc = CD3DX12_RESOURCE_DESC::Buffer(pMeshData->GetIndexBuffer().Size());
 
             ThrowIfFailed(pDevice->CreateCommittedResource(
                 &heapProperties, D3D12_HEAP_FLAG_NONE, &desc, DirectX::c_initialCopyTargetState, nullptr,
-                IID_GRAPHICS_PPV_ARGS(pSubmeshData->GetStaticIndexBuffer().GetAddressOf())));
+                IID_GRAPHICS_PPV_ARGS(pMeshData->GetStaticIndexBuffer().GetAddressOf())));
 
-            resourceUploadBatch.Upload(pSubmeshData->GetStaticIndexBuffer().Get(), pSubmeshData->GetIndexBuffer());
-            resourceUploadBatch.Transition(pSubmeshData->GetStaticIndexBuffer().Get(),
+            resourceUploadBatch.Upload(pMeshData->GetStaticIndexBuffer().Get(), pMeshData->GetIndexBuffer());
+            resourceUploadBatch.Transition(pMeshData->GetStaticIndexBuffer().Get(),
                 D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
             // Scan for any other part with the same index buffer for sharing
-            for (auto sit = std::next(it); sit != uniqueSubmeshes.cend(); ++sit) {
-                SubmeshDeviceData* pSharedSubMeshData = *sit;
-                assert(pSharedSubMeshData != pSubmeshData);
+            for (auto sit = std::next(it); sit != uniqueMeshes.cend(); ++sit) {
+                MeshDeviceData* pSharedMeshData = *sit;
+                assert(pSharedMeshData != pMeshData);
 
-                if (pSharedSubMeshData->GetStaticIndexBuffer())
+                if (pSharedMeshData->GetStaticIndexBuffer())
                     continue;
 
-                if (pSharedSubMeshData->GetIndexBuffer() == pSubmeshData->GetIndexBuffer()) {
-                    pSharedSubMeshData->SetIndexBufferSize(pSubmeshData->GetIndexBufferSize());
-                    pSharedSubMeshData->SetStaticIndexBuffer(pSubmeshData->GetStaticIndexBuffer().Get());
+                if (pSharedMeshData->GetIndexBuffer() == pMeshData->GetIndexBuffer()) {
+                    pSharedMeshData->SetIndexBufferSize(pMeshData->GetIndexBufferSize());
+                    pSharedMeshData->SetStaticIndexBuffer(pMeshData->GetStaticIndexBuffer().Get());
 
                     if (!keepMemory)
-                        pSharedSubMeshData->GetIndexBuffer().Reset();
+                        pSharedMeshData->GetIndexBuffer().Reset();
                 }
             }
 
             if (!keepMemory)
-                pSubmeshData->GetIndexBuffer().Reset();
+                pMeshData->GetIndexBuffer().Reset();
         }
     }
 }

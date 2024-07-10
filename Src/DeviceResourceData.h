@@ -19,30 +19,13 @@
 
 using MaterialPair = std::pair<const std::shared_ptr<Material>, std::unique_ptr<DirectX::IEffect>>;
 using ModelPair    = std::pair<const std::shared_ptr<Model>,    std::unique_ptr<ModelDeviceData>>;
-using MeshPair     = std::pair<const std::shared_ptr<Mesh>,     std::unique_ptr<MeshDeviceData>>; 
+using MeshPair     = std::pair<const std::shared_ptr<IMesh>,    std::unique_ptr<MeshDeviceData>>; 
 using TexturePair  = std::pair<const std::wstring,              std::unique_ptr<TextureDeviceData>>;
 using SpritePair   = std::pair<const std::shared_ptr<Sprite>,   std::unique_ptr<TextureDeviceData>>;
 using TextPair     = std::pair<const std::shared_ptr<Text>,     std::unique_ptr<TextDeviceData>>;
 
 class DeviceResourceData : public IDeviceObserver {
     private:
-        static constexpr D3D12_INPUT_ELEMENT_DESC c_InstancedInputElements[] = {
-            { "SV_Position", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
-            { "NORMAL",      0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
-            { "TEXCOORD",    0, DXGI_FORMAT_R32G32_FLOAT,       0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
-            { "InstMatrix",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-            { "InstMatrix",  1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-            { "InstMatrix",  2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-        };
-
-        static constexpr D3D12_INPUT_ELEMENT_DESC c_SkinnedInputElements[] ={
-           { "SV_Position",  0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-           { "NORMAL",       0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-           { "TEXCOORD",     0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-           { "BLENDINDICES", 0, DXGI_FORMAT_R8G8B8A8_UINT,   0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-           { "BLENDWEIGHT",  0, DXGI_FORMAT_R8G8B8A8_UNORM,  0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        };
-
         static constexpr std::uint32_t c_ImGuiDescriptorIndex = 0;
 
     public:
@@ -74,7 +57,7 @@ class DeviceResourceData : public IDeviceObserver {
         void BuildWindowSizeDependentResources();
     
     private:
-        D3D12_INPUT_LAYOUT_DESC InputLayout(std::uint32_t flags) const noexcept;
+        D3D12_INPUT_LAYOUT_DESC InputLayout(std::uint32_t flags) const;
         D3D12_BLEND_DESC BlendDesc(std::uint32_t flags) const noexcept;
         D3D12_DEPTH_STENCIL_DESC DepthStencilDesc(std::uint32_t flags) const noexcept;
         D3D12_RASTERIZER_DESC RasterizerDesc(std::uint32_t flags) const noexcept;
@@ -120,7 +103,7 @@ class DeviceResourceData : public IDeviceObserver {
 
         std::unordered_map<std::shared_ptr<Material>, std::unique_ptr<DirectX::IEffect>>  m_materialData;
         std::unordered_map<std::shared_ptr<Model>,    std::unique_ptr<ModelDeviceData>>   m_modelData;
-        std::unordered_map<std::shared_ptr<Mesh>,     std::unique_ptr<MeshDeviceData>>    m_meshData;
+        std::unordered_map<std::shared_ptr<IMesh>,    std::unique_ptr<MeshDeviceData>>    m_meshData;
         std::unordered_map<std::wstring,              std::unique_ptr<TextureDeviceData>> m_textureData;
         std::unordered_map<std::shared_ptr<Sprite>,   std::unique_ptr<TextureDeviceData>> m_spriteData;
         std::unordered_map<std::shared_ptr<Text>,     std::unique_ptr<TextDeviceData>>    m_textData;  

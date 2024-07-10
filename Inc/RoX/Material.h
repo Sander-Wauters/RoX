@@ -4,6 +4,8 @@
 
 #include "../../Src/Util/pch.h"
 
+#include "VertexTypes.h"
+
 namespace RenderFlags {
    namespace BlendState {
        constexpr std::uint32_t Opaque =                0x00000001;

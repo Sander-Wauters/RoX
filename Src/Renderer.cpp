@@ -285,11 +285,13 @@ void Renderer::Impl::RenderMeshes() {
         }
 
         for (std::uint64_t meshIndex = 0; meshIndex < modelPair.first->GetNumMeshes(); ++meshIndex) {
-            Mesh* pMesh = modelPair.first->GetMeshes()[meshIndex].get();
+            IMesh* pMesh = modelPair.first->GetMeshes()[meshIndex].get();
             MeshDeviceData* pMeshData = modelPair.second->GetMeshes()[meshIndex];
 
             if (!pMesh->IsVisible())
                 continue;
+
+            pMeshData->PrepareForDraw(pCommandList);
 
             for (std::uint64_t submeshIndex = 0; submeshIndex < pMesh->GetNumSubmeshes(); ++submeshIndex) {
                 Submesh* pSubmesh = pMesh->GetSubmeshes()[submeshIndex].get();

@@ -112,9 +112,7 @@ std::uint64_t Scene::GetTotalVerticesLoaded() const noexcept {
     std::uint64_t count = 0;
     for (auto& modelPair : m_models) {
         for (auto& mesh : modelPair.second->GetMeshes()) {
-            for (auto& submesh : mesh->GetSubmeshes()) {
-                count += submesh->GetNumVertices();
-            }
+                count += mesh->GetNumVertices();
         }
     }
     return count;
@@ -125,7 +123,7 @@ std::uint64_t Scene::GetTotalVerticesRendered() const noexcept {
     for (auto& modelPair : m_models) {
         for (auto& mesh : modelPair.second->GetMeshes()) {
             for (auto& submesh : mesh->GetSubmeshes()) {
-                count += submesh->GetNumVertices() * submesh->GetNumVisibleInstances();
+                count += mesh->GetNumVertices() * submesh->GetNumVisibleInstances();
             }
         }
     }

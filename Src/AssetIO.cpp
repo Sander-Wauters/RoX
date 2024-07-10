@@ -9,6 +9,7 @@
 
 #define ASSIMP_LOAD_FLAGS (aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_JoinIdenticalVertices | aiProcess_ConvertToLeftHanded)
 
+/*
 using BoneNameToAiBone = std::unordered_map<std::string, const aiBone*>;
 
 std::string GetNameFromFilePath(std::string filePath) {
@@ -216,3 +217,4 @@ void AssetIO::ExportModel(Model* pMesh, std::string filePath) {
     // TODO
     throw std::runtime_error("ExportMesh() not yet implemented");
 }
+*/

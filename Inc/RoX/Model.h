@@ -32,7 +32,7 @@ class Bone {
         std::string GetName() const noexcept;
 
         std::uint32_t GetParentIndex() const noexcept;
-        std::uint64_t GetNumChildren() const noexcept;
+        std::uint32_t GetNumChildren() const noexcept;
         std::vector<std::uint32_t>& GetChildIndices() noexcept;
 
         void SetParentIndex(std::uint32_t index) noexcept;
@@ -51,10 +51,8 @@ class Submesh {
     public:
         std::string GetName() const noexcept;
 
-        std::uint64_t GetNumCulled() const noexcept;
-        std::uint64_t GetNumVisibleInstances() const noexcept;
-        std::uint64_t GetNumVertices() const noexcept;
-        std::uint64_t GetNumIndices() const noexcept;
+        std::uint32_t GetNumCulled() const noexcept;
+        std::uint32_t GetNumVisibleInstances() const noexcept;
 
         std::vector<DirectX::XMFLOAT3X4>& GetInstances() noexcept;
         
@@ -64,27 +62,21 @@ class Submesh {
         std::uint32_t GetVertexOffset() const noexcept;
 
         std::shared_ptr<Material> GetMaterial(Model* pModel) const;
-        std::shared_ptr<std::vector<DirectX::VertexPositionNormalTexture>> GetVertices() const noexcept;
-        std::shared_ptr<std::vector<VertexPositionNormalTextureSkinning>> GetVerticesA() const noexcept { return m_pVerticesA; }
-        std::shared_ptr<std::vector<std::uint16_t>> GetIndices() const noexcept;
 
         bool IsVisible() const noexcept;
 
-        void SetNumberCulled(std::uint64_t amount);
+        void SetNumberCulled(std::uint32_t amount);
         void SetMaterialIndex(std::uint32_t index) noexcept;
         void SetIndexCount(std::uint32_t count) noexcept;
         void SetStartIndex(std::uint32_t index) noexcept;
         void SetVertexOffset(std::uint32_t offset) noexcept;
-        void SetVertices(std::shared_ptr<std::vector<DirectX::VertexPositionNormalTexture>> vertices) noexcept;
-        void SetVerticesA(std::shared_ptr<std::vector<VertexPositionNormalTextureSkinning>> vertices) noexcept { m_pVerticesA = std::move(vertices); }
-        void SetIndices(std::shared_ptr<std::vector<std::uint16_t>> indices) noexcept;
         void SetVisible(bool visible) noexcept;
 
     private:
         const std::string m_name;
 
         // The last m_numberCulled instances in m_instances will not be sent to the GPU.
-        std::uint64_t m_numCulled;
+        std::uint32_t m_numCulled;
         std::vector<DirectX::XMFLOAT3X4> m_instances;
 
         std::uint32_t m_materialIndex; 
@@ -92,32 +84,61 @@ class Submesh {
         std::uint32_t m_startIndex;
         std::uint32_t m_vertexOffset;
 
-        std::shared_ptr<std::vector<DirectX::VertexPositionNormalTexture>> m_pVertices; 
-        std::shared_ptr<std::vector<VertexPositionNormalTextureSkinning>> m_pVerticesA; 
-        std::shared_ptr<std::vector<std::uint16_t>> m_pIndices;
-
         bool m_visible;
 };
 
-class Mesh {
+class IMesh {
+    protected:
+        IMesh() = default;
+        IMesh(IMesh&&) = default;
+        IMesh& operator=(IMesh&&) = default;
+        
     public:
-        Mesh(const std::string name, bool visible = true) noexcept;
+        virtual ~IMesh() = default;
 
-        void Add(std::unique_ptr<Submesh> pSubmesh) noexcept;
+        virtual void Add(std::unique_ptr<Submesh> pSubmesh) noexcept = 0;
 
     public:
-        std::string GetName() const noexcept;
+        virtual std::string GetName() const noexcept = 0;
 
-        std::uint32_t GetBoneIndex() const noexcept;
-        std::uint64_t GetNumSubmeshes() const noexcept;
+        virtual std::uint32_t GetBoneIndex() const noexcept = 0;
+        virtual std::uint32_t GetNumSubmeshes() const noexcept = 0;
+        virtual std::uint32_t GetNumVertices() const noexcept = 0;
+        virtual std::uint32_t GetNumIndices() const noexcept = 0;
 
-        std::vector<std::uint32_t>& GetBoneInfluences() noexcept;
-        std::vector<std::unique_ptr<Submesh>>& GetSubmeshes() noexcept;
+        virtual std::vector<std::uint32_t>& GetBoneInfluences() noexcept = 0;
+        virtual std::vector<std::unique_ptr<Submesh>>& GetSubmeshes() noexcept = 0;
+        virtual std::vector<std::uint16_t>& GetIndices() noexcept = 0;
 
-        bool IsVisible() const noexcept;
+        virtual bool IsVisible() const noexcept = 0;
 
-        void SetBoneIndex(std::uint32_t boneIndex) noexcept;
-        void SetVisible(bool visible) noexcept;
+        virtual void SetBoneIndex(std::uint32_t boneIndex) noexcept = 0;
+        virtual void SetVisible(bool visible) noexcept = 0;
+};
+
+class Mesh : public IMesh {
+    public:
+        Mesh(const std::string name, bool visible = true) noexcept; 
+
+        void Add(std::unique_ptr<Submesh> pSubmesh) noexcept override;
+
+    public:
+        std::string GetName() const noexcept override;
+
+        std::uint32_t GetBoneIndex() const noexcept override;
+        std::uint32_t GetNumSubmeshes() const noexcept override;
+        std::uint32_t GetNumVertices() const noexcept override;
+        std::uint32_t GetNumIndices() const noexcept override;
+
+        std::vector<std::uint32_t>& GetBoneInfluences() noexcept override;
+        std::vector<std::unique_ptr<Submesh>>& GetSubmeshes() noexcept override;
+        std::vector<VertexPositionNormalTexture>& GetVertices() noexcept;
+        std::vector<std::uint16_t>& GetIndices() noexcept override;
+
+        bool IsVisible() const noexcept override;
+
+        void SetBoneIndex(std::uint32_t boneIndex) noexcept override;
+        void SetVisible(bool visible) noexcept override;
 
     private:
         const std::string m_name;
@@ -126,6 +147,45 @@ class Mesh {
 
         std::vector<std::uint32_t> m_boneInfluences;
         std::vector<std::unique_ptr<Submesh>> m_submeshes;
+        std::vector<VertexPositionNormalTexture> m_vertices;
+        std::vector<std::uint16_t> m_indices;
+
+        bool m_visible;
+};
+
+class SkinnedMesh : public IMesh {
+    public:
+        SkinnedMesh(const std::string name, bool visible = true) noexcept; 
+
+        void Add(std::unique_ptr<Submesh> pSubmesh) noexcept override;
+
+    public:
+        std::string GetName() const noexcept override;
+
+        std::uint32_t GetBoneIndex() const noexcept override;
+        std::uint32_t GetNumSubmeshes() const noexcept override;
+        std::uint32_t GetNumVertices() const noexcept;
+        std::uint32_t GetNumIndices() const noexcept override;
+
+        std::vector<std::uint32_t>& GetBoneInfluences() noexcept override;
+        std::vector<std::unique_ptr<Submesh>>& GetSubmeshes() noexcept override;
+        std::vector<VertexPositionNormalTextureSkinning>& GetVertices() noexcept;
+        std::vector<std::uint16_t>& GetIndices() noexcept override;
+
+        bool IsVisible() const noexcept override;
+
+        void SetBoneIndex(std::uint32_t boneIndex) noexcept override;
+        void SetVisible(bool visible) noexcept override;
+
+    private:
+        const std::string m_name;
+
+        std::uint32_t m_boneIndex;
+
+        std::vector<std::uint32_t> m_boneInfluences;
+        std::vector<std::unique_ptr<Submesh>> m_submeshes;
+        std::vector<VertexPositionNormalTextureSkinning> m_vertices;
+        std::vector<std::uint16_t> m_indices;
 
         bool m_visible;
 };
@@ -139,7 +199,7 @@ class Model {
         Model(Model& other);
 
         void Add(std::shared_ptr<Material> pMaterial) noexcept;
-        void Add(std::shared_ptr<Mesh> pMeshPart) noexcept;
+        void Add(std::shared_ptr<IMesh> pMesh) noexcept;
 
         void MakeBoneMatricesArray(std::uint64_t count);
         void MakeInverseBoneMatricesArray(std::uint64_t count);
@@ -147,12 +207,12 @@ class Model {
     public:
         std::string GetName() const noexcept;
 
-        std::uint64_t GetNumBones() const noexcept;
-        std::uint64_t GetNumMeshes() const noexcept;
-        std::uint64_t GetNumMaterials() const noexcept;
+        std::uint32_t GetNumBones() const noexcept;
+        std::uint32_t GetNumMeshes() const noexcept;
+        std::uint32_t GetNumMaterials() const noexcept;
 
         std::vector<std::shared_ptr<Material>>& GetMaterials() noexcept;
-        std::vector<std::shared_ptr<Mesh>>& GetMeshes() noexcept;
+        std::vector<std::shared_ptr<IMesh>>& GetMeshes() noexcept;
         std::vector<Bone>& GetBones() noexcept;
         DirectX::XMMATRIX* GetBoneMatrices() noexcept;
         DirectX::XMMATRIX* GetInverseBindPoseMatrices() noexcept;
@@ -166,7 +226,7 @@ class Model {
         const std::string m_name;
 
         std::vector<std::shared_ptr<Material>> m_materials;
-        std::vector<std::shared_ptr<Mesh>> m_meshes;
+        std::vector<std::shared_ptr<IMesh>> m_meshes;
         std::vector<Bone> m_bones;
         Bone::TransformArray m_boneMatrices;
         Bone::TransformArray m_inverseBindPoseMatrices;

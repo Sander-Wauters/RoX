@@ -1,18 +1,19 @@
 #pragma once 
 
 #include "Model.h"
+#include "VertexTypes.h"
 
 namespace SubmeshFactory {
-    std::unique_ptr<Submesh> CreateCube(float size = 1);
-    std::unique_ptr<Submesh> CreateBox(const DirectX::XMFLOAT3& size, bool invertn = false);
-    std::unique_ptr<Submesh> CreateSphere(float diameter = 1, size_t tessellation = 16, bool invertn = false);
-    std::unique_ptr<Submesh> CreateGeoSphere(float diameter = 1, size_t tessellation = 3);
-    std::unique_ptr<Submesh> CreateCylinder(float height = 1, float diameter = 1, size_t tessellation = 32);
-    std::unique_ptr<Submesh> CreateCone(float diameter = 1, float height = 1, size_t tessellation = 32);
-    std::unique_ptr<Submesh> CreateTorus(float diameter = 1, float thickness = 0.333f, size_t tessellation = 32);
-    std::unique_ptr<Submesh> CreateTetrahedron(float size = 1);
-    std::unique_ptr<Submesh> CreateOctahedron(float size = 1);
-    std::unique_ptr<Submesh> CreateDodecahedron(float size = 1);
-    std::unique_ptr<Submesh> CreateIcosahedron(float size = 1);
-    std::unique_ptr<Submesh> CreateTeapot(float size = 1, size_t tessellation = 8);
+    void CreateCube(IMesh& mesh, float size = 1);
+    void CreateBox(IMesh& mesh, const DirectX::XMFLOAT3& size, bool invertn = false);
+    void CreateSphere(IMesh& mesh, float diameter = 1, size_t tessellation = 16, bool invertn = false);
+    void CreateGeoSphere(IMesh& mesh, float diameter = 1, size_t tessellation = 3);
+    void CreateCylinder(IMesh& mesh, float height = 1, float diameter = 1, size_t tessellation = 32);
+    void CreateCone(IMesh& mesh, float diameter = 1, float height = 1, size_t tessellation = 32);
+    void CreateTorus(IMesh& mesh, float diameter = 1, float thickness = 0.333f, size_t tessellation = 32);
+    void CreateTetrahedron(IMesh& mesh, float size = 1);
+    void CreateOctahedron(IMesh& mesh, float size = 1);
+    void CreateDodecahedron(IMesh& mesh, float size = 1);
+    void CreateIcosahedron(IMesh& mesh, float size = 1);
+    void CreateTeapot(IMesh& mesh, float size = 1, size_t tessellation = 8);
 }

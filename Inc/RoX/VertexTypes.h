@@ -5,12 +5,6 @@
 #include <DirectXPackedVector.h>
 #include <d3d12.h>
 
-enum struct VertexTypes {
-    PositionNormalTexture,
-    PositionNormalColorTexture,
-    PositionNormalTextureSkinning,
-};
-
 struct VertexPositionNormalTexture {
     VertexPositionNormalTexture() = default;
 
@@ -62,64 +56,6 @@ struct VertexPositionNormalTexture {
     };
 };
 
-struct VertexPositionNormalColorTexture {
-    VertexPositionNormalColorTexture() = default;
-
-    VertexPositionNormalColorTexture(const VertexPositionNormalColorTexture&) = default;
-    VertexPositionNormalColorTexture& operator=(const VertexPositionNormalColorTexture&) = default;
-
-    VertexPositionNormalColorTexture(VertexPositionNormalColorTexture&&) = default;
-    VertexPositionNormalColorTexture& operator=(VertexPositionNormalColorTexture&&) = default;
-
-    VertexPositionNormalColorTexture(
-            const DirectX::XMFLOAT3& iposition,
-            const DirectX::XMFLOAT3& inormal,
-            const DirectX::XMFLOAT4& icolor,
-            const DirectX::XMFLOAT2& itextureCoordinate) noexcept
-        : position(iposition),
-        normal(inormal),
-        color(icolor),
-        textureCoordinate(itextureCoordinate) {}
-    VertexPositionNormalColorTexture(
-            DirectX::FXMVECTOR iposition, 
-            DirectX::FXMVECTOR inormal, 
-            DirectX::FXMVECTOR icolor, 
-            DirectX::CXMVECTOR itextureCoordinate) noexcept
-    {
-        DirectX::XMStoreFloat3(&this->position, iposition);
-        DirectX::XMStoreFloat3(&this->normal, inormal);
-        DirectX::XMStoreFloat4(&this->color, icolor);
-        DirectX::XMStoreFloat2(&this->textureCoordinate, itextureCoordinate);
-    }
-
-    DirectX::XMFLOAT3 position;
-    DirectX::XMFLOAT3 normal;
-    DirectX::XMFLOAT4 color;
-    DirectX::XMFLOAT2 textureCoordinate;
-
-    static constexpr D3D12_INPUT_ELEMENT_DESC InputElements[] = {
-        { "SV_Position", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "NORMAL",      0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "COLOR",       0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "TEXCOORD",    0, DXGI_FORMAT_R32G32_FLOAT,       0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-    };
-    static constexpr D3D12_INPUT_ELEMENT_DESC InputElementsInstancing[] = {
-        { "SV_Position", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
-        { "NORMAL",      0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
-        { "COLOR",       0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
-        { "TEXCOORD",    0, DXGI_FORMAT_R32G32_FLOAT,       0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,   0 },
-        { "InstMatrix",  0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-        { "InstMatrix",  1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-        { "InstMatrix",  2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-    };
-    static constexpr D3D12_INPUT_LAYOUT_DESC InputLayout {
-        InputElements, 4
-    };
-    static constexpr D3D12_INPUT_LAYOUT_DESC InputLayoutInstancing {
-        InputElementsInstancing, 7
-    };
-};
-
 struct VertexPositionNormalTextureSkinning {
     VertexPositionNormalTextureSkinning() = default;
 
@@ -156,7 +92,6 @@ struct VertexPositionNormalTextureSkinning {
         SetBlendIndices(iindices);
         SetBlendWeights(iweights);
     }
-    m_vertexStride(sizeof(DirectX::VertexPositionNormalTexture)),
 
     void SetBlendIndices(DirectX::XMUINT4 const& iindices) noexcept {
         indices = ((iindices.w & 0xff) << 24) | ((iindices.z & 0xff) << 16) | ((iindices.y & 0xff) << 8) | (iindices.x & 0xff);

@@ -38,20 +38,20 @@ namespace Outline {
             bool m_visible;
     };
 
-    template<typename T> class BoundingBody : public Base {
+    template<typename Bounds> class BoundingBody : public Base {
         private:
             static_assert(
-                    std::is_base_of<DirectX::BoundingBox, T>::value ||
-                    std::is_base_of<DirectX::BoundingFrustum, T>::value ||
-                    std::is_base_of<DirectX::BoundingOrientedBox, T>::value ||
-                    std::is_base_of<DirectX::BoundingSphere, T>::value,
+                    std::is_base_of<DirectX::BoundingBox,         Bounds>::value ||
+                    std::is_base_of<DirectX::BoundingFrustum,     Bounds>::value ||
+                    std::is_base_of<DirectX::BoundingOrientedBox, Bounds>::value ||
+                    std::is_base_of<DirectX::BoundingSphere,      Bounds>::value,
                     "T must either be a DirectX::BoundingBox, DirectX::BoundingFrustum, DirectX::BoundingOrientedBox or DirectX::BoundingSphere"
                     );
 
         public:
             BoundingBody(
                     const std::string name,
-                    T& bounds,
+                    Bounds& bounds,
                     DirectX::XMVECTOR color = DirectX::Colors::White,
                     bool visible = true
                     ) noexcept :
@@ -60,12 +60,10 @@ namespace Outline {
                 {}
 
         public:
-            const T& GetBounds() const noexcept { return m_bounds; }
-
-            void SetBounds(T& bounds) noexcept { m_bounds = bounds; }
+            Bounds& GetBounds() noexcept { return m_bounds; }
 
         private:
-            T& m_bounds;
+            Bounds& m_bounds;
     };
 
     class Grid : public Base {
