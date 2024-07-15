@@ -9,7 +9,6 @@
 
 #define ASSIMP_LOAD_FLAGS (aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_JoinIdenticalVertices | aiProcess_ConvertToLeftHanded)
 
-/*
 using BoneNameToAiBone = std::unordered_map<std::string, const aiBone*>;
 
 std::string GetNameFromFilePath(std::string filePath) {
@@ -67,36 +66,86 @@ void ParseBones(const aiScene* pScene, Model& model) {
 }
 
 
-void ParseVertices(std::vector<DirectX::VertexPositionNormalTexture>& vertices, const aiMesh* pMesh) {
+void ParseVertices(std::vector<VertexPositionNormalTexture>& vertices, const aiMesh* pMesh) {
     printf("Parsing vertices...\n");
 
-    vertices.resize(pMesh->mNumVertices);
+    vertices.reserve(pMesh->mNumVertices);
     for (int i = 0; i < pMesh->mNumVertices; ++i) {
-        vertices[i].position.x = pMesh->mVertices[i].x;
-        vertices[i].position.y = pMesh->mVertices[i].y;
-        vertices[i].position.z = pMesh->mVertices[i].z;
+        vertices.push_back({
+                {{ pMesh->mVertices[i].x, pMesh->mVertices[i].y, pMesh->mVertices[i].z }}, 
+                {{ pMesh->mNormals[i].x, pMesh->mNormals[i].y, pMesh->mNormals[i].z }}, 
+                {{ pMesh->mTextureCoords[0][i].x, pMesh->mTextureCoords[0][i].y }}
+                });
+    }
+}
 
-        vertices[i].normal.x = pMesh->mNormals[i].x;
-        vertices[i].normal.y = pMesh->mNormals[i].y;
-        vertices[i].normal.z = pMesh->mNormals[i].z;
+void ParseSkinnedVertices(std::vector<VertexPositionNormalTextureSkinning>& vertices, const aiMesh* pMesh) {
+    printf("Parsing vertices...\n");
 
-        vertices[i].textureCoordinate.x = pMesh->mTextureCoords[0][i].x;
-        vertices[i].textureCoordinate.y = pMesh->mTextureCoords[0][i].y;
+    vertices.reserve(pMesh->mNumVertices);
+    for (int i = 0; i < pMesh->mNumVertices; ++i) {
+        vertices.push_back({
+                {{ pMesh->mVertices[i].x, pMesh->mVertices[i].y, pMesh->mVertices[i].z }}, 
+                {{ pMesh->mNormals[i].x, pMesh->mNormals[i].y, pMesh->mNormals[i].z }}, 
+                {{ pMesh->mTextureCoords[0][i].x, pMesh->mTextureCoords[0][i].y }},
+                { 0, 0, 0, 0},
+                {{ 1.f, 1.f, 1.f, 1.f }}
+                });
     }
 }
 
 void ParseIndices(std::vector<std::uint16_t>& indices, const aiMesh* pMesh) {
     printf("Parsing indices...\n");
 
-    indices.resize(pMesh->mNumFaces * 3);
-
-    int indicesIndex = 0;
+    indices.reserve(pMesh->mNumFaces * 3);
     for (int faceIndex = 0; faceIndex < pMesh->mNumFaces; ++faceIndex) {
         for (int faceIndicesIndex = 0; faceIndicesIndex < pMesh->mFaces[faceIndex].mNumIndices; ++faceIndicesIndex) {
-            indices[indicesIndex++] = pMesh->mFaces[faceIndex].mIndices[faceIndicesIndex];
+            indices.push_back(pMesh->mFaces[faceIndex].mIndices[faceIndicesIndex]);
         }
     }
 }
+
+std::shared_ptr<Model> AssetIO::ImportModel(std::string filepath, std::shared_ptr<Material> material, bool skinned) {
+    Assimp::Importer importer;
+    const aiScene* pScene = importer.ReadFile(filepath.c_str(), ASSIMP_LOAD_FLAGS);
+
+    if (!pScene)
+        throw std::runtime_error("Error parsing '" + filepath + "': " + importer.GetErrorString());
+
+    Model model(GetNameFromFilePath(filepath), material);
+    ParseBones(pScene, model);
+
+    std::shared_ptr<IMesh>pIMesh;
+    if (skinned)
+        pIMesh = std::make_shared<SkinnedMesh>(GetNameFromFilePath(filepath) + "_mesh");
+    else
+        pIMesh = std::make_shared<Mesh>(GetNameFromFilePath(filepath) + "_mesh");
+
+    for (int i = 0; i < pScene->mNumMeshes; ++i) {
+        const aiMesh* pAIMesh = pScene->mMeshes[i];
+
+        auto pSubmesh = std::make_unique<Submesh>(pAIMesh->mName.C_Str(), 0);
+        pSubmesh->SetStartIndex(pIMesh->GetNumIndices());
+        pSubmesh->SetVertexOffset(pIMesh->GetNumVertices());
+        
+        if (auto pSkinnedMesh = dynamic_cast<SkinnedMesh*>(pIMesh.get()))
+            ParseSkinnedVertices(pSkinnedMesh->GetVertices(), pAIMesh);
+        if (auto pMesh = dynamic_cast<Mesh*>(pIMesh.get()))
+            ParseVertices(pMesh->GetVertices(), pAIMesh);
+
+        ParseIndices(pIMesh->GetIndices(), pAIMesh);
+        pSubmesh->SetIndexCount(pIMesh->GetNumIndices() - pSubmesh->GetStartIndex());
+
+        pIMesh->Add(std::move(pSubmesh));
+    }
+
+    model.Add(std::move(pIMesh));
+
+    return std::make_shared<Model>(model);
+}
+
+
+/*
 
 void ParseSubmesh(Submesh& submesh, const aiMesh* pMesh) {
     ParseVertices(*submesh.GetVertices(), pMesh);

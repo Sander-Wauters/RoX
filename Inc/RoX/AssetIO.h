@@ -2,8 +2,10 @@
 
 #include "Model.h"
 
-/*
 namespace AssetIO {
+    std::shared_ptr<Model> ImportModel(std::string filepath, std::shared_ptr<Material> material, bool skinned);
+
+    /*
     std::unique_ptr<Submesh> ImportSubmeshFromVBO(std::string filePath);
     void ExportSubmeshToVBO(Submesh* pSubmesh, std::string filePath);
 
@@ -15,5 +17,5 @@ namespace AssetIO {
 
     std::shared_ptr<Model> ImportModel(std::string filePath, std::shared_ptr<Material> pMaterial);
     void ExportModel(Model* pMesh, std::string filePath);
+    */
 };
-*/

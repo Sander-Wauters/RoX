@@ -64,6 +64,9 @@ namespace RenderFlags {
 
    constexpr std::uint32_t WireframeInstanced = BlendState::Opaque |  DepthStencilState::Default | 
        RasterizerState::Wireframe | SamplerState::AnisotropicWrap | Effect::Instanced | Effect::Lighting | Effect::Texture;
+
+   constexpr std::uint32_t WireframeSkinned = BlendState::Opaque |  DepthStencilState::Default | 
+       RasterizerState::Wireframe | SamplerState::AnisotropicWrap | Effect::Lighting | Effect::Texture | Effect::Skinned;
 }
 
 class Material {

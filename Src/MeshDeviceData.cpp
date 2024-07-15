@@ -10,29 +10,25 @@ MeshDeviceData::MeshDeviceData(ID3D12Device* pDevice, IMesh* pIMesh) :
     for (std::uint64_t i = 0; i < pIMesh->GetNumSubmeshes(); ++i) {
         m_submeshes.push_back(std::make_unique<SubmeshDeviceData>(pDevice, pIMesh->GetSubmeshes()[i].get()));
     }
-    m_submeshes.shrink_to_fit();
 
     void* vertexData;
-    std::uint16_t numVertices;
 
     if (auto pMesh = dynamic_cast<Mesh*>(pIMesh)) {
         m_vertexStride = sizeof(VertexPositionNormalTexture);
         vertexData = pMesh->GetVertices().data();
-        numVertices = pMesh->GetNumVertices();
     } else if (auto pSkinnedMesh = dynamic_cast<SkinnedMesh*>(pIMesh)) {
         m_vertexStride = sizeof(VertexPositionNormalTextureSkinning);
         vertexData = pSkinnedMesh->GetVertices().data();
-        numVertices = pSkinnedMesh->GetNumVertices();
     } else {
         throw std::invalid_argument("Mesh failed to downcast.");
     }
 
-    if (numVertices >= USHRT_MAX)
+    if (pIMesh->GetNumVertices() >= USHRT_MAX)
         throw std::invalid_argument("Too many vertices for a 16-bit index buffer");
     if (pIMesh->GetNumIndices() > UINT32_MAX)
         throw std::invalid_argument("Too many indices");
 
-    std::uint32_t sizeInBytes = static_cast<std::uint32_t>(numVertices) * m_vertexStride;
+    std::uint32_t sizeInBytes = static_cast<std::uint32_t>(pIMesh->GetNumVertices()) * m_vertexStride;
     if (sizeInBytes > static_cast<std::uint32_t>(D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u))
         throw std::invalid_argument("VB too large for DirectX 12");
 
