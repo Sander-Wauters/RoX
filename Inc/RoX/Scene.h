@@ -13,7 +13,7 @@
 
 class Scene {
     public:
-        Scene(Camera& camera) noexcept;
+        Scene(const std::string name, Camera& camera) noexcept;
         ~Scene() noexcept;
 
     public:
@@ -27,6 +27,7 @@ class Scene {
         void RemoveText(std::string name);
         void RemoveOutline(std::string name);
 
+        std::string GetName() const noexcept;
         Camera& GetCamera() const noexcept;
 
         const std::shared_ptr<Model>& GetModel(std::string name) const;
@@ -39,13 +40,17 @@ class Scene {
         const std::unordered_map<std::string, std::shared_ptr<Text>>& GetText() const noexcept;
         const std::unordered_map<std::string, std::shared_ptr<Outline::Base>>& GetOutlines() const noexcept;
 
-        std::uint64_t GetTotalInstanceCount() const noexcept;
-        std::uint64_t GetTotalVerticesLoaded() const noexcept;
-        std::uint64_t GetTotalVerticesRendered() const noexcept;
+        std::uint64_t GetNumInstances() const noexcept;
+        std::uint64_t GetNumRenderedInstances() const noexcept;
+        std::uint64_t GetNumLoadedVertices() const noexcept;
+        std::uint64_t GetNumRenderedVertices() const noexcept;
 
 
     private:
+        const std::string m_name;
+
         Camera& m_camera;
+
         std::unordered_map<std::string, std::shared_ptr<Model>> m_models;
         std::unordered_map<std::string, std::shared_ptr<Sprite>> m_sprites;
         std::unordered_map<std::string, std::shared_ptr<Text>> m_text;

@@ -109,10 +109,15 @@ void DeviceResourceData::Update() {
     m_pOutlineEffect->SetView(view);
     m_pOutlineEffect->SetProjection(projection);
 
-    for (auto& pMaterial : m_materialData) {
-        if (auto pEffect = dynamic_cast<DirectX::IEffectMatrices*>(pMaterial.second.get())) {
-            pEffect->SetView(view);
-            pEffect->SetProjection(projection);
+    for (MaterialPair& materialPair : m_materialData) {
+        if (auto pIMatrices = dynamic_cast<DirectX::IEffectMatrices*>(materialPair.second.get())) {
+            pIMatrices->SetView(view);
+            pIMatrices->SetProjection(projection);
+        }
+        if (auto pNormal = dynamic_cast<DirectX::NormalMapEffect*>(materialPair.second.get())) {
+            pNormal->SetDiffuseColor(materialPair.first->GetDiffuseColor());
+            pNormal->SetEmissiveColor(materialPair.first->GetEmissiveColor());
+            pNormal->SetSpecularColor(materialPair.first->GetSpecularColor());
         }
     }
 }

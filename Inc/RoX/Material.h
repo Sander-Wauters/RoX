@@ -7,66 +7,67 @@
 #include "VertexTypes.h"
 
 namespace RenderFlags {
-   namespace BlendState {
-       constexpr std::uint32_t Opaque =                0x00000001;
-       constexpr std::uint32_t AlphaBlend =            0x00000002;
-       constexpr std::uint32_t Additive =              0x00000004;
-       constexpr std::uint32_t NonPremultiplied =      0x00000008;
-       constexpr std::uint32_t Reset =                 !(Opaque + AlphaBlend + Additive + NonPremultiplied);
-   }
-   namespace DepthStencilState {
-        constexpr std::uint32_t None =                 0x00000010;
-        constexpr std::uint32_t Default =              0x00000020;
-        constexpr std::uint32_t Read =                 0x00000040;
-        constexpr std::uint32_t ReverseZ =             0x00000080;
-        constexpr std::uint32_t ReadReverseZ =         0x00000100;
-        constexpr std::uint32_t Reset =                !(None + Default + Read + ReverseZ + ReadReverseZ);
-   }
-   namespace RasterizerState {
-        constexpr std::uint32_t CullNone =             0x00000200;
-        constexpr std::uint32_t CullClockwise =        0x00000400;
-        constexpr std::uint32_t CullCounterClockwise = 0x00000800;
-        constexpr std::uint32_t Wireframe =            0x00001000;
-        constexpr std::uint32_t Reset =                !(CullNone + CullClockwise + CullCounterClockwise + Wireframe);
-   }
-   namespace SamplerState {
-        constexpr std::uint32_t PointWrap =            0x00002000;
-        constexpr std::uint32_t PointClamp =           0x00004000;
-        constexpr std::uint32_t LinearWrap =           0x00008000;
-        constexpr std::uint32_t LinearClamp =          0x00010000;
-        constexpr std::uint32_t AnisotropicWrap =      0x00020000;
-        constexpr std::uint32_t AnisotropicClamp =     0x00040000;
-        constexpr std::uint32_t Reset =                !(PointWrap + PointClamp + LinearWrap + LinearClamp + AnisotropicWrap + AnisotropicClamp);
-   }
-   namespace Effect {
-       constexpr std::uint32_t None =                  0x00800000;
-       constexpr std::uint32_t Fog =                   0x00100000;
-       constexpr std::uint32_t Lighting =              0x00200000;
-       constexpr std::uint32_t PerPixelLighting =      0x00400000;
-       constexpr std::uint32_t Texture =               0x00800000;
-       constexpr std::uint32_t Instanced =             0x01000000;
-       constexpr std::uint32_t Specular =              0x02000000;
-       constexpr std::uint32_t Skinned =               0x04000000;
-       constexpr std::uint32_t Reset =                 !(None + Fog + Lighting + PerPixelLighting + Texture + Instanced + Specular + Skinned);
-   }
+    constexpr std::uint32_t None =                      0;
+    namespace BlendState {
+        constexpr std::uint32_t Opaque =               1 << 0;
+        constexpr std::uint32_t AlphaBlend =           1 << 1;
+        constexpr std::uint32_t Additive =             1 << 2;
+        constexpr std::uint32_t NonPremultiplied =     1 << 3;
+        constexpr std::uint32_t Reset =                !(Opaque | AlphaBlend | Additive | NonPremultiplied);
+    }
+    namespace DepthStencilState {
+        constexpr std::uint32_t None =                 1 << 4;
+        constexpr std::uint32_t Default =              1 << 5;
+        constexpr std::uint32_t Read =                 1 << 6;
+        constexpr std::uint32_t ReverseZ =             1 << 7;
+        constexpr std::uint32_t ReadReverseZ =         1 << 8;
+        constexpr std::uint32_t Reset =                !(None | Default | Read | ReverseZ | ReadReverseZ);
+    }
+    namespace RasterizerState {
+        constexpr std::uint32_t CullNone =             1 << 9;
+        constexpr std::uint32_t CullClockwise =        1 << 10;
+        constexpr std::uint32_t CullCounterClockwise = 1 << 11;
+        constexpr std::uint32_t Wireframe =            1 << 12;
+        constexpr std::uint32_t Reset =                !(CullNone | CullClockwise | CullCounterClockwise | Wireframe);
+    }
+    namespace SamplerState {
+        constexpr std::uint32_t PointWrap =            1 << 13;
+        constexpr std::uint32_t PointClamp =           1 << 14;
+        constexpr std::uint32_t LinearWrap =           1 << 15;
+        constexpr std::uint32_t LinearClamp =          1 << 16;
+        constexpr std::uint32_t AnisotropicWrap =      1 << 17;
+        constexpr std::uint32_t AnisotropicClamp =     1 << 18;
+        constexpr std::uint32_t Reset =                !(PointWrap | PointClamp | LinearWrap | LinearClamp | AnisotropicWrap | AnisotropicClamp);
+    }
+    namespace Effect {
+        constexpr std::uint32_t None =                 1 << 19;
+        constexpr std::uint32_t Fog =                  1 << 20;
+        constexpr std::uint32_t Lighting =             1 << 21;
+        constexpr std::uint32_t PerPixelLighting =     1 << 22;
+        constexpr std::uint32_t Texture =              1 << 23;
+        constexpr std::uint32_t Instanced =            1 << 24;
+        constexpr std::uint32_t Specular =             1 << 25;
+        constexpr std::uint32_t Skinned =              1 << 26;
+        constexpr std::uint32_t Reset =                !(None | Fog | Lighting | PerPixelLighting | Texture | Instanced | Specular | Skinned);
+    }
 
-   constexpr std::uint32_t Default = BlendState::Opaque |  DepthStencilState::Default | 
-       RasterizerState::CullCounterClockwise | SamplerState::AnisotropicWrap | Effect::Lighting | Effect::Texture;
+    constexpr std::uint32_t Default = BlendState::Opaque |  DepthStencilState::Default | 
+        RasterizerState::CullCounterClockwise | SamplerState::AnisotropicWrap | Effect::Lighting | Effect::Texture;
 
-   constexpr std::uint32_t Skinned = BlendState::Opaque |  DepthStencilState::Default | 
-       RasterizerState::CullCounterClockwise | SamplerState::AnisotropicWrap | Effect::Lighting | Effect::Texture | Effect::Skinned;
+    constexpr std::uint32_t Skinned = BlendState::Opaque |  DepthStencilState::Default | 
+        RasterizerState::CullCounterClockwise | SamplerState::AnisotropicWrap | Effect::Lighting | Effect::Texture | Effect::Skinned;
 
-   constexpr std::uint32_t Wireframe = BlendState::Opaque |  DepthStencilState::Default | 
-       RasterizerState::Wireframe | SamplerState::AnisotropicWrap | Effect::Lighting | Effect::Texture;
+    constexpr std::uint32_t Wireframe = BlendState::Opaque |  DepthStencilState::Default | 
+        RasterizerState::Wireframe | SamplerState::AnisotropicWrap | Effect::Lighting | Effect::Texture;
 
-   constexpr std::uint32_t Instanced = BlendState::Opaque |  DepthStencilState::Default | 
-       RasterizerState::CullCounterClockwise | SamplerState::AnisotropicWrap | Effect::Instanced | Effect::Lighting | Effect::Texture;
+    constexpr std::uint32_t Instanced = BlendState::Opaque |  DepthStencilState::Default | 
+        RasterizerState::CullCounterClockwise | SamplerState::AnisotropicWrap | Effect::Instanced | Effect::Lighting | Effect::Texture;
 
-   constexpr std::uint32_t WireframeInstanced = BlendState::Opaque |  DepthStencilState::Default | 
-       RasterizerState::Wireframe | SamplerState::AnisotropicWrap | Effect::Instanced | Effect::Lighting | Effect::Texture;
+    constexpr std::uint32_t WireframeInstanced = BlendState::Opaque |  DepthStencilState::Default | 
+        RasterizerState::Wireframe | SamplerState::AnisotropicWrap | Effect::Instanced | Effect::Lighting | Effect::Texture;
 
-   constexpr std::uint32_t WireframeSkinned = BlendState::Opaque |  DepthStencilState::Default | 
-       RasterizerState::Wireframe | SamplerState::AnisotropicWrap | Effect::Lighting | Effect::Texture | Effect::Skinned;
+    constexpr std::uint32_t WireframeSkinned = BlendState::Opaque |  DepthStencilState::Default | 
+        RasterizerState::Wireframe | SamplerState::AnisotropicWrap | Effect::Lighting | Effect::Texture | Effect::Skinned;
 }
 
 class Material {

@@ -142,10 +142,10 @@ void Camera::PointAt(const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3&
 }
 
 void Camera::SetPerspectiveView(float fovY, float aspect, float nearZ, float farZ) noexcept {
-    m_fovY = fovY;
-    m_aspect = aspect;
-    m_nearZ = nearZ;
-    m_farZ = farZ;
+    m_fovY = std::max(fovY, .1f);
+    m_aspect = std::max(aspect, .1f);
+    m_nearZ = std::max(m_nearZ, .1f);
+    m_farZ = std::max(farZ, .1f);
     m_orthographic = false;
 
     m_nearWindowHeight = 2.0f * m_nearZ * tanf(0.5f * m_fovY);
@@ -156,9 +156,9 @@ void Camera::SetPerspectiveView(float fovY, float aspect, float nearZ, float far
 }
 
 void Camera::SetOrthographicView(float width, float height, float nearZ, float farZ) noexcept {
-    m_aspect = width/height; 
-    m_nearZ = nearZ;
-    m_farZ = farZ;
+    m_aspect = width/std::max(height, .1f); 
+    m_nearZ = std::max(nearZ, .1f);
+    m_farZ = std::max(farZ, .1f);
     m_orthographic = true;
 
     m_nearWindowHeight = 2.0f * m_nearZ * tanf(0.5f * m_fovY);

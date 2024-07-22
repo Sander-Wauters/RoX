@@ -32,6 +32,14 @@ std::vector<std::uint32_t>& Bone::GetChildIndices() noexcept {
     return m_childIndices;
 }
 
+bool Bone::IsRoot() const noexcept {
+    return m_parentIndex == INVALID_INDEX;
+}
+
+bool Bone::IsLeaf() const noexcept {
+    return m_childIndices.size() == 0;
+}
+
 void Bone::SetParentIndex(std::uint32_t index) noexcept {
     m_parentIndex = index;
 }
@@ -63,6 +71,10 @@ std::uint32_t Submesh::GetNumCulled() const noexcept {
     return m_numCulled;
 }
 
+std::uint32_t Submesh::GetNumInstances() const noexcept {
+    return m_instances.size();
+}
+
 std::uint32_t Submesh::GetNumVisibleInstances() const noexcept {
     return m_instances.size() - m_numCulled;
 }
@@ -87,8 +99,8 @@ std::uint32_t Submesh::GetVertexOffset() const noexcept {
     return m_vertexOffset;
 }
 
-std::shared_ptr<Material> Submesh::GetMaterial(Model* pModel) const {
-    return pModel->GetMaterials()[m_materialIndex];
+std::shared_ptr<Material> Submesh::GetMaterial(Model& grandParent) const {
+    return grandParent.GetMaterials()[m_materialIndex];
 }
 
 bool Submesh::IsVisible() const noexcept {

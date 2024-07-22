@@ -25,6 +25,7 @@ set(SOURCE
     Src/Camera.cpp
     Src/DebugDraw.cpp
     Src/DebugDraw.h
+    Src/DebugUI.cpp
     Src/DeviceResourceData.cpp
     Src/DeviceResourceData.h
     Src/DeviceResources.cpp

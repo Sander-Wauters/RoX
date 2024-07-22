@@ -35,6 +35,9 @@ class Bone {
         std::uint32_t GetNumChildren() const noexcept;
         std::vector<std::uint32_t>& GetChildIndices() noexcept;
 
+        bool IsRoot() const noexcept;
+        bool IsLeaf() const noexcept;
+
         void SetParentIndex(std::uint32_t index) noexcept;
 
     private:
@@ -52,6 +55,7 @@ class Submesh {
         std::string GetName() const noexcept;
 
         std::uint32_t GetNumCulled() const noexcept;
+        std::uint32_t GetNumInstances() const noexcept;
         std::uint32_t GetNumVisibleInstances() const noexcept;
 
         std::vector<DirectX::XMFLOAT3X4>& GetInstances() noexcept;
@@ -61,7 +65,7 @@ class Submesh {
         std::uint32_t GetStartIndex() const noexcept;
         std::uint32_t GetVertexOffset() const noexcept;
 
-        std::shared_ptr<Material> GetMaterial(Model* pModel) const;
+        std::shared_ptr<Material> GetMaterial(Model& grandParent) const;
 
         bool IsVisible() const noexcept;
 
@@ -164,7 +168,7 @@ class SkinnedMesh : public IMesh {
 
         std::uint32_t GetBoneIndex() const noexcept override;
         std::uint32_t GetNumSubmeshes() const noexcept override;
-        std::uint32_t GetNumVertices() const noexcept;
+        std::uint32_t GetNumVertices() const noexcept override;
         std::uint32_t GetNumIndices() const noexcept override;
 
         std::vector<std::uint32_t>& GetBoneInfluences() noexcept override;

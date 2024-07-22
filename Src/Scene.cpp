@@ -1,7 +1,8 @@
 #include "RoX/Scene.h"
 
-Scene::Scene(Camera& camera) 
-    noexcept : m_camera(camera),
+Scene::Scene(const std::string name, Camera& camera) 
+    noexcept : m_name(name),
+    m_camera(camera),
     m_models({}),
     m_sprites({}),
     m_text({}),
@@ -59,6 +60,10 @@ void Scene::RemoveOutline(std::string name) {
     m_outlines.erase(name);
 }
 
+std::string Scene::GetName() const noexcept {
+    return m_name;
+}
+
 Camera& Scene::GetCamera() const noexcept {
     return m_camera;
 }
@@ -96,34 +101,73 @@ const std::unordered_map<std::string, std::shared_ptr<Outline::Base>>& Scene::Ge
 }
 
 
-std::uint64_t Scene::GetTotalInstanceCount() const noexcept {
+std::uint64_t Scene::GetNumInstances() const noexcept {
     std::uint64_t count = 0;
     for (auto& modelPair : m_models) {
-        for (auto& mesh : modelPair.second->GetMeshes()) {
-            for (auto& submesh : mesh->GetSubmeshes()) {
-                count += submesh->GetNumVisibleInstances();
+        for (auto& pMesh : modelPair.second->GetMeshes()) {
+            for (auto& pSubmesh : pMesh->GetSubmeshes()) {
+                if (pSubmesh->GetMaterial(*modelPair.second.get())->GetFlags() & RenderFlags::Effect::Instanced)
+                    count += pSubmesh->GetNumVisibleInstances();
+                else
+                    ++count;
             }
         }
     } 
     return count;
 }
 
-std::uint64_t Scene::GetTotalVerticesLoaded() const noexcept {
+std::uint64_t Scene::GetNumRenderedInstances() const noexcept {
     std::uint64_t count = 0;
     for (auto& modelPair : m_models) {
-        for (auto& mesh : modelPair.second->GetMeshes()) {
-                count += mesh->GetNumVertices();
+        if (!modelPair.second->IsVisible())
+            continue;
+
+        for (auto& pMesh : modelPair.second->GetMeshes()) {
+            if (!pMesh->IsVisible())
+                continue;
+
+            for (auto& pSubmesh : pMesh->GetSubmeshes()) {
+                if (!pSubmesh->IsVisible())
+                    continue;
+
+                if (pSubmesh->GetMaterial(*modelPair.second.get())->GetFlags() & RenderFlags::Effect::Instanced)
+                    count += pSubmesh->GetNumVisibleInstances();
+                else
+                    ++count;
+            }
+        }
+    } 
+    return count;
+}
+
+std::uint64_t Scene::GetNumLoadedVertices() const noexcept {
+    std::uint64_t count = 0;
+    for (auto& modelPair : m_models) {
+        for (auto& pMesh : modelPair.second->GetMeshes()) {
+            count += pMesh->GetNumVertices();
         }
     }
     return count;
 }
 
-std::uint64_t Scene::GetTotalVerticesRendered() const noexcept {
+std::uint64_t Scene::GetNumRenderedVertices() const noexcept {
     std::uint64_t count = 0;
     for (auto& modelPair : m_models) {
-        for (auto& mesh : modelPair.second->GetMeshes()) {
-            for (auto& submesh : mesh->GetSubmeshes()) {
-                count += mesh->GetNumVertices() * submesh->GetNumVisibleInstances();
+        if (!modelPair.second->IsVisible())
+            continue;
+
+        for (auto& pMesh : modelPair.second->GetMeshes()) {
+            if (!pMesh->IsVisible())
+                continue;
+
+            for (auto& pSubmesh : pMesh->GetSubmeshes()) {
+                if (!pSubmesh->IsVisible())
+                    continue;
+
+                if (pSubmesh->GetMaterial(*modelPair.second.get())->GetFlags() & RenderFlags::Effect::Instanced)
+                    count += pMesh->GetNumVertices() * pSubmesh->GetNumVisibleInstances();
+                else
+                    count += pMesh->GetNumVertices();
             }
         }
     }

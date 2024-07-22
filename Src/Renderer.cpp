@@ -302,7 +302,7 @@ void Renderer::Impl::RenderMeshes() {
 
                 DirectX::IEffect* pEffect = modelPair.second->GetEffects()[pSubmesh->GetMaterialIndex()]->get();
 
-                std::uint32_t flags = pSubmesh->GetMaterial(modelPair.first.get())->GetFlags();
+                std::uint32_t flags = pSubmesh->GetMaterial(*modelPair.first)->GetFlags();
 
                 if (flags & RenderFlags::Effect::Instanced) {
                     const size_t instBytes = pSubmesh->GetNumVisibleInstances() * sizeof(DirectX::XMFLOAT3X4);
