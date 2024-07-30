@@ -44,8 +44,10 @@ void DebugUI::Vertex(VertexPositionNormalTextureSkinning& vertex) {
     DirectX::XMVECTOR position = DirectX::XMLoadFloat3(&vertex.position);
     DirectX::XMVECTOR normal = DirectX::XMLoadFloat3(&vertex.normal);
     DirectX::XMVECTOR texture = DirectX::XMLoadFloat2(&vertex.textureCoordinate);
+    //DirectX::XMVECTOR indices = DirectX::XMLoadUInt4(&vertex.indices);
+    DirectX::XMVECTOR weights = DirectX::XMLoadFloat4(&vertex.weights);
+
     std::uint32_t indices[4] = { vertex.indices & 0xff, (vertex.indices >> 8) & 0xff, (vertex.indices >> 16) & 0xff, (vertex.indices >> 24) & 0xff };
-    float weights[4] = { (float)(vertex.weights & 0xff), (float)((vertex.weights >> 8) & 0xff), (float)((vertex.weights >> 16) & 0xff), (float)((vertex.weights >> 24) & 0xff) };
 
     if (ImGui::DragFloat3("position", position.m128_f32))
         DirectX::XMStoreFloat3(&vertex.position, position);
@@ -55,8 +57,8 @@ void DebugUI::Vertex(VertexPositionNormalTextureSkinning& vertex) {
         DirectX::XMStoreFloat2(&vertex.textureCoordinate, texture);
     if (ImGui::DragScalarN("blend indices", ImGuiDataType_U32, indices, 4))
         vertex.SetBlendIndices({ indices[0], indices[1], indices[2], indices[3] });
-    if (ImGui::DragFloat4("blend weights", weights, 0.25f))
-        vertex.SetBlendWeights({{ weights[0], weights[1], weights[2], weights[3] }});
+    if (ImGui::DragFloat4("blend weights", weights.m128_f32, .25f, 0.f, 0.f, "%.5f"))
+        vertex.SetBlendWeights({{ weights.m128_f32[0], weights.m128_f32[1], weights.m128_f32[2], weights.m128_f32[3] }});
 }
 
 void DebugUI::Vertices(std::vector<VertexPositionNormalTexture>& vertices) {
@@ -403,6 +405,7 @@ void DebugUI::ModelHierarchy(Scene& scene, Model** ppSelectedModel, IMesh** ppSe
                             *ppSelectedSubmesh = pSubmesh.get();
                         }
                     }
+                    hierarchyNodeFlags = hierarchyBaseNodeFlags;
 
                     ImGui::TreePop();
                 }

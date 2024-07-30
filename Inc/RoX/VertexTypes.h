@@ -98,26 +98,24 @@ struct VertexPositionNormalTextureSkinning {
     }
 
     void SetBlendWeights(DirectX::XMFLOAT4 const& iweights) noexcept { 
-        SetBlendWeights(XMLoadFloat4(&iweights)); 
+        weights = iweights;
     }
     void XM_CALLCONV SetBlendWeights(DirectX::FXMVECTOR iweights) noexcept {
-        DirectX::PackedVector::XMUBYTEN4 packed;
-        DirectX::PackedVector::XMStoreUByteN4(&packed, iweights);
-        this->weights = packed.v;
+        DirectX::XMStoreFloat4(&weights, iweights);
     }
 
     DirectX::XMFLOAT3 position;
     DirectX::XMFLOAT3 normal;
     DirectX::XMFLOAT2 textureCoordinate;
     std::uint32_t indices;
-    std::uint32_t weights;
+    DirectX::XMFLOAT4 weights;
 
     static constexpr D3D12_INPUT_ELEMENT_DESC InputElements[] = {
         { "SV_Position",  0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         { "NORMAL",       0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         { "TEXCOORD",     0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         { "BLENDINDICES", 0, DXGI_FORMAT_R8G8B8A8_UINT,   0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "BLENDWEIGHT",  0, DXGI_FORMAT_R8G8B8A8_UNORM,  0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "BLENDWEIGHT",  0, DXGI_FORMAT_R32G32B32A32_FLOAT,  0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
     };
     static constexpr D3D12_INPUT_LAYOUT_DESC InputLayout = {
         InputElements, 5
