@@ -1,9 +1,6 @@
 #pragma once
 
-#include <unordered_map>
 #include <memory>
-
-#include "../../Lib/DirectXTK12/Inc/VertexTypes.h"
 
 #include "VertexTypes.h"
 #include "Material.h"
@@ -218,8 +215,8 @@ class Model {
         std::vector<std::shared_ptr<Material>>& GetMaterials() noexcept;
         std::vector<std::shared_ptr<IMesh>>& GetMeshes() noexcept;
         std::vector<Bone>& GetBones() noexcept;
-        DirectX::XMMATRIX* GetBoneMatrices() noexcept;
-        DirectX::XMMATRIX* GetInverseBindPoseMatrices() noexcept;
+        Bone::TransformArray& GetBoneMatrices() noexcept;
+        Bone::TransformArray& GetInverseBindPoseMatrices() noexcept;
 
         bool IsVisible() const noexcept;
         bool IsSkinned() const noexcept;

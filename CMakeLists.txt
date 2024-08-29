@@ -18,9 +18,11 @@ set(SOURCE
     Src/Exceptions/ThrowIfFailed.h
 
     Src/Util/d3dx12.h
+    Src/Util/DebugPrint.h
     Src/Util/Logger.h
     Src/Util/pch.h
 
+    Src/Animation.cpp
     Src/AssetIO.cpp
     Src/Camera.cpp
     Src/DebugDraw.cpp

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include <Effects.h>
 
 #include "RoX/Model.h"

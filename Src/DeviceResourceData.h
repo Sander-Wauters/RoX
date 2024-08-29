@@ -5,6 +5,7 @@
 #include <Effects.h>
 #include <PrimitiveBatch.h>
 #include <CommonStates.h>
+#include <VertexTypes.h>
 
 #include "Util/pch.h"
 

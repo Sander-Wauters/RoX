@@ -1,8 +1,8 @@
 #include "ModelDeviceData.h"
 
-#include <DirectXHelpers.h>
-
 #include <set>
+
+#include <DirectXHelpers.h>
 
 #include "Exceptions/ThrowIfFailed.h"
 
@@ -40,7 +40,7 @@ void ModelDeviceData::DrawSkinned(ID3D12GraphicsCommandList* pCommandList, Model
             auto iSkinning = dynamic_cast<DirectX::IEffectSkinning*>(pEffect);
             if (iSkinning) {
                 if (pMesh->GetBoneInfluences().empty())
-                    iSkinning->SetBoneTransforms(pModel->GetBoneMatrices(), pModel->GetNumBones());
+                    iSkinning->SetBoneTransforms(pModel->GetBoneMatrices().get(), pModel->GetNumBones());
                 else {
                     if (!temp) {
                         temp = Bone::MakeArray(DirectX::IEffectSkinning::MaxBones);

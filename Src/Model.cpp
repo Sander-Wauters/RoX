@@ -281,14 +281,10 @@ Model::Model(Model& other) :
     m_bones(other.GetBones())
 {
     if (other.GetNumBones() > 0) {
-        if (other.GetBoneMatrices()) {
-            m_boneMatrices = Bone::MakeArray(other.GetNumBones());
-            memcpy(m_boneMatrices.get(), other.GetBoneMatrices(), sizeof(DirectX::XMMATRIX) * other.GetNumBones());
-        }
-        if (other.GetInverseBindPoseMatrices()) {
-            m_inverseBindPoseMatrices = Bone::MakeArray(other.GetNumBones());
-            memcpy(m_inverseBindPoseMatrices.get(), other.GetInverseBindPoseMatrices(), sizeof(DirectX::XMMATRIX) * other.GetNumBones());
-        }
+        if (other.GetBoneMatrices())
+            m_boneMatrices = std::move(other.GetBoneMatrices());
+        if (other.GetInverseBindPoseMatrices())
+            m_inverseBindPoseMatrices = std::move(other.GetInverseBindPoseMatrices());
     }
 }
 
@@ -336,12 +332,12 @@ std::vector<Bone>& Model::GetBones() noexcept {
     return m_bones;
 }
 
-DirectX::XMMATRIX* Model::GetBoneMatrices() noexcept {
-    return m_boneMatrices.get();
+Bone::TransformArray& Model::GetBoneMatrices() noexcept {
+    return m_boneMatrices;
 }
 
-DirectX::XMMATRIX* Model::GetInverseBindPoseMatrices() noexcept {
-    return m_inverseBindPoseMatrices.get();
+Bone::TransformArray& Model::GetInverseBindPoseMatrices() noexcept {
+    return m_inverseBindPoseMatrices;
 }
 
 bool Model::IsVisible() const noexcept {

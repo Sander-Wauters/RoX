@@ -1,7 +1,5 @@
 #include "DeviceResourceData.h"
 
-#include <unordered_set>
-
 #include <DescriptorHeap.h>
 #include <ResourceUploadBatch.h>
 #include <DDSTextureLoader.h>
