@@ -1,7 +1,10 @@
 #pragma once
 
-#include "../../Src/Util/pch.h"
+#include <Windows.h>
+#include <string>
 
+// Used as a fast fail. 
+// If this exception is thrown the application cannot resume and needs to be shut down.
 class DXException {
     public:
         DXException() = default;

@@ -24,20 +24,8 @@ std::uint32_t Bone::GetParentIndex() const noexcept {
     return m_parentIndex;
 }
 
-std::uint32_t Bone::GetNumChildren() const noexcept {
-    return m_childIndices.size();
-}
-
-std::vector<std::uint32_t>& Bone::GetChildIndices() noexcept {
-    return m_childIndices;
-}
-
 bool Bone::IsRoot() const noexcept {
     return m_parentIndex == INVALID_INDEX;
-}
-
-bool Bone::IsLeaf() const noexcept {
-    return m_childIndices.size() == 0;
 }
 
 void Bone::SetParentIndex(std::uint32_t index) noexcept {

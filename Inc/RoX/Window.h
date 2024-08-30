@@ -10,10 +10,11 @@
 #include "../../Lib/DirectXTK12/Inc/Keyboard.h"
 #include "../../Lib/DirectXTK12/Inc/Mouse.h"
 
-#include "../../Src/Util/pch.h"
 #include "Renderer.h"
 #include "IWindowObserver.h"
 
+// A window to be used be **Renderer**.
+// Handles all window events, to execute code when a event fires use the **IWindowObserver** class.
 class Window {
     public:
         Window(Renderer& renderer, PCWSTR windowName, HINSTANCE hInstance,
@@ -24,7 +25,7 @@ class Window {
               );
         ~Window();
 
-    public: // Properties.
+    public:
         DirectX::Mouse& GetMouse() const noexcept;
         DirectX::Keyboard& GetKeyboard() const noexcept;
 

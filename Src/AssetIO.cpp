@@ -1,6 +1,7 @@
 #include "RoX/AssetIO.h"
 
 #include <unordered_map>
+#include <stdexcept>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -41,12 +42,6 @@ std::string GetNameFromFilePath(std::string filePath) {
 }
 
 DirectX::XMMATRIX ParseMatrix(const aiMatrix4x4* pMatrix) {
-    //return {
-    //    pMatrix->a1, pMatrix->a2, pMatrix->a3, pMatrix->a4,
-    //    pMatrix->b1, pMatrix->b2, pMatrix->b3, pMatrix->b4,
-    //    pMatrix->c1, pMatrix->c2, pMatrix->c3, pMatrix->c4,
-    //    pMatrix->d1, pMatrix->d2, pMatrix->d3, pMatrix->d4
-    //};
     return {
         pMatrix->a1, pMatrix->b1, pMatrix->c1, pMatrix->d1,
         pMatrix->a2, pMatrix->b2, pMatrix->c2, pMatrix->d2,
@@ -93,8 +88,6 @@ void ParseBonesRecursive(
         
         // Bone matrices are FUNCKED no mather what file format or export settings, so just put the identity.
         model.GetBoneMatrices()[index] = DirectX::XMMatrixIdentity();
-        if (parentIndex >= 0 && parentIndex < model.GetNumBones()) 
-            model.GetBones()[parentIndex].GetChildIndices().push_back(index);
     }
 
     for (int i = 0; i < pNode->mNumChildren; ++i) {

@@ -4,9 +4,9 @@
 #include <cstdint>
 #include <exception>
 #include <functional>
+#include <Windows.h>
 
-#include "../../Src/Util/pch.h"
-
+// Helper class to deal with time based events.
 class Timer {
     public:
         Timer();

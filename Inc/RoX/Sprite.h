@@ -2,6 +2,7 @@
 
 #include "../../Src/Util/pch.h"
 
+// Describes a 2D texture.
 // Positioning
 //      -y
 //      |
@@ -35,20 +36,15 @@ class Sprite {
         std::string GetName() const noexcept { return m_name; }
         std::wstring GetFilePath() const noexcept { return m_filePath; }
 
-        const DirectX::XMFLOAT2& GetOrigin() const noexcept { return m_origin; }
-        const DirectX::XMFLOAT2& GetOffset() const noexcept { return m_offset; }
-        const DirectX::XMFLOAT2& GetScale() const noexcept { return m_scale; }
-        const DirectX::XMVECTOR& GetColor() const noexcept { return m_color; }
+        DirectX::XMFLOAT2& GetOrigin() noexcept { return m_origin; }
+        DirectX::XMFLOAT2& GetOffset() noexcept { return m_offset; }
+        DirectX::XMFLOAT2& GetScale() noexcept { return m_scale; }
+        DirectX::XMVECTOR& GetColor() noexcept { return m_color; }
 
         float GetAngle() const noexcept { return m_angle; }  
         float GetLayer() const noexcept { return m_layer; }
 
         bool IsVisible() const noexcept { return m_visible; }
-
-        void SetOrigin(DirectX::XMFLOAT2 origin) noexcept { m_origin = origin; }
-        void SetOffset(DirectX::XMFLOAT2 offset) noexcept { m_offset = offset; }
-        void SetScale(DirectX::XMFLOAT2 scale) noexcept { m_scale = scale; }
-        void SetColor(DirectX::XMVECTOR color) noexcept { m_color = color; }
 
         void SetAngle(float angle) noexcept { m_angle = angle; }
         void SetLayer(float layer) noexcept { m_layer = layer; }

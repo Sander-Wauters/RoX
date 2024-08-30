@@ -344,27 +344,27 @@ void Renderer::Impl::RenderOutlines() {
     pOutlineEffect->SetWorld(DirectX::XMMatrixIdentity());
     pOutlineEffect->Apply(pCommandList);
 
-    for (const std::pair<std::string const, std::shared_ptr<Outline::Base>>& outlinePair : m_pDeviceResourceData->GetScene().GetOutlines()) {
+    for (const std::pair<std::string const, std::shared_ptr<IOutline>>& outlinePair : m_pDeviceResourceData->GetScene().GetOutlines()) {
         if (!outlinePair.second->IsVisible())
             continue;
 
-        if (auto p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingBox>>(outlinePair.second)) 
+        if (auto p = std::dynamic_pointer_cast<BoundingBodyOutline<DirectX::BoundingBox>>(outlinePair.second)) 
             Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
-        else if (auto p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingFrustum>>(outlinePair.second)) 
+        else if (auto p = std::dynamic_pointer_cast<BoundingBodyOutline<DirectX::BoundingFrustum>>(outlinePair.second)) 
             Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
-        else if (auto p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingOrientedBox>>(outlinePair.second)) 
+        else if (auto p = std::dynamic_pointer_cast<BoundingBodyOutline<DirectX::BoundingOrientedBox>>(outlinePair.second)) 
             Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
-        else if (auto p = std::dynamic_pointer_cast<Outline::BoundingBody<DirectX::BoundingSphere>>(outlinePair.second)) 
+        else if (auto p = std::dynamic_pointer_cast<BoundingBodyOutline<DirectX::BoundingSphere>>(outlinePair.second)) 
             Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
-        else if (auto p = std::dynamic_pointer_cast<Outline::Grid>(outlinePair.second))
+        else if (auto p = std::dynamic_pointer_cast<GridOutline>(outlinePair.second))
             DrawGrid(pOutlineBatch, p->GetXAxis(), p->GetYAxis(), p->GetOrigin(), p->GetXDivsions(), p->GetYDivsions(), p->GetColor());
-        else if (auto p = std::dynamic_pointer_cast<Outline::Ring>(outlinePair.second))
+        else if (auto p = std::dynamic_pointer_cast<RingOutline>(outlinePair.second))
             DrawRing(pOutlineBatch, p->GetOrigin(), p->GetMajorAxis(), p->GetMinorAxis(), p->GetColor());
-        else if (auto p = std::dynamic_pointer_cast<Outline::Ray>(outlinePair.second)) 
+        else if (auto p = std::dynamic_pointer_cast<RayOutline>(outlinePair.second)) 
             DrawRay(pOutlineBatch, p->GetOrigin(), p->GetDirection(), p->IsNormalized(), p->GetColor());
-        else if (auto p = std::dynamic_pointer_cast<Outline::Triangle>(outlinePair.second)) 
+        else if (auto p = std::dynamic_pointer_cast<TriangleOutline>(outlinePair.second)) 
             DrawTriangle(pOutlineBatch, p->GetPointA(), p->GetPointB(), p->GetPointC(), p->GetColor());
-        else if (auto p = std::dynamic_pointer_cast<Outline::Quad>(outlinePair.second)) 
+        else if (auto p = std::dynamic_pointer_cast<QuadOutline>(outlinePair.second)) 
             DrawQuad(pOutlineBatch, p->GetPointA(), p->GetPointB(), p->GetPointC(), p->GetPointD(), p->GetColor());
     }
     pOutlineBatch->End();
@@ -455,7 +455,7 @@ Renderer::Renderer(Timer& timer)
     m_pImpl(std::make_unique<Impl>(this)) 
 {} 
 Renderer::~Renderer() noexcept {}
-Renderer::Renderer(Renderer&& moveFrom) noexcept : m_timer(moveFrom.m_timer), m_pImpl(std::make_unique<Impl>(this)) {}
+Renderer::Renderer(Renderer&& other) noexcept : m_timer(other.m_timer), m_pImpl(std::make_unique<Impl>(this)) {}
 void Renderer::Initialize(HWND window, int width, int height) { m_pImpl->Initialize(window, width, height); }
 void Renderer::Load(Scene& scene) { m_pImpl->Load(scene); }
 void Renderer::Update() { m_pImpl->Update(); }

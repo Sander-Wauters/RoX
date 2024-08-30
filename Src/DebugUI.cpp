@@ -339,28 +339,6 @@ void DebugUI::SubmeshVertexIndexing(Submesh& submesh) {
     ImGui::PopItemWidth();
 }
 
-void DebugUI::BoneHierarchy(std::vector<Bone>& bones, Bone** ppSelectedBone, std::uint32_t index) {
-    static ImGuiTreeNodeFlags hierarchyBaseNodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-    if (bones.size() == 0)
-        return;
-
-    ImGuiTreeNodeFlags hierarchyNodeFlags = hierarchyBaseNodeFlags;
-    Bone& bone = bones[index]; 
-
-    if (bone.IsLeaf()) {
-        hierarchyNodeFlags |= ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-        ImGui::TreeNodeEx(bone.GetName().c_str(), hierarchyNodeFlags);
-        return;
-    }
-
-    if (ImGui::TreeNode(bone.GetName().c_str())) {
-        for (std::uint32_t i = 0; i < bone.GetNumChildren(); ++i) {
-            BoneHierarchy(bones, ppSelectedBone, bone.GetChildIndices()[i]);
-        }
-        ImGui::TreePop();
-    }
-}
-
 void DebugUI::ModelHierarchy(Scene& scene, Model** ppSelectedModel, IMesh** ppSelectedIMesh, Submesh** ppSelectedSubmesh) {
     int expandAll = -1;
     if (ImGui::Button("Expand all"))
@@ -501,8 +479,6 @@ void DebugUI::ModelMenu(Model& model) {
             } 
         }
     }
-    if (ImGui::CollapsingHeader("Armature"))
-        BoneHierarchy(model.GetBones(), nullptr);
 }
 
 void DebugUI::SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags) {

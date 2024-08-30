@@ -1,9 +1,9 @@
 #pragma once 
 
 #include "Model.h"
-#include "VertexTypes.h"
 
-namespace SubmeshFactory {
+// Contains helper functions for generating geometric primitives.
+namespace MeshFactory {
     void CreateCube(IMesh& mesh, float size = 1);
     void CreateBox(IMesh& mesh, const DirectX::XMFLOAT3& size, bool invertn = false);
     void CreateSphere(IMesh& mesh, float diameter = 1, size_t tessellation = 16, bool invertn = false);

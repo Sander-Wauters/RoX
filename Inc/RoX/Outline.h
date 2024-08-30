@@ -1,232 +1,242 @@
 #pragma once
 
+#include <string>
 #include <type_traits>
 
-#include "../../Src/Util/pch.h"
+#include <DirectXMath.h>
+#include <DirectXColors.h>
+#include <DirectXCollision.h>
 
-namespace Outline {
+// Collection of classes that hold data to renderer the outline of shape.
 
-    class Base {
-        protected: 
-            Base(
-                    const std::string name,
-                    DirectX::XMVECTOR color = DirectX::Colors::White,
-                    bool visible = true
-                ) noexcept :
-                m_name(name),
-                m_color(color), 
-                m_visible(visible)
-                {}
+// Abstract interface representing the outline of a shape.
+class IOutline {
+    protected:
+        IOutline() = default;
+        IOutline(IOutline&) = default;
+        IOutline(IOutline&&) = default;
+        IOutline& operator= (IOutline&&) = default;
 
-        public:
-            virtual ~Base() noexcept {}
+    public:
+        virtual ~IOutline() = default;
 
-            std::string GetName() const noexcept { return m_name; }
+        virtual std::string GetName() const noexcept = 0;
+        virtual DirectX::XMVECTOR& GetColor() noexcept = 0;
+        virtual bool IsVisible() const noexcept = 0;
 
-            const DirectX::XMVECTOR& GetColor() const noexcept { return m_color; }
+        virtual void SetVisible(bool visible) noexcept = 0;
+};
 
-            bool IsVisible() const noexcept { return m_visible; }
+// Outlines a boundind body in **DirectXCollision**.
+template<typename Bounds> class BoundingBodyOutline : public IOutline {
+    private:
+        static_assert(
+                std::is_base_of<DirectX::BoundingBox,         Bounds>::value ||
+                std::is_base_of<DirectX::BoundingFrustum,     Bounds>::value ||
+                std::is_base_of<DirectX::BoundingOrientedBox, Bounds>::value ||
+                std::is_base_of<DirectX::BoundingSphere,      Bounds>::value,
+                "T must either be a DirectX::BoundingBox, DirectX::BoundingFrustum, DirectX::BoundingOrientedBox or DirectX::BoundingSphere"
+                );
 
-            void SetColor(DirectX::XMVECTOR& color) noexcept { m_color = color; }
-            void SetVisible(bool visible) noexcept { m_visible = visible; }
+    public:
+        BoundingBodyOutline(
+                const std::string name,
+                Bounds& bounds,
+                DirectX::XMVECTOR color = DirectX::Colors::White,
+                bool visible = true) noexcept : 
+            m_name(name),
+            m_color(color),
+            m_visible(visible),
+            m_bounds(bounds) {}
 
-        private:
-            const std::string m_name;
+    public:
+        std::string GetName() const noexcept override { return m_name; }
+        DirectX::XMVECTOR& GetColor() noexcept override { return m_color; }
+        bool IsVisible() const noexcept override { return m_visible; }
 
-            DirectX::XMVECTOR m_color;
+        Bounds& GetBounds() noexcept { return m_bounds; }
 
-            bool m_visible;
-    };
+        void SetVisible(bool visible) noexcept override { m_visible = visible; }
 
-    template<typename Bounds> class BoundingBody : public Base {
-        private:
-            static_assert(
-                    std::is_base_of<DirectX::BoundingBox,         Bounds>::value ||
-                    std::is_base_of<DirectX::BoundingFrustum,     Bounds>::value ||
-                    std::is_base_of<DirectX::BoundingOrientedBox, Bounds>::value ||
-                    std::is_base_of<DirectX::BoundingSphere,      Bounds>::value,
-                    "T must either be a DirectX::BoundingBox, DirectX::BoundingFrustum, DirectX::BoundingOrientedBox or DirectX::BoundingSphere"
-                    );
+    private:
+        const std::string m_name;
+        DirectX::XMVECTOR m_color;
+        bool m_visible;
 
-        public:
-            BoundingBody(
-                    const std::string name,
-                    Bounds& bounds,
-                    DirectX::XMVECTOR color = DirectX::Colors::White,
-                    bool visible = true
-                    ) noexcept :
-                Base(name, color, visible),
-                m_bounds(bounds)
-                {}
+        Bounds& m_bounds;
+};
 
-        public:
-            Bounds& GetBounds() noexcept { return m_bounds; }
+class GridOutline : public IOutline {
+    public:
+        GridOutline(
+                const std::string name,
+                std::uint16_t xDivsions,
+                std::uint16_t yDivsions,
+                DirectX::XMVECTOR xAxis, 
+                DirectX::XMVECTOR yAxis, 
+                DirectX::XMVECTOR origin = {{ 0.f, 0.f, 0.f }},
+                DirectX::XMVECTOR color = DirectX::Colors::White,
+                bool visible = true
+                ) noexcept;
+    public:
+        std::string GetName() const noexcept override;
+        DirectX::XMVECTOR& GetColor() noexcept override;
+        bool IsVisible() const noexcept override;
 
-        private:
-            Bounds& m_bounds;
-    };
+        std::uint16_t GetXDivsions() const noexcept;
+        std::uint16_t GetYDivsions() const noexcept;
 
-    class Grid : public Base {
-        public:
-            Grid(
-                    const std::string name,
-                    std::uint16_t xDivsions,
-                    std::uint16_t yDivsions,
-                    DirectX::XMVECTOR xAxis, 
-                    DirectX::XMVECTOR yAxis, 
-                    DirectX::XMVECTOR origin = {{ 0.f, 0.f, 0.f }},
-                    DirectX::XMVECTOR color = DirectX::Colors::White,
-                    bool visible = true
-                ) noexcept :
-                Base(name, color, visible),
-                m_xDivsions(xDivsions), m_yDivsions(yDivsions),
-                m_xAxis(xAxis), m_yAxis(yAxis), m_origin(origin)
-                {}
+        DirectX::XMVECTOR& GetXAxis() noexcept;
+        DirectX::XMVECTOR& GetYAxis() noexcept;
+        DirectX::XMVECTOR& GetOrigin() noexcept;
 
-        public:
-            std::uint16_t GetXDivsions() const noexcept { return m_xDivsions; };
-            std::uint16_t GetYDivsions() const noexcept { return m_yDivsions; };
+        void SetVisible(bool visible) noexcept override;
 
-            const DirectX::XMVECTOR& GetXAxis() const noexcept { return m_xAxis; };
-            const DirectX::XMVECTOR& GetYAxis() const noexcept { return m_yAxis; };
-            const DirectX::XMVECTOR& GetOrigin() const noexcept { return m_origin; };
+        void SetXDivisions(std::uint16_t xDivsions) noexcept;
+        void SetYDivisions(std::uint16_t yDivsions) noexcept;
 
-            void SetXDivisions(std::uint16_t xDivsions) noexcept { m_xDivsions = xDivsions; }
-            void SetYDivisions(std::uint16_t yDivsions) noexcept { m_yDivsions = yDivsions; }
+    private:
+        const std::string m_name;
+        DirectX::XMVECTOR m_color;
+        bool m_visible;
 
-            void SetXAxis(DirectX::XMVECTOR& xAxis) noexcept { m_xAxis = xAxis; }
-            void SetYAxis(DirectX::XMVECTOR& yAxis) noexcept { m_yAxis = yAxis; }
-            void SetOrigin(DirectX::XMVECTOR& origin) noexcept { m_origin = origin; }
+        std::uint16_t m_xDivsions;
+        std::uint16_t m_yDivsions;
 
-        private:
-            std::uint16_t m_xDivsions;
-            std::uint16_t m_yDivsions;
+        DirectX::XMVECTOR m_xAxis;
+        DirectX::XMVECTOR m_yAxis;
+        DirectX::XMVECTOR m_origin;
+};
 
-            DirectX::XMVECTOR m_xAxis;
-            DirectX::XMVECTOR m_yAxis;
-            DirectX::XMVECTOR m_origin;
-    };
+class RingOutline : public IOutline {
+    public:
+        RingOutline(
+                const std::string name,
+                DirectX::XMVECTOR majorAxis,
+                DirectX::XMVECTOR minorAxis,
+                DirectX::XMVECTOR origin = {{ 0.f, 0.f, 0.f }},
+                DirectX::XMVECTOR color = DirectX::Colors::White,
+                bool visible = true
+                ) noexcept;
 
-    class Ring : public Base {
-        public:
-            Ring(
-                    const std::string name,
-                    DirectX::XMVECTOR majorAxis,
-                    DirectX::XMVECTOR minorAxis,
-                    DirectX::XMVECTOR origin = {{ 0.f, 0.f, 0.f }},
-                    DirectX::XMVECTOR color = DirectX::Colors::White,
-                    bool visible = true
-                ) noexcept :
-                Base(name, color, visible),
-                m_majorAxis(majorAxis), m_minorAxis(minorAxis),
-                m_origin(origin)
-                {}
+    public:
+        std::string GetName() const noexcept override;
+        DirectX::XMVECTOR& GetColor() noexcept override;
+        bool IsVisible() const noexcept override;
 
-        public:
-            const DirectX::XMVECTOR& GetMajorAxis() const noexcept { return m_majorAxis; }
-            const DirectX::XMVECTOR& GetMinorAxis() const noexcept { return m_minorAxis; }
-            const DirectX::XMVECTOR& GetOrigin() const noexcept { return m_origin; }            
+        DirectX::XMVECTOR& GetMajorAxis() noexcept;
+        DirectX::XMVECTOR& GetMinorAxis() noexcept;
+        DirectX::XMVECTOR& GetOrigin() noexcept;           
 
-            void setMajorAxis(DirectX::XMVECTOR& majorAxis) noexcept { m_majorAxis = majorAxis; }
-            void setMinorAxis(DirectX::XMVECTOR& minorAxis) noexcept { m_majorAxis = minorAxis; }
-            void SetOrigin(DirectX::XMVECTOR& origin) noexcept { m_origin = origin; }
+        void SetVisible(bool visible) noexcept override;
 
-        private:
-            DirectX::XMVECTOR m_majorAxis;
-            DirectX::XMVECTOR m_minorAxis;
-            DirectX::XMVECTOR m_origin;
-    };
+    private:
+        const std::string m_name;
+        DirectX::XMVECTOR m_color;
+        bool m_visible;
 
-    class Ray : public Base {
-        public:
-            Ray(
-                    const std::string name,
-                    DirectX::XMVECTOR direction,
-                    DirectX::XMVECTOR origin = {{ 0.f, 0.f, 0.f }},
-                    bool normalized = false,
-                    DirectX::XMVECTOR color = DirectX::Colors::White,
-                    bool visible = true
-               ) noexcept :
-                Base(name, color, visible),
-                m_direction(direction), m_origin(origin),
-                m_normalized(normalized)
-                {}
-        public:
-            const DirectX::XMVECTOR& GetDirection() const noexcept { return m_direction; }
-            const DirectX::XMVECTOR& GetOrigin() const noexcept { return m_origin; }
-            bool IsNormalized() const noexcept { return m_normalized; }
+        DirectX::XMVECTOR m_majorAxis;
+        DirectX::XMVECTOR m_minorAxis;
+        DirectX::XMVECTOR m_origin;
+};
 
-            void SetDirection(DirectX::XMVECTOR& direction) noexcept { m_direction = direction; }
-            void SetOrigin(DirectX::XMVECTOR& origin) noexcept { m_origin = origin; }
+class RayOutline : public IOutline {
+    public:
+        RayOutline(
+                const std::string name,
+                DirectX::XMVECTOR direction,
+                DirectX::XMVECTOR origin = {{ 0.f, 0.f, 0.f }},
+                bool normalized = false,
+                DirectX::XMVECTOR color = DirectX::Colors::White,
+                bool visible = true
+                ) noexcept;
 
-            void SetNormalized(bool normalized) noexcept { m_normalized = normalized; }
+    public:
+        std::string GetName() const noexcept override;
+        DirectX::XMVECTOR& GetColor() noexcept override;
+        bool IsVisible() const noexcept override;
 
-        private:
-            DirectX::XMVECTOR m_direction;
-            DirectX::XMVECTOR m_origin;
-            bool m_normalized;
-    };
+        DirectX::XMVECTOR& GetDirection() noexcept;
+        DirectX::XMVECTOR& GetOrigin() noexcept;
+        bool IsNormalized() const noexcept;
 
-    class Triangle : public Base {
-        public:
-            Triangle(
-                    const std::string name,
-                    DirectX::XMVECTOR pointA,
-                    DirectX::XMVECTOR pointB,
-                    DirectX::XMVECTOR pointC,
-                    DirectX::XMVECTOR color = DirectX::Colors::White,
-                    bool visible = true
-                    ) noexcept :
-                Base(name, color, visible),
-                m_pointA(pointA), m_pointB(pointB), m_pointC(pointC)
-                {}
+        void SetVisible(bool visible) noexcept override;
+        void SetNormalized(bool normalized) noexcept;
 
-        public:
-            const DirectX::XMVECTOR& GetPointA() const noexcept { return m_pointA; }
-            const DirectX::XMVECTOR& GetPointB() const noexcept { return m_pointB; }
-            const DirectX::XMVECTOR& GetPointC() const noexcept { return m_pointC; }
+    private:
+        const std::string m_name;
+        DirectX::XMVECTOR m_color;
+        bool m_visible;
 
-            void SetPointA(DirectX::XMVECTOR& pointA) noexcept { m_pointA = pointA; }
-            void SetPointB(DirectX::XMVECTOR& pointB) noexcept { m_pointB = pointB; }
-            void SetPointC(DirectX::XMVECTOR& pointC) noexcept { m_pointC = pointC; }
+        DirectX::XMVECTOR m_direction;
+        DirectX::XMVECTOR m_origin;
+        bool m_normalized;
+};
 
-        private:
-            DirectX::XMVECTOR m_pointA;
-            DirectX::XMVECTOR m_pointB;
-            DirectX::XMVECTOR m_pointC;
-    };
+class TriangleOutline : public IOutline {
+    public:
+        TriangleOutline(
+                const std::string name,
+                DirectX::XMVECTOR pointA,
+                DirectX::XMVECTOR pointB,
+                DirectX::XMVECTOR pointC,
+                DirectX::XMVECTOR color = DirectX::Colors::White,
+                bool visible = true
+                ) noexcept;
 
-    class Quad : public Base {
-        public:
-            Quad(
-                    const std::string name,
-                    DirectX::XMVECTOR pointA,
-                    DirectX::XMVECTOR pointB,
-                    DirectX::XMVECTOR pointC,
-                    DirectX::XMVECTOR pointD,
-                    DirectX::XMVECTOR color = DirectX::Colors::White,
-                    bool visible = true
-                ) noexcept :
-                Base(name, color, visible),
-                m_pointA(pointA), m_pointB(pointB), m_pointC(pointC), m_pointD(pointD)
-                {}
+    public:
+        std::string GetName() const noexcept override;
+        DirectX::XMVECTOR& GetColor() noexcept override;
+        bool IsVisible() const noexcept override;
 
-        public:
-            const DirectX::XMVECTOR& GetPointA() const noexcept { return m_pointA; }
-            const DirectX::XMVECTOR& GetPointB() const noexcept { return m_pointB; }
-            const DirectX::XMVECTOR& GetPointC() const noexcept { return m_pointC; }
-            const DirectX::XMVECTOR& GetPointD() const noexcept { return m_pointD; }
+        DirectX::XMVECTOR& GetPointA() noexcept;
+        DirectX::XMVECTOR& GetPointB() noexcept;
+        DirectX::XMVECTOR& GetPointC() noexcept;
 
-            void SetPointA(DirectX::XMVECTOR& pointA) noexcept { m_pointA = pointA; }
-            void SetPointB(DirectX::XMVECTOR& pointB) noexcept { m_pointB = pointB; }
-            void SetPointC(DirectX::XMVECTOR& pointC) noexcept { m_pointC = pointC; }
-            void SetPointD(DirectX::XMVECTOR& pointD) noexcept { m_pointD = pointD; }
+        void SetVisible(bool visible) noexcept override;
 
-        private:
-            DirectX::XMVECTOR m_pointA;
-            DirectX::XMVECTOR m_pointB;
-            DirectX::XMVECTOR m_pointC;
-            DirectX::XMVECTOR m_pointD;
-    };
+    private:
+        const std::string m_name;
+        DirectX::XMVECTOR m_color;
+        bool m_visible;
+
+        DirectX::XMVECTOR m_pointA;
+        DirectX::XMVECTOR m_pointB;
+        DirectX::XMVECTOR m_pointC;
+};
+
+class QuadOutline : public IOutline {
+    public:
+        QuadOutline(
+                const std::string name,
+                DirectX::XMVECTOR pointA,
+                DirectX::XMVECTOR pointB,
+                DirectX::XMVECTOR pointC,
+                DirectX::XMVECTOR pointD,
+                DirectX::XMVECTOR color = DirectX::Colors::White,
+                bool visible = true
+                ) noexcept;
+
+    public:
+        std::string GetName() const noexcept override;
+        DirectX::XMVECTOR& GetColor() noexcept override;
+        bool IsVisible() const noexcept override;
+
+        DirectX::XMVECTOR& GetPointA() noexcept;
+        DirectX::XMVECTOR& GetPointB() noexcept;
+        DirectX::XMVECTOR& GetPointC() noexcept;
+        DirectX::XMVECTOR& GetPointD() noexcept;
+
+        void SetVisible(bool visible) noexcept override;
+
+    private:
+        const std::string m_name;
+        DirectX::XMVECTOR m_color;
+        bool m_visible;
+
+        DirectX::XMVECTOR m_pointA;
+        DirectX::XMVECTOR m_pointB;
+        DirectX::XMVECTOR m_pointC;
+        DirectX::XMVECTOR m_pointD;
 };
 

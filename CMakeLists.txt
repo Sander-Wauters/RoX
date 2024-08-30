@@ -36,14 +36,15 @@ set(SOURCE
     Src/Material.cpp
     Src/MeshDeviceData.cpp
     Src/MeshDeviceData.h
+    Src/MeshFactory.cpp
     Src/Model.cpp
     Src/ModelDeviceData.cpp
     Src/ModelDeviceData.h
+    Src/Outline.cpp
     Src/Renderer.cpp
     Src/Scene.cpp
     Src/SubmeshDeviceData.cpp
     Src/SubmeshDeviceData.h
-    Src/SubmeshFactory.cpp
     Src/TextDeviceData.h
     Src/TextureDeviceData.h
     Src/Timer.cpp

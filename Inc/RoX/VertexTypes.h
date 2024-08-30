@@ -5,6 +5,7 @@
 #include <DirectXPackedVector.h>
 #include <d3d12.h>
 
+// Describes a vertex for use in static geometry.
 struct VertexPositionNormalTexture {
     VertexPositionNormalTexture() = default;
 
@@ -56,6 +57,7 @@ struct VertexPositionNormalTexture {
     };
 };
 
+// Describes a vertex for use in skinned meshes.
 struct VertexPositionNormalTextureSkinning {
     VertexPositionNormalTextureSkinning() = default;
 

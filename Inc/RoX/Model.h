@@ -1,12 +1,15 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include "VertexTypes.h"
 #include "Material.h"
 
+// Forward declaration of **Model**.
 class Model;
 
+// Represents a node in the bone hierarchy.
 class Bone {
     public:
         static constexpr std::uint32_t INVALID_INDEX = std::uint32_t(-1);
@@ -29,11 +32,8 @@ class Bone {
         std::string GetName() const noexcept;
 
         std::uint32_t GetParentIndex() const noexcept;
-        std::uint32_t GetNumChildren() const noexcept;
-        std::vector<std::uint32_t>& GetChildIndices() noexcept;
 
         bool IsRoot() const noexcept;
-        bool IsLeaf() const noexcept;
 
         void SetParentIndex(std::uint32_t index) noexcept;
 
@@ -41,9 +41,13 @@ class Bone {
         const std::string m_name;
 
         std::uint32_t m_parentIndex;
-        std::vector<std::uint32_t> m_childIndices;
 };
 
+// A submesh determines to which set for vertices in a mesh a material is applied.
+// Does not store it's material but an index into the array of materials in **Model**.
+// The location of a submesh in world space is determined by the transformation in **m_instances**.
+// There need to be 1 instance available at all time.
+// If multiple instances need to be rendered then the **RenderFlags::Effect::Instances** should be set in the used material.
 class Submesh {
     public:
         Submesh(const std::string name, std::uint32_t materialIndex, bool visible = true) noexcept;
@@ -88,11 +92,13 @@ class Submesh {
         bool m_visible;
 };
 
+// Abstract interface representing any mesh which can be used by the **Renderer**.
+// A mesh contains the vertices and indices of a part of a model.
 class IMesh {
     protected:
         IMesh() = default;
         IMesh(IMesh&&) = default;
-        IMesh& operator=(IMesh&&) = default;
+        IMesh& operator= (IMesh&&) = default;
         
     public:
         virtual ~IMesh() = default;
@@ -117,6 +123,7 @@ class IMesh {
         virtual void SetVisible(bool visible) noexcept = 0;
 };
 
+// Used in models that do not require skinned animations.
 class Mesh : public IMesh {
     public:
         Mesh(const std::string name, bool visible = true) noexcept; 
@@ -154,6 +161,7 @@ class Mesh : public IMesh {
         bool m_visible;
 };
 
+// Used in models that require skinned animations.
 class SkinnedMesh : public IMesh {
     public:
         SkinnedMesh(const std::string name, bool visible = true) noexcept; 
@@ -191,6 +199,7 @@ class SkinnedMesh : public IMesh {
         bool m_visible;
 };
 
+// Contains 1 or more meshes, all the materials used by there submeshes and a collection of tranformations to animate the model.
 class Model {
     public:
         Model(const std::string name, 

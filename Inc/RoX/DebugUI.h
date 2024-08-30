@@ -2,6 +2,8 @@
 
 #include <functional>
 
+#include "../Lib/ImGui/Inc/ImGui/imgui.h"
+
 #include "VertexTypes.h"
 #include "Material.h"
 #include "Model.h"
@@ -9,51 +11,42 @@
 
 using ImGuiWindowFlags = int;
 
-class DebugUI {
-    public:
-        DebugUI() = delete;
-        DebugUI operator=(DebugUI) = delete;
+// Contains helper function for the UI.
+// Is not indended for use in production code.
+namespace DebugUI {
+    void HelpMarker(const char* desc);
 
-        DebugUI(const DebugUI& other) = delete;
-        DebugUI& operator=(const DebugUI& other) = delete;
+    void ArrayControls(const char* label, std::uint32_t* pIndex, const std::function<void()>& onAdd, const std::function<void()>& onRemove);
 
-        DebugUI(const DebugUI&& other) = delete;
-        DebugUI& operator=(const DebugUI&& other) = delete;
+    void Vertex(VertexPositionNormalTexture& vertex);
+    void Vertex(VertexPositionNormalTextureSkinning& vertex);
 
-        static void HelpMarker(const char* desc);
+    void Vertices(std::vector<VertexPositionNormalTexture>& vertices);
+    void Vertices(std::vector<VertexPositionNormalTextureSkinning>& vertices);
 
-        static void ArrayControls(const char* label, std::uint32_t* pIndex, const std::function<void()>& onAdd, const std::function<void()>& onRemove);
+    void Indices(std::vector<std::uint16_t>& indices, std::uint16_t numVertices);
 
-        static void Vertex(VertexPositionNormalTexture& vertex);
-        static void Vertex(VertexPositionNormalTextureSkinning& vertex);
+    void Matrix(DirectX::XMMATRIX& matrix);
+    void Matrix(DirectX::XMFLOAT4X4& matrix);
+    void Matrix(DirectX::XMFLOAT3X4& matrix);
 
-        static void Vertices(std::vector<VertexPositionNormalTexture>& vertices);
-        static void Vertices(std::vector<VertexPositionNormalTextureSkinning>& vertices);
+    void RenderFlags(std::uint32_t renderFlags);
 
-        static void Indices(std::vector<std::uint16_t>& indices, std::uint16_t numVertices);
+    void MaterialTextures(Material& material);
+    void MaterialColors(Material& material);
+    void MaterialEditor(Material& material);
+    void MaterialSelector(std::uint32_t& index, std::vector<std::shared_ptr<Material>>& materials);
 
-        static void Matrix(DirectX::XMMATRIX& matrix);
-        static void Matrix(DirectX::XMFLOAT4X4& matrix);
-        static void Matrix(DirectX::XMFLOAT3X4& matrix);
+    void SubmeshInstances(Submesh& submesh);
+    void SubmeshVertexIndexing(Submesh& submesh);
 
-        static void RenderFlags(std::uint32_t renderFlags);
+    void ModelHierarchy(Scene& scene, Model** ppSelectedModel, IMesh** ppSelectedIMesh, Submesh** ppSelectedSubmesh);
 
-        static void MaterialTextures(Material& material);
-        static void MaterialColors(Material& material);
-        static void MaterialEditor(Material& material);
-        static void MaterialSelector(std::uint32_t& index, std::vector<std::shared_ptr<Material>>& materials);
+    void CameraMenu(Camera& camera);
+    void SubmeshMenu(Submesh& submesh, Model& grandParent);
+    void IMeshMenu(IMesh& iMesh);
+    void ModelMenu(Model& model);
 
-        static void SubmeshInstances(Submesh& submesh);
-        static void SubmeshVertexIndexing(Submesh& submesh);
-
-        static void BoneHierarchy(std::vector<Bone>& bones, Bone** ppSelectedBone, std::uint32_t index = 0);
-        static void ModelHierarchy(Scene& scene, Model** ppSelectedModel, IMesh** ppSelectedIMesh, Submesh** ppSelectedSubmesh);
-
-        static void CameraMenu(Camera& camera);
-        static void SubmeshMenu(Submesh& submesh, Model& grandParent);
-        static void IMeshMenu(IMesh& iMesh);
-        static void ModelMenu(Model& model);
-
-        static void SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags);
+    void SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags);
 };
 

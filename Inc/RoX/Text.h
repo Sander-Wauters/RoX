@@ -4,6 +4,7 @@
 
 #include "Sprite.h"
 
+// Describes a 2D texture containing a text string.
 class Text : public Sprite {
     public:
         Text(

@@ -36,8 +36,8 @@ void Scene::Add(std::shared_ptr<Text> pText) {
         throw std::invalid_argument("Scene already contains this text.");
 }
 
-void Scene::Add(std::shared_ptr<Outline::Base> pOutline) {
-    std::shared_ptr<Outline::Base>& entry = m_outlines[pOutline->GetName()];
+void Scene::Add(std::shared_ptr<IOutline> pOutline) {
+    std::shared_ptr<IOutline>& entry = m_outlines[pOutline->GetName()];
     if (!entry) 
         entry = pOutline;
     else
@@ -80,7 +80,7 @@ const std::shared_ptr<Text>& Scene::GetText(std::string name) const {
     return m_text.at(name);
 }
 
-const std::shared_ptr<Outline::Base>& Scene::GetOutline(std::string name) const {
+const std::shared_ptr<IOutline>& Scene::GetOutline(std::string name) const {
     return m_outlines.at(name); 
 }
 
@@ -96,7 +96,7 @@ const std::unordered_map<std::string, std::shared_ptr<Text>>& Scene::GetText() c
     return m_text;
 }
 
-const std::unordered_map<std::string, std::shared_ptr<Outline::Base>>& Scene::GetOutlines() const noexcept {
+const std::unordered_map<std::string, std::shared_ptr<IOutline>>& Scene::GetOutlines() const noexcept {
     return m_outlines;
 }
 

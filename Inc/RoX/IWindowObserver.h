@@ -1,5 +1,7 @@
 #pragma once
 
+// Abstraction over window events.
+// Used for when classes need to execute code when a certain window event is fired.
 class IWindowObserver {
     public:   
         virtual void OnActivated() = 0;

@@ -1,13 +1,13 @@
 #pragma once
 
 #include <string>
+#include <DirectXMath.h>
 
-#include "../../Src/Util/pch.h"
-
-#include "VertexTypes.h"
-
+// Collection of flags that **Renderer** uses to determine how a material (and by association a submesh) should be rendered.
 namespace RenderFlags {
-    constexpr std::uint32_t None =                      0;
+    constexpr std::uint32_t None =                     0;
+    // Determines how a submesh should calculate opacity.
+    // Only 1 may be set. If more than 1 is set that the lowest value will be used.
     namespace BlendState {
         constexpr std::uint32_t Opaque =               1 << 0;
         constexpr std::uint32_t AlphaBlend =           1 << 1;
@@ -15,6 +15,8 @@ namespace RenderFlags {
         constexpr std::uint32_t NonPremultiplied =     1 << 3;
         constexpr std::uint32_t Reset =                !(Opaque | AlphaBlend | Additive | NonPremultiplied);
     }
+    // Determines a texture texture is read.
+    // Only 1 may be set. If more than 1 is set that the lowest value will be used.
     namespace DepthStencilState {
         constexpr std::uint32_t None =                 1 << 4;
         constexpr std::uint32_t Default =              1 << 5;
@@ -23,6 +25,8 @@ namespace RenderFlags {
         constexpr std::uint32_t ReadReverseZ =         1 << 8;
         constexpr std::uint32_t Reset =                !(None | Default | Read | ReverseZ | ReadReverseZ);
     }
+    // Determines how the submesh should be rasterized.
+    // Only 1 may be set. If more than 1 is set that the lowest value will be used.
     namespace RasterizerState {
         constexpr std::uint32_t CullNone =             1 << 9;
         constexpr std::uint32_t CullClockwise =        1 << 10;
@@ -30,6 +34,8 @@ namespace RenderFlags {
         constexpr std::uint32_t Wireframe =            1 << 12;
         constexpr std::uint32_t Reset =                !(CullNone | CullClockwise | CullCounterClockwise | Wireframe);
     }
+    // Determines how a texture is applied to a surface.
+    // Only 1 may be set. If more than 1 is set that the lowest value will be used.
     namespace SamplerState {
         constexpr std::uint32_t PointWrap =            1 << 13;
         constexpr std::uint32_t PointClamp =           1 << 14;
@@ -39,6 +45,8 @@ namespace RenderFlags {
         constexpr std::uint32_t AnisotropicClamp =     1 << 18;
         constexpr std::uint32_t Reset =                !(PointWrap | PointClamp | LinearWrap | LinearClamp | AnisotropicWrap | AnisotropicClamp);
     }
+    // Determines which effect should be applied by the GPU.
+    // Multiple values may be set.
     namespace Effect {
         constexpr std::uint32_t None =                 1 << 19;
         constexpr std::uint32_t Fog =                  1 << 20;
@@ -70,6 +78,9 @@ namespace RenderFlags {
         RasterizerState::Wireframe | SamplerState::AnisotropicWrap | Effect::Lighting | Effect::Texture | Effect::Skinned;
 }
 
+// Describes the texture, color and effects of a submesh.
+// Name must be unique as it is used as a key internally.
+// **Renderer** requires a material to have both a diffuse and normal map.
 class Material {
     public:
         Material(
@@ -90,10 +101,6 @@ class Material {
         DirectX::XMVECTOR& GetDiffuseColor() noexcept;
         DirectX::XMVECTOR& GetEmissiveColor() noexcept;
         DirectX::XMVECTOR& GetSpecularColor() noexcept;
-
-        void SetDiffuseColor(DirectX::XMVECTOR color) noexcept;
-        void SetEmissiveColor(DirectX::XMVECTOR color) noexcept;
-        void SetSpecularColor(DirectX::XMVECTOR color) noexcept;
 
     private:
         const std::string m_name;

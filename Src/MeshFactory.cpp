@@ -1,4 +1,4 @@
-#include "RoX/SubmeshFactory.h"
+#include "RoX/MeshFactory.h"
 
 #include <GeometricPrimitive.h>
 
@@ -24,7 +24,7 @@ void AppendToMesh(
     mesh.GetIndices().insert(mesh.GetIndices().end(), indicesIn.begin(), indicesIn.end());
 }
 
-void SubmeshFactory::CreateCube(IMesh& mesh, float size) {
+void MeshFactory::CreateCube(IMesh& mesh, float size) {
     auto pSubmesh = std::make_unique<Submesh>("cube", 0);
     pSubmesh->SetStartIndex(mesh.GetNumIndices());
     pSubmesh->SetVertexOffset(mesh.GetNumVertices());
@@ -39,7 +39,7 @@ void SubmeshFactory::CreateCube(IMesh& mesh, float size) {
     mesh.Add(std::move(pSubmesh));
 }
 
-void SubmeshFactory::CreateBox(IMesh& mesh, const DirectX::XMFLOAT3& size, bool invertn) {
+void MeshFactory::CreateBox(IMesh& mesh, const DirectX::XMFLOAT3& size, bool invertn) {
     auto pSubmesh = std::make_unique<Submesh>("box", 0);
     pSubmesh->SetStartIndex(mesh.GetNumIndices());
     pSubmesh->SetVertexOffset(mesh.GetNumVertices());
@@ -54,7 +54,7 @@ void SubmeshFactory::CreateBox(IMesh& mesh, const DirectX::XMFLOAT3& size, bool 
     mesh.Add(std::move(pSubmesh));
 }
 
-void SubmeshFactory::CreateSphere(IMesh& mesh, float diameter, size_t tessellation, bool invertn) {
+void MeshFactory::CreateSphere(IMesh& mesh, float diameter, size_t tessellation, bool invertn) {
     auto pSubmesh = std::make_unique<Submesh>("sphere", 0);
     pSubmesh->SetStartIndex(mesh.GetNumIndices());
     pSubmesh->SetVertexOffset(mesh.GetNumVertices());
@@ -69,7 +69,7 @@ void SubmeshFactory::CreateSphere(IMesh& mesh, float diameter, size_t tessellati
     mesh.Add(std::move(pSubmesh));
 }
 
-void SubmeshFactory::CreateGeoSphere(IMesh& mesh, float diameter, size_t tessellation) {
+void MeshFactory::CreateGeoSphere(IMesh& mesh, float diameter, size_t tessellation) {
     auto pSubmesh = std::make_unique<Submesh>("geosphere", 0);
     pSubmesh->SetStartIndex(mesh.GetNumIndices());
     pSubmesh->SetVertexOffset(mesh.GetNumVertices());
@@ -84,7 +84,7 @@ void SubmeshFactory::CreateGeoSphere(IMesh& mesh, float diameter, size_t tessell
     mesh.Add(std::move(pSubmesh));
 }
 
-void SubmeshFactory::CreateCylinder(IMesh& mesh, float height, float diameter, size_t tessellation) {
+void MeshFactory::CreateCylinder(IMesh& mesh, float height, float diameter, size_t tessellation) {
     auto pSubmesh = std::make_unique<Submesh>("cylinder", 0);
     pSubmesh->SetStartIndex(mesh.GetNumIndices());
     pSubmesh->SetVertexOffset(mesh.GetNumVertices());
@@ -99,7 +99,7 @@ void SubmeshFactory::CreateCylinder(IMesh& mesh, float height, float diameter, s
     mesh.Add(std::move(pSubmesh));
 }
 
-void SubmeshFactory::CreateCone(IMesh& mesh, float diameter, float height, size_t tessellation) {
+void MeshFactory::CreateCone(IMesh& mesh, float diameter, float height, size_t tessellation) {
     auto pSubmesh = std::make_unique<Submesh>("cone", 0);
     pSubmesh->SetStartIndex(mesh.GetNumIndices());
     pSubmesh->SetVertexOffset(mesh.GetNumVertices());
@@ -114,7 +114,7 @@ void SubmeshFactory::CreateCone(IMesh& mesh, float diameter, float height, size_
     mesh.Add(std::move(pSubmesh));
 }
 
-void SubmeshFactory::CreateTorus(IMesh& mesh, float diameter, float thickness, size_t tessellation) {
+void MeshFactory::CreateTorus(IMesh& mesh, float diameter, float thickness, size_t tessellation) {
     auto pSubmesh = std::make_unique<Submesh>("torus", 0);
     pSubmesh->SetStartIndex(mesh.GetNumIndices());
     pSubmesh->SetVertexOffset(mesh.GetNumVertices());
@@ -129,7 +129,7 @@ void SubmeshFactory::CreateTorus(IMesh& mesh, float diameter, float thickness, s
     mesh.Add(std::move(pSubmesh));
 }
 
-void SubmeshFactory::CreateTetrahedron(IMesh& mesh, float size) {
+void MeshFactory::CreateTetrahedron(IMesh& mesh, float size) {
     auto pSubmesh = std::make_unique<Submesh>("tetrahedron", 0);
     pSubmesh->SetStartIndex(mesh.GetNumIndices());
     pSubmesh->SetVertexOffset(mesh.GetNumVertices());
@@ -144,7 +144,7 @@ void SubmeshFactory::CreateTetrahedron(IMesh& mesh, float size) {
     mesh.Add(std::move(pSubmesh));
 }
 
-void SubmeshFactory::CreateOctahedron(IMesh& mesh, float size) {
+void MeshFactory::CreateOctahedron(IMesh& mesh, float size) {
     auto pSubmesh = std::make_unique<Submesh>("octahedron", 0);
     pSubmesh->SetStartIndex(mesh.GetNumIndices());
     pSubmesh->SetVertexOffset(mesh.GetNumVertices());
@@ -159,7 +159,7 @@ void SubmeshFactory::CreateOctahedron(IMesh& mesh, float size) {
     mesh.Add(std::move(pSubmesh));
 }
 
-void SubmeshFactory::CreateDodecahedron(IMesh& mesh, float size) {
+void MeshFactory::CreateDodecahedron(IMesh& mesh, float size) {
     auto pSubmesh = std::make_unique<Submesh>("dodecahedron", 0);
     pSubmesh->SetStartIndex(mesh.GetNumIndices());
     pSubmesh->SetVertexOffset(mesh.GetNumVertices());
@@ -174,7 +174,7 @@ void SubmeshFactory::CreateDodecahedron(IMesh& mesh, float size) {
     mesh.Add(std::move(pSubmesh));
 }
 
-void SubmeshFactory::CreateIcosahedron(IMesh& mesh, float size) {
+void MeshFactory::CreateIcosahedron(IMesh& mesh, float size) {
     auto pSubmesh = std::make_unique<Submesh>("icosahedron", 0);
     pSubmesh->SetStartIndex(mesh.GetNumIndices());
     pSubmesh->SetVertexOffset(mesh.GetNumVertices());
@@ -189,7 +189,7 @@ void SubmeshFactory::CreateIcosahedron(IMesh& mesh, float size) {
     mesh.Add(std::move(pSubmesh));
 }
 
-void SubmeshFactory::CreateTeapot(IMesh& mesh, float size, size_t tessellation) {
+void MeshFactory::CreateTeapot(IMesh& mesh, float size, size_t tessellation) {
     auto pSubmesh = std::make_unique<Submesh>("teapot", 0);
     pSubmesh->SetStartIndex(mesh.GetNumIndices());
     pSubmesh->SetVertexOffset(mesh.GetNumVertices());

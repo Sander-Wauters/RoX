@@ -1,7 +1,10 @@
 #pragma once
 
-#include "../../Src/Util/pch.h"
+#include <DirectXMath.h>
 
+// A camera holds the view and projection matrices along with its own position in world space.
+// Defaults to a perspective view but can be changed to an orthographic one.
+// After changing the position and/or direction of the camera, **Update()** need to be called for the changes to apply.
 class Camera { 
     public:
         Camera(float fovY = DirectX::XM_PIDIV4, float aspect = 1.7f, float nearZ = 1.f, float farZ = 1000.f) noexcept;

@@ -45,15 +45,3 @@ DirectX::XMVECTOR& Material::GetSpecularColor() noexcept {
     return m_specularColor;
 }
 
-void Material::SetDiffuseColor(DirectX::XMVECTOR color) noexcept {
-    m_diffuseColor = color;
-}
-
-void Material::SetEmissiveColor(DirectX::XMVECTOR color) noexcept {
-    m_emissiveColor = color;
-}
-
-void Material::SetSpecularColor(DirectX::XMVECTOR color) noexcept {
-    m_specularColor = color;
-}
-
