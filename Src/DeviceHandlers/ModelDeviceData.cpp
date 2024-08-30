@@ -1,11 +1,5 @@
 #include "ModelDeviceData.h"
 
-#include <set>
-
-#include <DirectXHelpers.h>
-
-#include "Exceptions/ThrowIfFailed.h"
-
 ModelDeviceData::ModelDeviceData(ID3D12Device* pDevice, Model* pModel, 
         std::unordered_map<std::shared_ptr<IMesh>, std::unique_ptr<MeshDeviceData>>& sharedMeshes) 
 {

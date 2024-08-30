@@ -49,6 +49,8 @@
 #endif
 
 #include <dxgi1_4.h>
+#include <dxgi1_5.h>
+#include <dxgi1_6.h>
 
 #include <DirectXMath.h>
 #include <DirectXColors.h>
@@ -66,6 +68,11 @@
 #include <stdexcept>
 #include <system_error>
 #include <tuple>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+#include <set>
+#include <stdexcept>
 
 #ifdef _DEBUG
 #include <dxgidebug.h>

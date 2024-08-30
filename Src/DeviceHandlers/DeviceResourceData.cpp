@@ -1,14 +1,6 @@
 #include "DeviceResourceData.h"
 
-#include <DescriptorHeap.h>
-#include <ResourceUploadBatch.h>
-#include <DDSTextureLoader.h>
-#include <WICTextureLoader.h>
-#include <DirectXHelpers.h>
-
 #include "RoX/VertexTypes.h"
-
-#include "Exceptions/ThrowIfFailed.h"
 
 DeviceResourceData::DeviceResourceData(Scene& scene, const DeviceResources& deviceResources) 
     noexcept : m_scene(scene), 

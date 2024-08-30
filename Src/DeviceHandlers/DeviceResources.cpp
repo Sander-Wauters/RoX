@@ -1,9 +1,6 @@
 #include "DeviceResources.h"
 
-#include <dxgi1_5.h>
-#include <dxgi1_6.h>
-
-#include "Exceptions/ThrowIfFailed.h"
+#include "../Util/dxtk12pch.h"
 
 namespace {
     inline DXGI_FORMAT NoSRGB(DXGI_FORMAT fmt) noexcept {

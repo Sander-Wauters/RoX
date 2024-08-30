@@ -2,8 +2,6 @@
 
 #include <functional>
 
-#include "../Lib/ImGui/Inc/ImGui/imgui.h"
-
 #include "VertexTypes.h"
 #include "Material.h"
 #include "Model.h"

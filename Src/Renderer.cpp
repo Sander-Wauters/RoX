@@ -1,12 +1,5 @@
 #include "RoX/Renderer.h"
 
-#include <ResourceUploadBatch.h>
-#include <DescriptorHeap.h>
-#include <CommonStates.h>
-#include <RenderTargetState.h>
-#include <SpriteBatch.h>
-#include <DirectXHelpers.h>
-
 #include <ImGui/imgui.h>
 #include <ImGuiBackends/imgui_impl_dx12.h>
 #include <ImGuiBackends/imgui_impl_win32.h>
@@ -14,10 +7,9 @@
 #include "Util/pch.h"
 
 #include "DebugDraw.h"
-#include "IDeviceObserver.h"
-#include "DeviceResources.h"
-#include "DeviceResourceData.h"
-
+#include "DeviceHandlers/IDeviceObserver.h"
+#include "DeviceHandlers/DeviceResources.h"
+#include "DeviceHandlers/DeviceResourceData.h"
 
 class Renderer::Impl : public IDeviceObserver {
     public:

@@ -1,11 +1,5 @@
 #include "SubmeshDeviceData.h"
 
-#include <DirectXHelpers.h>
-
-#include "RoX/VertexTypes.h"
-
-#include "Exceptions/ThrowIfFailed.h"
-
 SubmeshDeviceData::SubmeshDeviceData(ID3D12Device* pDevice, Submesh* pSubmesh)
 {}
 

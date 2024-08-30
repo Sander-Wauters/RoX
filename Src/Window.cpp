@@ -1,11 +1,9 @@
 #include "RoX/Window.h"
 
-#include <tuple>
+#include "Util/pch.h"
+#include "Util/dxtk12pch.h"
 
 #include "ImGuiBackends/imgui_impl_win32.h"
-
-#include "util/Logger.h"
-#include "Exceptions/ThrowIfFailed.h"
 
 Window::Window(Renderer& renderer, PCWSTR windowName, HINSTANCE hInstance,
         DWORD style, DWORD exStyle,
@@ -54,8 +52,6 @@ Window::Window(Renderer& renderer, PCWSTR windowName, HINSTANCE hInstance,
     m_pKeyboard = std::make_unique<DirectX::Keyboard>();
     m_pMouse = std::make_unique<DirectX::Mouse>();
     m_pMouse->SetWindow(m_hwnd);
-
-    Logger::Info("window initialized");
 }
 
 Window::~Window() {}

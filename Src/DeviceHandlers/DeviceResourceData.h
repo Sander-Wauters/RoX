@@ -1,13 +1,7 @@
 #pragma once
 
-#include <unordered_map>
-
-#include <Effects.h>
-#include <PrimitiveBatch.h>
-#include <CommonStates.h>
-#include <VertexTypes.h>
-
-#include "Util/pch.h"
+#include "../Util/pch.h"
+#include "../Util/dxtk12pch.h"
 
 #include "RoX/Scene.h"
 

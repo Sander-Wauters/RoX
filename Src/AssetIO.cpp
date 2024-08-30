@@ -1,7 +1,6 @@
 #include "RoX/AssetIO.h"
 
-#include <unordered_map>
-#include <stdexcept>
+#include "Util/pch.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>

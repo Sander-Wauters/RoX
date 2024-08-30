@@ -1,8 +1,6 @@
 #pragma once
 
-#include <unordered_set>
-
-#include "Util/pch.h"
+#include "../Util/pch.h"
 #include "IDeviceObserver.h"
 
 class DeviceResources {

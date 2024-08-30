@@ -14,11 +14,26 @@ add_subdirectory(Lib/DirectXTK12)
 add_subdirectory(Lib/ImGui)
 
 set(SOURCE
+    Src/DeviceHandlers/DeviceResourceData.cpp
+    Src/DeviceHandlers/DeviceResourceData.h
+    Src/DeviceHandlers/DeviceResources.cpp
+    Src/DeviceHandlers/DeviceResources.h
+    Src/DeviceHandlers/IDeviceObserver.h
+    Src/DeviceHandlers/MeshDeviceData.cpp
+    Src/DeviceHandlers/MeshDeviceData.h
+    Src/DeviceHandlers/ModelDeviceData.cpp
+    Src/DeviceHandlers/ModelDeviceData.h
+    Src/DeviceHandlers/SubmeshDeviceData.cpp
+    Src/DeviceHandlers/SubmeshDeviceData.h
+    Src/DeviceHandlers/TextDeviceData.h
+    Src/DeviceHandlers/TextureDeviceData.h
+
     Src/Exceptions/DXException.cpp
     Src/Exceptions/ThrowIfFailed.h
 
     Src/Util/d3dx12.h
     Src/Util/DebugPrint.h
+    Src/Util/dxtk12Pch.h
     Src/Util/Logger.h
     Src/Util/pch.h
 
@@ -28,25 +43,12 @@ set(SOURCE
     Src/DebugDraw.cpp
     Src/DebugDraw.h
     Src/DebugUI.cpp
-    Src/DeviceResourceData.cpp
-    Src/DeviceResourceData.h
-    Src/DeviceResources.cpp
-    Src/DeviceResources.h
-    Src/IDeviceObserver.h
     Src/Material.cpp
-    Src/MeshDeviceData.cpp
-    Src/MeshDeviceData.h
     Src/MeshFactory.cpp
     Src/Model.cpp
-    Src/ModelDeviceData.cpp
-    Src/ModelDeviceData.h
     Src/Outline.cpp
     Src/Renderer.cpp
     Src/Scene.cpp
-    Src/SubmeshDeviceData.cpp
-    Src/SubmeshDeviceData.h
-    Src/TextDeviceData.h
-    Src/TextureDeviceData.h
     Src/Timer.cpp
     Src/Window.cpp
 )

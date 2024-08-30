@@ -1,8 +1,7 @@
 #pragma once
 
-#include <SpriteFont.h>
-
-#include "Util/pch.h"
+#include "../Util/pch.h"
+#include "../Util/dxtk12pch.h"
 
 class TextDeviceData {
     public:

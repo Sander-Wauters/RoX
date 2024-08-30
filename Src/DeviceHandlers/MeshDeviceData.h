@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../Util/dxtk12pch.h"
+
 #include "RoX/Model.h"
 
 #include "SubmeshDeviceData.h"

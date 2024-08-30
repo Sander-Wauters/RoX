@@ -1,8 +1,6 @@
 #pragma once
 
-#include <unordered_map>
-
-#include <Effects.h>
+#include "../Util/pch.h"
 
 #include "RoX/Model.h"
 

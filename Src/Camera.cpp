@@ -1,6 +1,6 @@
 #include "Rox/Camera.h"
 
-#include <algorithm>
+#include "Util/pch.h"
 
 Camera::Camera(float fovY, float aspect, float nearZ, float farZ) 
     noexcept : m_nearZ(nearZ), m_farZ(farZ),
