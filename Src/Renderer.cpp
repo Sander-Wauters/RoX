@@ -401,6 +401,9 @@ void Renderer::Impl::RenderText() {
     DirectX::SpriteBatch* pSpriteBatch = m_pDeviceResourceData->GetSpriteBatch();
 
     for (const TextPair& textPair : m_pDeviceResourceData->GetTextData()) {
+        if (!textPair.first->IsVisible()) 
+            continue;
+
         textPair.second->GetSpriteFont()->DrawString(
                 pSpriteBatch,
                 textPair.first->GetContent().c_str(),

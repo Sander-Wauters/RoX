@@ -6,12 +6,14 @@
 #include "Material.h"
 #include "Model.h"
 #include "Scene.h"
+#include "Outline.h"
 
 using ImGuiWindowFlags = int;
 
 // Contains helper function for the UI.
 // Is not indended for use in production code.
 namespace DebugUI {
+    bool InputTextMultiline(const char* label, std::string* str);
     void HelpMarker(const char* desc);
 
     void ArrayControls(const char* label, std::uint32_t* pIndex, const std::function<void()>& onAdd, const std::function<void()>& onRemove);
@@ -28,22 +30,30 @@ namespace DebugUI {
     void Matrix(DirectX::XMFLOAT4X4& matrix);
     void Matrix(DirectX::XMFLOAT3X4& matrix);
 
+    bool AffineTransformation(DirectX::XMMATRIX& matrix);
+    bool AffineTransformation(DirectX::XMFLOAT4X4& matrix);
+    bool AffineTransformation(DirectX::XMFLOAT3X4& matrix);
+
     void RenderFlags(std::uint32_t renderFlags);
 
     void MaterialTextures(Material& material);
     void MaterialColors(Material& material);
-    void MaterialEditor(Material& material);
     void MaterialSelector(std::uint32_t& index, std::vector<std::shared_ptr<Material>>& materials);
 
     void SubmeshInstances(Submesh& submesh);
     void SubmeshVertexIndexing(Submesh& submesh);
 
     void ModelHierarchy(Scene& scene, Model** ppSelectedModel, IMesh** ppSelectedIMesh, Submesh** ppSelectedSubmesh);
+    void BoneHierarchy(Model& model, std::uint32_t& selectedBone);
 
     void CameraMenu(Camera& camera);
+    void MaterialMenu(Material& material);
+    void BoneMenu(Model& model, std::uint32_t boneIndex);
     void SubmeshMenu(Submesh& submesh, Model& grandParent);
     void IMeshMenu(IMesh& iMesh);
     void ModelMenu(Model& model);
+    void SpriteMenu(Sprite& sprite);
+    void IOutlineMenu(IOutline& outline);
 
     void SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags);
 };

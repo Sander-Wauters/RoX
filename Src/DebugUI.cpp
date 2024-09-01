@@ -1,7 +1,49 @@
 #include "RoX/DebugUI.h"
 
+#include "Util/pch.h"
+#include "Util/dxtk12pch.h"
+
 #undef max
 #include "ImGui/imgui.h"
+
+struct InputTextCallback_UserData {
+    std::string*            Str;
+    ImGuiInputTextCallback  ChainCallback;
+    void*                   ChainCallbackUserData;
+};
+
+int InputTextCallback(ImGuiInputTextCallbackData* data) {
+    InputTextCallback_UserData* user_data = (InputTextCallback_UserData*)data->UserData;
+    if (data->EventFlag == ImGuiInputTextFlags_CallbackResize) {
+        // Resize string callback
+        // If for some reason we refuse the new length (BufTextLen) and/or capacity (BufSize) we need to set them back to what we want.
+        std::string* str = user_data->Str;
+        IM_ASSERT(data->Buf == str->c_str());
+        str->resize(data->BufTextLen);
+        data->Buf = (char*)str->c_str();
+    }
+    else if (user_data->ChainCallback) {
+        // Forward to user callback, if any
+        data->UserData = user_data->ChainCallbackUserData;
+        return user_data->ChainCallback(data);
+    }
+    return 0;
+}
+
+bool InputTextMultilineImpl(const char* label, std::string* str, const ImVec2& size = ImVec2(0, 0), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr) {
+    IM_ASSERT((flags & ImGuiInputTextFlags_CallbackResize) == 0);
+    flags |= ImGuiInputTextFlags_CallbackResize;
+
+    InputTextCallback_UserData cb_user_data;
+    cb_user_data.Str = str;
+    cb_user_data.ChainCallback = callback;
+    cb_user_data.ChainCallbackUserData = user_data;
+    return ImGui::InputTextMultiline(label, (char*)str->c_str(), str->capacity() + 1, size, flags, InputTextCallback, &cb_user_data);
+}
+
+bool DebugUI::InputTextMultiline(const char* label, std::string* str) {
+    return InputTextMultilineImpl(label, str);
+}
 
 void DebugUI::HelpMarker(const char* desc) {
     ImGui::TextDisabled("(?)");
@@ -44,7 +86,6 @@ void DebugUI::Vertex(VertexPositionNormalTextureSkinning& vertex) {
     DirectX::XMVECTOR position = DirectX::XMLoadFloat3(&vertex.position);
     DirectX::XMVECTOR normal = DirectX::XMLoadFloat3(&vertex.normal);
     DirectX::XMVECTOR texture = DirectX::XMLoadFloat2(&vertex.textureCoordinate);
-    //DirectX::XMVECTOR indices = DirectX::XMLoadUInt4(&vertex.indices);
     DirectX::XMVECTOR weights = DirectX::XMLoadFloat4(&vertex.weights);
 
     std::uint32_t indices[4] = { vertex.indices & 0xff, (vertex.indices >> 8) & 0xff, (vertex.indices >> 16) & 0xff, (vertex.indices >> 24) & 0xff };
@@ -166,12 +207,75 @@ void DebugUI::Matrix(DirectX::XMFLOAT4X4& matrix) {
 
 void DebugUI::Matrix(DirectX::XMFLOAT3X4& matrix) {
     static float r3[4] = { 0.f, 0.f, 0.f, 1.f };
-    ImGui::DragFloat4("r0", matrix.m[0], 0.25f);
+    ImGui::DragFloat4("c0", matrix.m[0], 0.25f);
     ImGui::SameLine();
     HelpMarker("matrix column-major");
-    ImGui::DragFloat4("r1", matrix.m[1], 0.25f);
-    ImGui::DragFloat4("r2", matrix.m[2], 0.25f);
-    ImGui::InputFloat4("r3", r3, "%.3f", ImGuiInputTextFlags_ReadOnly);
+    ImGui::DragFloat4("c1", matrix.m[1], 0.25f);
+    ImGui::DragFloat4("c2", matrix.m[2], 0.25f);
+    ImGui::InputFloat4("c3", r3, "%.3f", ImGuiInputTextFlags_ReadOnly);
+}
+
+bool DebugUI::AffineTransformation(DirectX::XMMATRIX& matrix) {
+    static float origin[3] = { 0.f, 0.f, 0.f};
+    static float translation[3] = { 0.f, 0.f, 0.f };
+    static float scale[3] = { 1.f, 1.f, 1.f };
+    static float rotation[3] = { 0.f, 0.f, 0.f };
+
+    if (ImGui::Button("Apply")) {
+        DirectX::XMVECTOR o = DirectX::XMVectorSet(origin[0], origin[1], origin[2], 0.f);
+        DirectX::XMVECTOR t = DirectX::XMVectorSet(translation[0], translation[1], translation[2], 0.f);
+        DirectX::XMVECTOR s = DirectX::XMVectorSet(scale[0], scale[1], scale[2], 0.f);
+        DirectX::XMVECTOR r = DirectX::XMQuaternionRotationRollPitchYaw(
+                DirectX::XMConvertToRadians(rotation[0]), 
+                DirectX::XMConvertToRadians(rotation[1]), 
+                DirectX::XMConvertToRadians(rotation[2]));
+        matrix = DirectX::XMMatrixAffineTransformation(s, o, r, t);
+        return true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Load")) {
+        DirectX::XMVECTOR t;
+        DirectX::XMVECTOR s;
+        DirectX::XMVECTOR r;
+        DirectX::XMMatrixDecompose(&s, &r, &t, matrix);
+
+        DirectX::SimpleMath::Quaternion q(r);
+        DirectX::XMFLOAT3 euler = q.ToEuler();
+        r = DirectX::XMLoadFloat3(&euler);
+
+        origin[0]      = 0.f;           origin[1]      = 0.f;           origin[2]      = 0.f;
+        translation[0] = t.m128_f32[0]; translation[1] = t.m128_f32[1]; translation[2] = t.m128_f32[2];
+        scale[0]       = s.m128_f32[0]; scale[1]       = s.m128_f32[1]; scale[2]       = s.m128_f32[2];
+        rotation[0]    = r.m128_f32[0]; rotation[1]    = r.m128_f32[1]; rotation[2]    = r.m128_f32[2];
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Reset")) {
+        origin[0]      = 0.f; origin[1]      = 0.f; origin[2]      = 0.f;
+        translation[0] = 0.f; translation[1] = 0.f; translation[2] = 0.f;
+        scale[0]       = 1.f; scale[1]       = 1.f; scale[2]       = 1.f;
+        rotation[0]    = 0.f; rotation[1]    = 0.f; rotation[2]    = 0.f;
+    }
+
+    ImGui::DragFloat3("origin", origin);
+    ImGui::DragFloat3("translation", translation);
+    ImGui::DragFloat3("scale", scale);
+    ImGui::DragFloat3("rotation", rotation);
+
+    return false;
+}
+
+bool DebugUI::AffineTransformation(DirectX::XMFLOAT4X4& matrix) {
+    DirectX::XMMATRIX M = DirectX::XMLoadFloat4x4(&matrix);
+    bool transformatonApplied = AffineTransformation(M);
+    DirectX::XMStoreFloat4x4(&matrix, M);
+    return transformatonApplied;
+}
+
+bool DebugUI::AffineTransformation(DirectX::XMFLOAT3X4& matrix) {
+    DirectX::XMMATRIX M = DirectX::XMLoadFloat3x4(&matrix);
+    bool transformatonApplied = AffineTransformation(M);
+    DirectX::XMStoreFloat3x4(&matrix, M);
+    return transformatonApplied;
 }
 
 void DebugUI::RenderFlags(std::uint32_t renderFlags) {
@@ -239,24 +343,6 @@ void DebugUI::MaterialColors(Material& material) {
     ImGui::ColorEdit4(std::string("specular##" + material.GetName()).c_str(), material.GetSpecularColor().m128_f32);
 }
 
-void DebugUI::MaterialEditor(Material& material) {
-    if (ImGui::TreeNode("Textures")) {
-        MaterialTextures(material);
-        ImGui::TreePop();
-        ImGui::Spacing();
-    }
-    if (ImGui::TreeNode("RenderFlags")) {
-        RenderFlags(material.GetFlags());
-        ImGui::TreePop();
-        ImGui::Spacing();
-    }
-    if (ImGui::TreeNode("Colors")) {
-        MaterialColors(material);
-        ImGui::TreePop();
-        ImGui::Spacing();
-    }
-}
-
 void DebugUI::MaterialSelector(std::uint32_t& index, std::vector<std::shared_ptr<Material>>& materials) {
     ImVec2 buttonSize(ImGui::GetFontSize(), ImGui::GetFontSize());
 
@@ -318,8 +404,11 @@ void DebugUI::SubmeshInstances(Submesh& submesh) {
 
     ImGui::Spacing();
 
-    if (index >= 0 && index < submesh.GetNumInstances())
+    if (index >= 0 && index < submesh.GetNumInstances()) {
+        AffineTransformation(submesh.GetInstances()[index]);
+        ImGui::Separator();
         Matrix(submesh.GetInstances()[index]);
+    }
 }
 
 void DebugUI::SubmeshVertexIndexing(Submesh& submesh) {
@@ -394,6 +483,16 @@ void DebugUI::ModelHierarchy(Scene& scene, Model** ppSelectedModel, IMesh** ppSe
     }
 }
 
+void DebugUI::BoneHierarchy(Model& model, std::uint32_t& selectedBone) {
+    ImGui::BeginChild("bone_hierarchy", ImVec2(ImGui::GetWindowWidth() - 15.f, 200.f), ImGuiChildFlags_None);
+    for (std::uint32_t i = 0; i < model.GetNumBones(); ++i) {
+        std::string text = std::to_string(i) + ": " + model.GetBones()[i].GetName() + "; " + std::to_string(model.GetBones()[i].GetParentIndex());
+        if (ImGui::Selectable(text.c_str(), selectedBone == i))
+            selectedBone = i;
+    }
+    ImGui::EndChild();
+}
+
 void DebugUI::CameraMenu(Camera& camera) {
     ImGuiViewport* pViewport = ImGui::GetMainViewport();
     static float z[2] = { camera.GetNearZ(), camera.GetFarZ() };
@@ -410,27 +509,59 @@ void DebugUI::CameraMenu(Camera& camera) {
     }
 
     ImGui::SeparatorText("Projection");
-    ImGui::DragFloat2("z planes", z);
+    ImGui::DragFloat2("z planes", z, 1.f, .01f, std::numeric_limits<float>::max(), "%.3f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::Text("Fov x: %f", camera.GetFovX());
-    ImGui::DragFloat("fov y", &fovY, DirectX::XMConvertToRadians(.5f));
+    ImGui::DragFloat("fov y", &fovY, DirectX::XMConvertToRadians(.5f), .01f, std::numeric_limits<float>::max());
 
     ImGui::SeparatorText("Window size");
     ImGui::Text("Aspect: %f", camera.GetAspect());
-    ImGui::DragFloat2("window size", windowSize);
+    ImGui::DragFloat2("window size", windowSize, 1.f, .1f, std::numeric_limits<float>::max(), "%.3f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::Text("Near plane width:  %f", camera.GetNearWindowWidth());
     ImGui::Text("Near plane height: %f", camera.GetNearWindowHeight());
     ImGui::Spacing();
     ImGui::Text("Far plane width:   %f", camera.GetFarWindowWidth());
     ImGui::Text("Far plane height:  %f", camera.GetFarWindowHeight());
 
-    z[0] = std::max(z[0], .1f); z[1] = std::max(z[1], .1f);
-    fovY = std::max(fovY, .1f);
-
     if (isOrthographic)
-        camera.SetOrthographicView(windowSize[0], windowSize[1], z[0], z[1]);
+        camera.SetOrthographicView(windowSize[0], windowSize[1], z[0], std::max(z[1], 1.f));
     else
-        camera.SetPerspectiveView(fovY, windowSize[0] / windowSize[1], z[0], z[1]);
+        camera.SetPerspectiveView(fovY, windowSize[0] / windowSize[1], z[0], std::max(z[1], 1.f));
     camera.Update();
+}
+
+void DebugUI::MaterialMenu(Material& material) {
+    if (ImGui::TreeNode("Textures")) {
+        MaterialTextures(material);
+        ImGui::TreePop();
+        ImGui::Spacing();
+    }
+    if (ImGui::TreeNode("RenderFlags")) {
+        RenderFlags(material.GetFlags());
+        ImGui::TreePop();
+        ImGui::Spacing();
+    }
+    if (ImGui::TreeNode("Colors")) {
+        MaterialColors(material);
+        ImGui::TreePop();
+        ImGui::Spacing();
+    }
+}
+
+
+void DebugUI::BoneMenu(Model& model, std::uint32_t boneIndex) {
+    std::vector<Bone>& bones = model.GetBones();
+    ImGui::Text("Parent: %s", bones[boneIndex].IsRoot() ? "NONE" : bones[bones[boneIndex].GetParentIndex()].GetName().c_str());
+    ImGui::Text("Parent index: %d", bones[boneIndex].GetParentIndex());
+    if (ImGui::CollapsingHeader("Transform")) {
+        AffineTransformation(model.GetBoneMatrices()[boneIndex]);
+        ImGui::Separator();
+        Matrix(model.GetBoneMatrices()[boneIndex]);
+    }
+    if (ImGui::CollapsingHeader("Inverse bind pose")) {
+        AffineTransformation(model.GetBoneMatrices()[boneIndex]);
+        ImGui::Separator();
+        Matrix(model.GetInverseBindPoseMatrices()[boneIndex]);
+    }
 }
 
 void DebugUI::SubmeshMenu(Submesh& submesh, Model& grandParent) {
@@ -444,7 +575,7 @@ void DebugUI::SubmeshMenu(Submesh& submesh, Model& grandParent) {
     }
     if (ImGui::CollapsingHeader("Instancing"))
         SubmeshInstances(submesh);
-    if(ImGui::CollapsingHeader("Vertex indexing"))
+    if (ImGui::CollapsingHeader("Vertex indexing"))
         SubmeshVertexIndexing(submesh);
 }
 
@@ -468,17 +599,158 @@ void DebugUI::ModelMenu(Model& model) {
     bool visible = model.IsVisible();
     if (ImGui::Checkbox("Visible", &visible))
         model.SetVisible(visible);
-
+    if (ImGui::CollapsingHeader("World transform")) {
+        HelpMarker("Will apply transformation to all instances of all submeshes of all meshes in this model.\n!CAUTION! meshes could be shared beteen models.");
+        DirectX::XMFLOAT3X4 W;
+        if (AffineTransformation(W))
+            model.SetWorldTransform(W);
+    }
+    if (ImGui::CollapsingHeader("Armature")) {
+        static std::uint32_t selectedBone = std::uint32_t(-1);
+        BoneHierarchy(model, selectedBone);
+        if (selectedBone != std::uint32_t(-1) && selectedBone < model.GetNumBones()) {
+            ImGui::SeparatorText(model.GetBones()[selectedBone].GetName().c_str());
+            BoneMenu(model, selectedBone);
+            ImGui::Separator();
+        }
+    }
     if (ImGui::CollapsingHeader("Materials")) {
         for (std::shared_ptr<Material>& pMaterial : model.GetMaterials()) {
             if (ImGui::TreeNode(pMaterial->GetName().c_str())) {
-                MaterialEditor(*pMaterial);
+                MaterialMenu(*pMaterial);
                 
                 ImGui::TreePop();
                 ImGui::Spacing();
             } 
         }
     }
+}
+
+void DebugUI::SpriteMenu(Sprite& sprite) {
+    bool visible = sprite.IsVisible();
+    if (ImGui::Checkbox("Visible", &visible))
+        sprite.SetVisible(visible);
+    ImGui::Text("File: %ws", sprite.GetFilePath().c_str());
+    if (ImGui::CollapsingHeader("Position")) {
+        float origin[2] = { sprite.GetOrigin().x, sprite.GetOrigin().y };
+        float offset[2] = { sprite.GetOffset().x, sprite.GetOffset().y };
+        float scale[2] = { sprite.GetScale().x, sprite.GetScale().y };
+        float layer = sprite.GetLayer();
+        float angle = DirectX::XMConvertToDegrees(sprite.GetAngle());
+
+        if (ImGui::DragFloat2(std::string("origin##" + sprite.GetName()).c_str(), origin))
+            sprite.GetOrigin() = { origin[0], origin[1] };
+        if (ImGui::DragFloat2(std::string("offset##" + sprite.GetName()).c_str(), offset))
+            sprite.GetOffset() = { offset[0], offset[1] };
+        if (ImGui::DragFloat2(std::string("scale##" + sprite.GetName()).c_str(), scale))
+            sprite.GetScale() = { scale[0], scale[1] };
+        if (ImGui::DragFloat(std::string("layer##" + sprite.GetName()).c_str(), &layer))
+            sprite.SetLayer(layer);
+        if (ImGui::DragFloat(std::string("angle##" + sprite.GetName()).c_str(), &angle))
+            sprite.SetAngle(DirectX::XMConvertToRadians(angle));
+    }
+    if (ImGui::CollapsingHeader("Color"))
+        ImGui::ColorEdit4(std::string("color##" + sprite.GetName()).c_str(), sprite.GetColor().m128_f32);
+}
+
+void DebugUI::IOutlineMenu(IOutline& outline) {
+    bool visible = outline.IsVisible();
+    if (ImGui::Checkbox("Visible", &visible))
+        outline.SetVisible(visible);
+    if (ImGui::CollapsingHeader("Position")) {
+        if (auto p = dynamic_cast<BoundingBodyOutline<DirectX::BoundingBox>*>(&outline)) {
+            DirectX::BoundingBox& b = p->GetBounds();
+
+            static float center[3] = { b.Center.x, b.Center.y, b.Center.z };
+            static float extents[3] = { b.Extents.x, b.Extents.y, b.Extents.z };
+
+            if (ImGui::DragFloat3(std::string("center##" + outline.GetName()).c_str(), center))
+                b.Center = { center[0], center[1], center[2] };
+            if (ImGui::DragFloat3(std::string("extents##" + outline.GetName()).c_str(), extents))
+                b.Extents = { extents[0], extents[1], extents[2] };
+        } else if (auto p = dynamic_cast<BoundingBodyOutline<DirectX::BoundingFrustum>*>(&outline)) {
+            DirectX::BoundingFrustum& b = p->GetBounds();
+
+            static float origin[3] = { b.Origin.x, b.Origin.y, b.Origin.z };
+
+            DirectX::SimpleMath::Quaternion q = b.Orientation;
+            DirectX::XMFLOAT3 r = q.ToEuler();
+            static float rotation[3] = { r.x, r.y, r.z };
+
+            if (ImGui::DragFloat3(std::string("origin##" + outline.GetName()).c_str(), origin))
+                b.Origin = { origin[0], origin[1], origin[2] };
+            if (ImGui::DragFloat3(std::string("rotation##" + outline.GetName()).c_str(), rotation))
+                DirectX::XMStoreFloat4(&b.Orientation, DirectX::XMQuaternionRotationRollPitchYaw(
+                            DirectX::XMConvertToRadians(rotation[0]), 
+                            DirectX::XMConvertToRadians(rotation[1]), 
+                            DirectX::XMConvertToRadians(rotation[2])));
+            ImGui::DragFloat(std::string("right slope##" + outline.GetName()).c_str(), &b.RightSlope);
+            ImGui::DragFloat(std::string("left slope##" + outline.GetName()).c_str(), &b.LeftSlope);
+            ImGui::DragFloat(std::string("top slope##" + outline.GetName()).c_str(), &b.TopSlope);
+            ImGui::DragFloat(std::string("bottom slope##" + outline.GetName()).c_str(), &b.BottomSlope);
+            ImGui::DragFloat(std::string("near##" + outline.GetName()).c_str(), &b.Near);
+            ImGui::DragFloat(std::string("far##" + outline.GetName()).c_str(), &b.Far);
+        } else if (auto p = dynamic_cast<BoundingBodyOutline<DirectX::BoundingOrientedBox>*>(&outline)) {
+            DirectX::BoundingOrientedBox& b = p->GetBounds();
+
+            static float center[3] = { b.Center.x, b.Center.y, b.Center.z };
+            static float extents[3] = { b.Extents.x, b.Extents.y, b.Extents.z };
+            DirectX::SimpleMath::Quaternion q = b.Orientation;
+            DirectX::XMFLOAT3 r = q.ToEuler();
+            static float rotation[3] = { r.x, r.y, r.z };
+
+            if (ImGui::DragFloat3(std::string("center##" + outline.GetName()).c_str(), center))
+                b.Center = { center[0], center[1], center[2] };
+            if (ImGui::DragFloat3(std::string("extents##" + outline.GetName()).c_str(), extents))
+                b.Extents = { extents[0], extents[1], extents[2] };
+            if (ImGui::DragFloat3(std::string("rotation##" + outline.GetName()).c_str(), rotation))
+                DirectX::XMStoreFloat4(&b.Orientation, DirectX::XMQuaternionRotationRollPitchYaw(
+                            DirectX::XMConvertToRadians(rotation[0]), 
+                            DirectX::XMConvertToRadians(rotation[1]), 
+                            DirectX::XMConvertToRadians(rotation[2])));
+        } else if (auto p = dynamic_cast<BoundingBodyOutline<DirectX::BoundingSphere>*>(&outline)) {
+            DirectX::BoundingSphere& b = p->GetBounds();
+
+            static float center[3] = { b.Center.x, b.Center.y, b.Center.z };
+
+            if (ImGui::DragFloat3(std::string("center##" + outline.GetName()).c_str(), center))
+                b.Center = { center[0], center[1], center[2] };
+            ImGui::DragFloat(std::string("radius##" + outline.GetName()).c_str(), &b.Radius);
+        } else if (auto p = dynamic_cast<GridOutline*>(&outline)) {
+            static std::uint16_t xDiv = p->GetXDivsions();
+            static std::uint16_t yDiv = p->GetYDivsions();
+
+            if (ImGui::DragScalar(std::string("x divisions##" + outline.GetName()).c_str(), ImGuiDataType_U16, &xDiv))
+                p->SetXDivisions(xDiv);
+            if (ImGui::DragScalar(std::string("y divisions##" + outline.GetName()).c_str(), ImGuiDataType_U16, &yDiv))
+                p->SetYDivisions(yDiv);
+            ImGui::DragFloat3(std::string("x axis##" + outline.GetName()).c_str(), p->GetXAxis().m128_f32);
+            ImGui::DragFloat3(std::string("y axis##" + outline.GetName()).c_str(), p->GetYAxis().m128_f32);
+            ImGui::DragFloat3(std::string("origin##" + outline.GetName()).c_str(), p->GetOrigin().m128_f32);
+        } else if (auto p = dynamic_cast<RingOutline*>(&outline)) {
+            ImGui::DragFloat3(std::string("minor axis##" + outline.GetName()).c_str(), p->GetMajorAxis().m128_f32);
+            ImGui::DragFloat3(std::string("major axis##" + outline.GetName()).c_str(), p->GetMinorAxis().m128_f32);
+            ImGui::DragFloat3(std::string("origin##" + outline.GetName()).c_str(), p->GetOrigin().m128_f32);
+        } else if (auto p = dynamic_cast<RayOutline*>(&outline)) {
+            bool normalized = p->IsNormalized();
+            if (ImGui::Checkbox("Normalized", &normalized))
+                p->SetNormalized(normalized);
+            ImGui::DragFloat3(std::string("direction##" + outline.GetName()).c_str(), p->GetDirection().m128_f32);
+            ImGui::DragFloat3(std::string("origin##" + outline.GetName()).c_str(), p->GetOrigin().m128_f32);
+        } else if (auto p = dynamic_cast<TriangleOutline*>(&outline)) {
+            ImGui::DragFloat3(std::string("point A##" + outline.GetName()).c_str(), p->GetPointA().m128_f32);
+            ImGui::DragFloat3(std::string("point B##" + outline.GetName()).c_str(), p->GetPointB().m128_f32);
+            ImGui::DragFloat3(std::string("point C##" + outline.GetName()).c_str(), p->GetPointC().m128_f32);
+        } else if (auto p = dynamic_cast<QuadOutline*>(&outline)) {
+            ImGui::DragFloat3(std::string("point A##" + outline.GetName()).c_str(), p->GetPointA().m128_f32);
+            ImGui::DragFloat3(std::string("point B##" + outline.GetName()).c_str(), p->GetPointB().m128_f32);
+            ImGui::DragFloat3(std::string("point C##" + outline.GetName()).c_str(), p->GetPointC().m128_f32);
+            ImGui::DragFloat3(std::string("point D##" + outline.GetName()).c_str(), p->GetPointD().m128_f32);
+        }
+    }
+    if (ImGui::CollapsingHeader("Color"))
+        ImGui::ColorEdit4(std::string("color##" + outline.GetName()).c_str(), outline.GetColor().m128_f32);
+
 }
 
 void DebugUI::SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags) {
@@ -496,6 +768,24 @@ void DebugUI::SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags) {
     static IMesh* pSelectedIMesh = nullptr;
     static Submesh* pSelectedSubmesh = nullptr;
 
+    if (ImGui::CollapsingHeader("Stats")) {
+        ImGui::Text("Models:                     %llu", scene.GetNumModels());
+        ImGui::Text("Meshes:                     %llu", scene.GetNumMeshes());
+        ImGui::Text("Submeshes:                  %llu", scene.GetNumSubmeshes());
+        ImGui::Separator();
+        ImGui::Text("Materials:                  %llu", scene.GetNumMaterials());
+        ImGui::Text("Sprites:                    %llu", scene.GetNumSprites());
+        ImGui::Text("Texts:                      %llu", scene.GetNumTexts());
+        ImGui::Text("Outlines:                   %llu", scene.GetNumOutlines());
+        ImGui::Separator();
+        ImGui::Text("Submesh instances:          %llu", scene.GetNumSubmeshInstances());
+        ImGui::Text("Rendered submesh instances: %llu", scene.GetNumRenderedSubmeshInstances());
+        ImGui::Text("Loaded vertices:            %llu", scene.GetNumLoadedVertices());
+        ImGui::Text("Rendered vertices:          %llu", scene.GetNumRenderedVertices());
+
+        ImGui::Separator();
+        ImGui::Spacing();
+    }
     if (ImGui::CollapsingHeader("Camera")) {
         CameraMenu(scene.GetCamera());
         ImGui::Separator();
@@ -526,16 +816,32 @@ void DebugUI::SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags) {
         ImGui::Spacing();
     }
     if (ImGui::CollapsingHeader("Sprites")) {
-
+        for (auto& spritePair : scene.GetSprites()) {
+            if (ImGui::TreeNode(spritePair.first.c_str())) {
+                SpriteMenu(*spritePair.second);
+                ImGui::TreePop();
+            }
+        }
         ImGui::Separator();
         ImGui::Spacing();
     }
     if (ImGui::CollapsingHeader("Text")) {
-
+        for (auto& textPair : scene.GetTexts()) {
+            if (ImGui::TreeNode(textPair.first.c_str())) {
+                SpriteMenu(*textPair.second);
+                ImGui::TreePop();
+            }
+        }
         ImGui::Separator();
         ImGui::Spacing();
     }
     if (ImGui::CollapsingHeader("Outlines")) {
+        for (auto& outlinePair : scene.GetOutlines()) {
+            if (ImGui::TreeNode(outlinePair.first.c_str())) {
+                IOutlineMenu(*outlinePair.second);
+                ImGui::TreePop();
+            }
+        }
 
         ImGui::Separator();
         ImGui::Spacing();

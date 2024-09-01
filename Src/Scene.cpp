@@ -5,7 +5,7 @@ Scene::Scene(const std::string name, Camera& camera)
     m_camera(camera),
     m_models({}),
     m_sprites({}),
-    m_text({}),
+    m_texts({}),
     m_outlines({})
 {}
 
@@ -29,7 +29,7 @@ void Scene::Add(std::shared_ptr<Sprite> pSprite) {
 }
 
 void Scene::Add(std::shared_ptr<Text> pText) {
-    std::shared_ptr<Text>& entry = m_text[pText->GetName()];
+    std::shared_ptr<Text>& entry = m_texts[pText->GetName()];
     if (!entry) 
         entry = pText;
     else
@@ -53,7 +53,7 @@ void Scene::RemoveSprite(std::string name) {
 }
 
 void Scene::RemoveText(std::string name) {
-    m_text.erase(name);
+    m_texts.erase(name);
 }
 
 void Scene::RemoveOutline(std::string name) {
@@ -77,7 +77,7 @@ const std::shared_ptr<Sprite>& Scene::GetSprite(std::string name) const {
 }
 
 const std::shared_ptr<Text>& Scene::GetText(std::string name) const {
-    return m_text.at(name);
+    return m_texts.at(name);
 }
 
 const std::shared_ptr<IOutline>& Scene::GetOutline(std::string name) const {
@@ -92,16 +92,66 @@ const std::unordered_map<std::string, std::shared_ptr<Sprite>>& Scene::GetSprite
     return m_sprites;
 }
 
-const std::unordered_map<std::string, std::shared_ptr<Text>>& Scene::GetText() const noexcept {
-    return m_text;
+const std::unordered_map<std::string, std::shared_ptr<Text>>& Scene::GetTexts() const noexcept {
+    return m_texts;
 }
 
 const std::unordered_map<std::string, std::shared_ptr<IOutline>>& Scene::GetOutlines() const noexcept {
     return m_outlines;
 }
 
+std::uint64_t Scene::GetNumModels() const noexcept {
+    return m_models.size();
+}
 
-std::uint64_t Scene::GetNumInstances() const noexcept {
+std::uint64_t Scene::GetNumMeshes() const noexcept {
+    std::unordered_set<std::shared_ptr<IMesh>> uniqueMeshes;
+    for (auto& modelPair : m_models) {
+        for (std::shared_ptr<IMesh>& iMesh : modelPair.second->GetMeshes()) {
+            uniqueMeshes.insert(iMesh);
+        } 
+    }
+    return uniqueMeshes.size();
+}
+
+std::uint64_t Scene::GetNumSubmeshes() const noexcept {
+    std::unordered_set<std::shared_ptr<IMesh>> uniqueMeshes;
+    for (auto& modelPair : m_models) {
+        for (std::shared_ptr<IMesh>& iMesh : modelPair.second->GetMeshes()) {
+            uniqueMeshes.insert(iMesh);
+        } 
+    }
+
+    std::uint64_t count = 0;
+    for (std::shared_ptr<IMesh> iMesh : uniqueMeshes) {
+        count += iMesh->GetNumSubmeshes();
+    } 
+    return count;
+}
+
+std::uint64_t Scene::GetNumMaterials() const noexcept {
+    std::unordered_set<std::string> materialNames;
+    for (auto& modelPair : m_models) {
+        for (std::shared_ptr<Material>& material : modelPair.second->GetMaterials()) {
+            materialNames.insert(material->GetName());
+        }
+    }
+    return materialNames.size();
+}
+
+std::uint64_t Scene::GetNumSprites() const noexcept {
+    return m_sprites.size();
+}
+
+std::uint64_t Scene::GetNumTexts() const noexcept {
+    return m_texts.size();
+}
+
+std::uint64_t Scene::GetNumOutlines() const noexcept {
+    return m_outlines.size();
+}
+
+std::uint64_t Scene::GetNumSubmeshInstances() const noexcept {
     std::uint64_t count = 0;
     for (auto& modelPair : m_models) {
         for (auto& pMesh : modelPair.second->GetMeshes()) {
@@ -116,7 +166,7 @@ std::uint64_t Scene::GetNumInstances() const noexcept {
     return count;
 }
 
-std::uint64_t Scene::GetNumRenderedInstances() const noexcept {
+std::uint64_t Scene::GetNumRenderedSubmeshInstances() const noexcept {
     std::uint64_t count = 0;
     for (auto& modelPair : m_models) {
         if (!modelPair.second->IsVisible())

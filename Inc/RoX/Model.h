@@ -231,6 +231,7 @@ class Model {
         bool IsSkinned() const noexcept;
 
         void SetVisible(bool visible) noexcept;
+        void SetWorldTransform(DirectX::XMFLOAT3X4 W);
     
     private:
         const std::string m_name;

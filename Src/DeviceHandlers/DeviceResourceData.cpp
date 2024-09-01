@@ -18,7 +18,7 @@ DeviceResourceData::DeviceResourceData(Scene& scene, const DeviceResources& devi
     for (auto& sprite : m_scene.GetSprites()) {
         Add(sprite.second);
     }
-    for (auto& text : m_scene.GetText()) {
+    for (auto& text : m_scene.GetTexts()) {
         Add(text.second);
     }
 }

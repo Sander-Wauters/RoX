@@ -346,3 +346,13 @@ void Model::SetVisible(bool visible) noexcept {
     m_visible = visible;
 }
 
+void Model::SetWorldTransform(DirectX::XMFLOAT3X4 W) {
+    for (std::shared_ptr<IMesh>& pIMesh : m_meshes) {
+        for (std::unique_ptr<Submesh>& pSubmesh : pIMesh->GetSubmeshes()) {
+            for (DirectX::XMFLOAT3X4& instance : pSubmesh->GetInstances()) {
+                instance = W;
+            }
+        }
+    }
+}
+
