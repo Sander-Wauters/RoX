@@ -336,7 +336,7 @@ void Renderer::Impl::RenderOutlines() {
     pOutlineEffect->SetWorld(DirectX::XMMatrixIdentity());
     pOutlineEffect->Apply(pCommandList);
 
-    for (const std::pair<std::string const, std::shared_ptr<IOutline>>& outlinePair : m_pDeviceResourceData->GetScene().GetOutlines()) {
+    for (const std::pair<std::string const, std::shared_ptr<IOutline>>& outlinePair : m_pDeviceResourceData->GetScene().GetOutlines(0)) {
         if (!outlinePair.second->IsVisible())
             continue;
 

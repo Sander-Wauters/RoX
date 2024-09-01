@@ -437,7 +437,7 @@ void DebugUI::ModelHierarchy(Scene& scene, Model** ppSelectedModel, IMesh** ppSe
         expandAll = 0;
 
     static ImGuiTreeNodeFlags hierarchyBaseNodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-    for (auto modelPair : scene.GetModels()) {
+    for (auto modelPair : scene.GetModels(0)) {
         ImGuiTreeNodeFlags hierarchyNodeFlags = hierarchyBaseNodeFlags;
 
         if (expandAll != -1)
@@ -816,7 +816,7 @@ void DebugUI::SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags) {
         ImGui::Spacing();
     }
     if (ImGui::CollapsingHeader("Sprites")) {
-        for (auto& spritePair : scene.GetSprites()) {
+        for (auto& spritePair : scene.GetSprites(0)) {
             if (ImGui::TreeNode(spritePair.first.c_str())) {
                 SpriteMenu(*spritePair.second);
                 ImGui::TreePop();
@@ -826,7 +826,7 @@ void DebugUI::SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags) {
         ImGui::Spacing();
     }
     if (ImGui::CollapsingHeader("Text")) {
-        for (auto& textPair : scene.GetTexts()) {
+        for (auto& textPair : scene.GetTexts(0)) {
             if (ImGui::TreeNode(textPair.first.c_str())) {
                 SpriteMenu(*textPair.second);
                 ImGui::TreePop();
@@ -836,7 +836,7 @@ void DebugUI::SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags) {
         ImGui::Spacing();
     }
     if (ImGui::CollapsingHeader("Outlines")) {
-        for (auto& outlinePair : scene.GetOutlines()) {
+        for (auto& outlinePair : scene.GetOutlines(0)) {
             if (ImGui::TreeNode(outlinePair.first.c_str())) {
                 IOutlineMenu(*outlinePair.second);
                 ImGui::TreePop();

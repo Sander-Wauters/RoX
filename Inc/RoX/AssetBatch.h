@@ -8,6 +8,7 @@
 #include "Text.h"
 #include "Outline.h"
 
+// Contains data that will be rendered to the display.
 class AssetBatch {
     public:
         AssetBatch() noexcept;

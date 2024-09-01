@@ -12,13 +12,13 @@ DeviceResourceData::DeviceResourceData(Scene& scene, const DeviceResources& devi
     m_pOutlineEffect(nullptr),
     m_pOutlinePrimitiveBatch(nullptr)
 {
-    for (auto& model : m_scene.GetModels()) {
+    for (auto& model : m_scene.GetModels(0)) {
         Add(model.second);
     }
-    for (auto& sprite : m_scene.GetSprites()) {
+    for (auto& sprite : m_scene.GetSprites(0)) {
         Add(sprite.second);
     }
-    for (auto& text : m_scene.GetTexts()) {
+    for (auto& text : m_scene.GetTexts(0)) {
         Add(text.second);
     }
 }
