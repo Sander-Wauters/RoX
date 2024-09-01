@@ -38,6 +38,7 @@ set(SOURCE
     Src/Util/pch.h
 
     Src/Animation.cpp
+    Src/AssetBatch.cpp
     Src/AssetIO.cpp
     Src/Camera.cpp
     Src/DebugDraw.cpp

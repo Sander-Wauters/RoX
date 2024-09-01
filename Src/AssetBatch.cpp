@@ -1,18 +1,18 @@
-#include "RoX/Scene.h"
+#include "RoX/AssetBatch.h"
 
-Scene::Scene(const std::string name, Camera& camera) 
-    noexcept : m_name(name),
-    m_camera(camera),
-    m_models({}),
+#include "Util/pch.h"
+
+AssetBatch::AssetBatch() 
+    noexcept : m_models({}),
     m_sprites({}),
     m_texts({}),
     m_outlines({})
 {}
 
-Scene::~Scene() noexcept 
+AssetBatch::~AssetBatch() noexcept 
 {}
 
-void Scene::Add(std::shared_ptr<Model> pMesh) {
+void AssetBatch::Add(std::shared_ptr<Model> pMesh) {
     std::shared_ptr<Model>& entry = m_models[pMesh->GetName()];
     if (!entry) 
         entry = pMesh;
@@ -20,7 +20,7 @@ void Scene::Add(std::shared_ptr<Model> pMesh) {
         throw std::invalid_argument("Scene already contains this mesh.");
 }
 
-void Scene::Add(std::shared_ptr<Sprite> pSprite) {
+void AssetBatch::Add(std::shared_ptr<Sprite> pSprite) {
     std::shared_ptr<Sprite>& entry = m_sprites[pSprite->GetName()];
     if (!entry)
         entry = pSprite;
@@ -28,7 +28,7 @@ void Scene::Add(std::shared_ptr<Sprite> pSprite) {
         throw std::invalid_argument("Scene already contains this sprite.");
 }
 
-void Scene::Add(std::shared_ptr<Text> pText) {
+void AssetBatch::Add(std::shared_ptr<Text> pText) {
     std::shared_ptr<Text>& entry = m_texts[pText->GetName()];
     if (!entry) 
         entry = pText;
@@ -36,7 +36,7 @@ void Scene::Add(std::shared_ptr<Text> pText) {
         throw std::invalid_argument("Scene already contains this text.");
 }
 
-void Scene::Add(std::shared_ptr<IOutline> pOutline) {
+void AssetBatch::Add(std::shared_ptr<IOutline> pOutline) {
     std::shared_ptr<IOutline>& entry = m_outlines[pOutline->GetName()];
     if (!entry) 
         entry = pOutline;
@@ -44,67 +44,59 @@ void Scene::Add(std::shared_ptr<IOutline> pOutline) {
         throw std::invalid_argument("Scene already contains this outline.");
 }
 
-void Scene::RemoveMesh(std::string name) {
+void AssetBatch::RemoveMesh(std::string name) {
     m_models.erase(name);
 }
 
-void Scene::RemoveSprite(std::string name) {
+void AssetBatch::RemoveSprite(std::string name) {
     m_sprites.erase(name);
 }
 
-void Scene::RemoveText(std::string name) {
+void AssetBatch::RemoveText(std::string name) {
     m_texts.erase(name);
 }
 
-void Scene::RemoveOutline(std::string name) {
+void AssetBatch::RemoveOutline(std::string name) {
     m_outlines.erase(name);
 }
 
-std::string Scene::GetName() const noexcept {
-    return m_name;
-}
-
-Camera& Scene::GetCamera() const noexcept {
-    return m_camera;
-}
-
-const std::shared_ptr<Model>& Scene::GetModel(std::string name) const {
+const std::shared_ptr<Model>& AssetBatch::GetModel(std::string name) const {
     return m_models.at(name);
 }
 
-const std::shared_ptr<Sprite>& Scene::GetSprite(std::string name) const {
+const std::shared_ptr<Sprite>& AssetBatch::GetSprite(std::string name) const {
     return m_sprites.at(name);
 }
 
-const std::shared_ptr<Text>& Scene::GetText(std::string name) const {
+const std::shared_ptr<Text>& AssetBatch::GetText(std::string name) const {
     return m_texts.at(name);
 }
 
-const std::shared_ptr<IOutline>& Scene::GetOutline(std::string name) const {
+const std::shared_ptr<IOutline>& AssetBatch::GetOutline(std::string name) const {
     return m_outlines.at(name); 
 }
 
-const std::unordered_map<std::string, std::shared_ptr<Model>>& Scene::GetModels() const noexcept {
+const std::unordered_map<std::string, std::shared_ptr<Model>>& AssetBatch::GetModels() const noexcept {
     return m_models;
 }
 
-const std::unordered_map<std::string, std::shared_ptr<Sprite>>& Scene::GetSprites() const noexcept {
+const std::unordered_map<std::string, std::shared_ptr<Sprite>>& AssetBatch::GetSprites() const noexcept {
     return m_sprites;
 }
 
-const std::unordered_map<std::string, std::shared_ptr<Text>>& Scene::GetTexts() const noexcept {
+const std::unordered_map<std::string, std::shared_ptr<Text>>& AssetBatch::GetTexts() const noexcept {
     return m_texts;
 }
 
-const std::unordered_map<std::string, std::shared_ptr<IOutline>>& Scene::GetOutlines() const noexcept {
+const std::unordered_map<std::string, std::shared_ptr<IOutline>>& AssetBatch::GetOutlines() const noexcept {
     return m_outlines;
 }
 
-std::uint64_t Scene::GetNumModels() const noexcept {
+std::uint64_t AssetBatch::GetNumModels() const noexcept {
     return m_models.size();
 }
 
-std::uint64_t Scene::GetNumMeshes() const noexcept {
+std::uint64_t AssetBatch::GetNumMeshes() const noexcept {
     std::unordered_set<std::shared_ptr<IMesh>> uniqueMeshes;
     for (auto& modelPair : m_models) {
         for (std::shared_ptr<IMesh>& iMesh : modelPair.second->GetMeshes()) {
@@ -114,7 +106,7 @@ std::uint64_t Scene::GetNumMeshes() const noexcept {
     return uniqueMeshes.size();
 }
 
-std::uint64_t Scene::GetNumSubmeshes() const noexcept {
+std::uint64_t AssetBatch::GetNumSubmeshes() const noexcept {
     std::unordered_set<std::shared_ptr<IMesh>> uniqueMeshes;
     for (auto& modelPair : m_models) {
         for (std::shared_ptr<IMesh>& iMesh : modelPair.second->GetMeshes()) {
@@ -129,7 +121,7 @@ std::uint64_t Scene::GetNumSubmeshes() const noexcept {
     return count;
 }
 
-std::uint64_t Scene::GetNumMaterials() const noexcept {
+std::uint64_t AssetBatch::GetNumMaterials() const noexcept {
     std::unordered_set<std::string> materialNames;
     for (auto& modelPair : m_models) {
         for (std::shared_ptr<Material>& material : modelPair.second->GetMaterials()) {
@@ -139,19 +131,19 @@ std::uint64_t Scene::GetNumMaterials() const noexcept {
     return materialNames.size();
 }
 
-std::uint64_t Scene::GetNumSprites() const noexcept {
+std::uint64_t AssetBatch::GetNumSprites() const noexcept {
     return m_sprites.size();
 }
 
-std::uint64_t Scene::GetNumTexts() const noexcept {
+std::uint64_t AssetBatch::GetNumTexts() const noexcept {
     return m_texts.size();
 }
 
-std::uint64_t Scene::GetNumOutlines() const noexcept {
+std::uint64_t AssetBatch::GetNumOutlines() const noexcept {
     return m_outlines.size();
 }
 
-std::uint64_t Scene::GetNumSubmeshInstances() const noexcept {
+std::uint64_t AssetBatch::GetNumSubmeshInstances() const noexcept {
     std::uint64_t count = 0;
     for (auto& modelPair : m_models) {
         for (auto& pMesh : modelPair.second->GetMeshes()) {
@@ -166,7 +158,7 @@ std::uint64_t Scene::GetNumSubmeshInstances() const noexcept {
     return count;
 }
 
-std::uint64_t Scene::GetNumRenderedSubmeshInstances() const noexcept {
+std::uint64_t AssetBatch::GetNumRenderedSubmeshInstances() const noexcept {
     std::uint64_t count = 0;
     for (auto& modelPair : m_models) {
         if (!modelPair.second->IsVisible())
@@ -190,7 +182,7 @@ std::uint64_t Scene::GetNumRenderedSubmeshInstances() const noexcept {
     return count;
 }
 
-std::uint64_t Scene::GetNumLoadedVertices() const noexcept {
+std::uint64_t AssetBatch::GetNumLoadedVertices() const noexcept {
     std::uint64_t count = 0;
     for (auto& modelPair : m_models) {
         for (auto& pMesh : modelPair.second->GetMeshes()) {
@@ -200,7 +192,7 @@ std::uint64_t Scene::GetNumLoadedVertices() const noexcept {
     return count;
 }
 
-std::uint64_t Scene::GetNumRenderedVertices() const noexcept {
+std::uint64_t AssetBatch::GetNumRenderedVertices() const noexcept {
     std::uint64_t count = 0;
     for (auto& modelPair : m_models) {
         if (!modelPair.second->IsVisible())
