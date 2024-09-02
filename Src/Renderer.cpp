@@ -8,6 +8,7 @@
 
 #include "DebugDraw.h"
 #include "DeviceHandlers/IDeviceObserver.h"
+#include "DeviceHandlers/DeviceDataBatch.h"
 #include "DeviceHandlers/DeviceResources.h"
 #include "DeviceHandlers/DeviceResourceData.h"
 
@@ -44,11 +45,12 @@ class Renderer::Impl : public IDeviceObserver {
     private:
         void Clear();
 
-        void RenderMeshes();
-        void RenderOldMeshes();
-        void RenderOutlines();
-        void RenderSprites();
-        void RenderText();
+        void RenderBatch(const DeviceDataBatch& batch);
+        void RenderMeshes(const DeviceDataBatch& batch);
+        void RenderOldMeshes(const DeviceDataBatch& batch);
+        void RenderOutlines(const DeviceDataBatch& batch);
+        void RenderSprites(const DeviceDataBatch& batch);
+        void RenderText(const DeviceDataBatch& batch);
 
         void CreateDeviceDependentResources();
         void CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
@@ -100,17 +102,22 @@ void Renderer::Impl::Load(Scene& scene) {
     m_pDeviceResourceData = std::make_unique<DeviceResourceData>(scene, *m_pDeviceResources.get());
     CreateDeviceDependentResources();
     CreateWindowSizeDependentResources();
+
+    DirectX::DescriptorHeap* pDesc = m_pDeviceResourceData->GetImGuiDescriptorHeap();
     ImGui_ImplDX12_Init(m_pDeviceResources->GetDevice(), 
             m_pDeviceResources->GetBackBufferCount(),
             m_pDeviceResources->GetBackBufferFormat(),
-            m_pDeviceResourceData->GetDescriptorHeap()->Heap(),
-            m_pDeviceResourceData->GetImGuiCpuDescHandle(),
-            m_pDeviceResourceData->GetImGuiGpuDescHandle());
+            pDesc->Heap(),
+            pDesc->GetCpuHandle(0),
+            pDesc->GetGpuHandle(0));
+            //m_pDeviceResourceData->GetDescriptorHeap()->Heap(),
+            //m_pDeviceResourceData->GetImGuiCpuDescHandle(),
+            //m_pDeviceResourceData->GetImGuiGpuDescHandle());
 }
 
 void Renderer::Impl::Update() {
     if (m_pDeviceResourceData) 
-        m_pDeviceResourceData->Update();
+        m_pDeviceResourceData->UpdateEffects();
 }
 
 void Renderer::Impl::Render(const std::function<void()>& renderImGui) {
@@ -133,28 +140,10 @@ void Renderer::Impl::Render(const std::function<void()>& renderImGui) {
     }
 
     Clear();
-
-    if (m_pDeviceResourceData->HasTextures()) {
-        ID3D12DescriptorHeap* heaps[] = { 
-            m_pDeviceResourceData->GetDescriptorHeap()->Heap(), 
-            m_pDeviceResourceData->GetStates()->Heap() 
-        };
-        pCommandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
+    for (const std::unique_ptr<DeviceDataBatch>& pBatch : m_pDeviceResourceData->GetDataBatches()) {
+        RenderBatch(*pBatch);
     }
-
-    if (m_pDeviceResourceData->HasMaterials() && m_pDeviceResourceData->HasTextures())
-        RenderMeshes();
-
-    RenderOutlines();
-
-    if (m_pDeviceResourceData->HasTextures()) {
-        DirectX::SpriteBatch* pSpriteBatch = m_pDeviceResourceData->GetSpriteBatch();
-        pSpriteBatch->Begin(pCommandList, DirectX::SpriteSortMode_FrontToBack);
-        RenderSprites();
-        RenderText();
-        pSpriteBatch->End();
-    }
-    
+ 
     // Show the new frame.
     if (m_msaaEnabled) {
         CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -169,6 +158,12 @@ void Renderer::Impl::Render(const std::function<void()>& renderImGui) {
         m_pDeviceResources->Present(D3D12_RESOURCE_STATE_RESOLVE_DEST);
     } else {
         // ImGui doesn't support MSAA.
+        ID3D12DescriptorHeap* heaps[] = { 
+            m_pDeviceResourceData->GetImGuiDescriptorHeap()->Heap(),
+            m_pDeviceResourceData->GetImGuiStates()->Heap()
+        };
+        pCommandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
+
         ImGui_ImplDX12_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
@@ -265,10 +260,36 @@ void Renderer::Impl::Clear() {
     pCommandList->RSSetScissorRects(1, &scissorRect);
 }
 
-void Renderer::Impl::RenderMeshes() {
+void Renderer::Impl::RenderBatch(const DeviceDataBatch& batch) {
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
 
-    for (const ModelPair& modelPair : m_pDeviceResourceData->GetModelData()) {
+    if (batch.HasTextures()) {
+        ID3D12DescriptorHeap* heaps[] = { 
+            batch.GetDescriptorHeap()->Heap(), 
+            batch.GetStates()->Heap() 
+        };
+        pCommandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
+    }
+
+    if (batch.HasMaterials() && batch.HasTextures())
+        RenderMeshes(batch);
+
+    RenderOutlines(batch);
+
+    if (batch.HasTextures()) {
+        DirectX::SpriteBatch* pSpriteBatch = batch.GetSpriteBatch();
+        pSpriteBatch->Begin(pCommandList, DirectX::SpriteSortMode_FrontToBack);
+        RenderSprites(batch);
+        RenderText(batch);
+        pSpriteBatch->End();
+    }
+
+}
+
+void Renderer::Impl::RenderMeshes(const DeviceDataBatch& batch) {
+    ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
+
+    for (const ModelPair& modelPair : batch.GetModelData()) {
         if (!modelPair.first->IsVisible())
             continue;
         if (modelPair.first->IsSkinned()) {
@@ -326,13 +347,13 @@ void Renderer::Impl::RenderMeshes() {
     }
 }
 
-void Renderer::Impl::RenderOutlines() {
+void Renderer::Impl::RenderOutlines(const DeviceDataBatch& batch) {
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
 
-    DirectX::PrimitiveBatch<DirectX::VertexPositionColor>* pOutlineBatch = m_pDeviceResourceData->GetOutlineBatch();
+    DirectX::PrimitiveBatch<DirectX::VertexPositionColor>* pOutlineBatch = batch.GetOutlineBatch();
     pOutlineBatch->Begin(pCommandList);
 
-    DirectX::BasicEffect* pOutlineEffect = m_pDeviceResourceData->GetOutlineEffect();
+    DirectX::BasicEffect* pOutlineEffect = batch.GetOutlineEffect();
     pOutlineEffect->SetWorld(DirectX::XMMatrixIdentity());
     pOutlineEffect->Apply(pCommandList);
 
@@ -362,10 +383,10 @@ void Renderer::Impl::RenderOutlines() {
     pOutlineBatch->End();
 }
 
-void Renderer::Impl::RenderSprites() {
-    DirectX::SpriteBatch* pSpriteBatch = m_pDeviceResourceData->GetSpriteBatch();
+void Renderer::Impl::RenderSprites(const DeviceDataBatch& batch) {
+    DirectX::SpriteBatch* pSpriteBatch = batch.GetSpriteBatch();
 
-    for (const SpritePair& spritePair : m_pDeviceResourceData->GetSpriteData()) {
+    for (const SpritePair& spritePair : batch.GetSpriteData()) {
         if (!spritePair.first->IsVisible())
             continue;
 
@@ -384,7 +405,7 @@ void Renderer::Impl::RenderSprites() {
         offset.y += spritePair.first->GetOffset().y;
 
         pSpriteBatch->Draw(
-                m_pDeviceResourceData->GetDescriptorHeap()->GetGpuHandle(spritePair.second->GetHeapIndex()),
+                batch.GetDescriptorHeap()->GetGpuHandle(spritePair.second->GetHeapIndex()),
                 textureSize,
                 offset,
                 nullptr,
@@ -397,10 +418,10 @@ void Renderer::Impl::RenderSprites() {
     }
 }
 
-void Renderer::Impl::RenderText() {
-    DirectX::SpriteBatch* pSpriteBatch = m_pDeviceResourceData->GetSpriteBatch();
+void Renderer::Impl::RenderText(const DeviceDataBatch& batch) {
+    DirectX::SpriteBatch* pSpriteBatch = batch.GetSpriteBatch();
 
-    for (const TextPair& textPair : m_pDeviceResourceData->GetTextData()) {
+    for (const TextPair& textPair : batch.GetTextData()) {
         if (!textPair.first->IsVisible()) 
             continue;
 
@@ -432,17 +453,17 @@ void Renderer::Impl::CreateDeviceDependentResources() {
     }
 
     if (m_pDeviceResourceData)
-        m_pDeviceResourceData->BuildDeviceDependentResources(m_msaaEnabled);
+        m_pDeviceResourceData->CreateDeviceDependentResources(m_msaaEnabled);
 }
 
 void Renderer::Impl::CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
     if (m_pDeviceResourceData)
-        m_pDeviceResourceData->BuildRenderTargetDependentResources(resourceUploadBatch, m_msaaEnabled);
+        m_pDeviceResourceData->CreateRenderTargetDependentResources(resourceUploadBatch, m_msaaEnabled);
 }
 
 void Renderer::Impl::CreateWindowSizeDependentResources() {
     if (m_pDeviceResourceData)
-        m_pDeviceResourceData->BuildWindowSizeDependentResources();
+        m_pDeviceResourceData->CreateWindowSizeDependentResources();
 }
 
 Renderer::Renderer(Timer& timer) 

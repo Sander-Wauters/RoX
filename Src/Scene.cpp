@@ -51,6 +51,10 @@ Camera& Scene::GetCamera() const noexcept {
     return m_camera;
 }
 
+const std::vector<AssetBatch> Scene::GetAssetBatches() const noexcept {
+    return m_assetBatches;
+}
+
 const std::shared_ptr<Model>& Scene::GetModel(std::uint8_t batch, std::string name) const {
     return m_assetBatches[batch].GetModel(name);
 }
@@ -93,6 +97,10 @@ std::uint8_t Scene::GetNumStaticBatches() const noexcept {
 
 std::uint8_t Scene::GetNumDynamicBatches() const noexcept {
     return m_numDynamicBatches;
+}
+
+std::uint8_t Scene::GetFirstDynamicBatchIndex() const noexcept {
+    return m_numStaticBatches;    
 }
 
 std::uint64_t Scene::GetNumModels() const noexcept {

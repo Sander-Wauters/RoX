@@ -14,6 +14,8 @@ add_subdirectory(Lib/DirectXTK12)
 add_subdirectory(Lib/ImGui)
 
 set(SOURCE
+    Src/DeviceHandlers/DeviceDataBatch.cpp
+    Src/DeviceHandlers/DeviceDataBatch.h
     Src/DeviceHandlers/DeviceResourceData.cpp
     Src/DeviceHandlers/DeviceResourceData.h
     Src/DeviceHandlers/DeviceResources.cpp

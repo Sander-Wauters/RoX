@@ -19,6 +19,7 @@ class DeviceResources {
         DeviceResources(DeviceResources const&) = delete;
         DeviceResources& operator= (DeviceResources const&) = delete;
 
+    public:
         void CreateDeviceResources();
         void CreateWindowSizeDependentResources();
         bool WindowSizeChanged(int width, int height);

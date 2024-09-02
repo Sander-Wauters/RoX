@@ -35,8 +35,11 @@ class Scene {
         void RemoveText(std::uint8_t batch, std::string name);
         void RemoveOutline(std::uint8_t batch, std::string name);
 
+    public:
         std::string GetName() const noexcept;
         Camera& GetCamera() const noexcept;
+
+        const std::vector<AssetBatch> GetAssetBatches() const noexcept;
 
         const std::shared_ptr<Model>& GetModel(std::uint8_t batch, std::string name) const;
         const std::shared_ptr<Sprite>& GetSprite(std::uint8_t batch, std::string name) const;
@@ -51,6 +54,7 @@ class Scene {
         std::uint8_t GetNumAssetBatches() const noexcept;
         std::uint8_t GetNumStaticBatches() const noexcept;
         std::uint8_t GetNumDynamicBatches() const noexcept;
+        std::uint8_t GetFirstDynamicBatchIndex() const noexcept;
 
         std::uint64_t GetNumModels() const noexcept;
         std::uint64_t GetNumMeshes() const noexcept;
