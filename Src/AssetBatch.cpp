@@ -36,8 +36,8 @@ void AssetBatch::Add(std::shared_ptr<Text> pText) {
         throw std::invalid_argument("Scene already contains this text.");
 }
 
-void AssetBatch::Add(std::shared_ptr<IOutline> pOutline) {
-    std::shared_ptr<IOutline>& entry = m_outlines[pOutline->GetName()];
+void AssetBatch::Add(std::shared_ptr<Outline> pOutline) {
+    std::shared_ptr<Outline>& entry = m_outlines[pOutline->name];
     if (!entry) 
         entry = pOutline;
     else
@@ -60,19 +60,19 @@ void AssetBatch::RemoveOutline(std::string name) {
     m_outlines.erase(name);
 }
 
-const std::shared_ptr<Model>& AssetBatch::GetModel(std::string name) const {
+std::shared_ptr<Model>& AssetBatch::GetModel(std::string name) {
     return m_models.at(name);
 }
 
-const std::shared_ptr<Sprite>& AssetBatch::GetSprite(std::string name) const {
+std::shared_ptr<Sprite>& AssetBatch::GetSprite(std::string name) {
     return m_sprites.at(name);
 }
 
-const std::shared_ptr<Text>& AssetBatch::GetText(std::string name) const {
+std::shared_ptr<Text>& AssetBatch::GetText(std::string name) {
     return m_texts.at(name);
 }
 
-const std::shared_ptr<IOutline>& AssetBatch::GetOutline(std::string name) const {
+std::shared_ptr<Outline>& AssetBatch::GetOutline(std::string name) {
     return m_outlines.at(name); 
 }
 
@@ -88,7 +88,7 @@ const std::unordered_map<std::string, std::shared_ptr<Text>>& AssetBatch::GetTex
     return m_texts;
 }
 
-const std::unordered_map<std::string, std::shared_ptr<IOutline>>& AssetBatch::GetOutlines() const noexcept {
+const std::unordered_map<std::string, std::shared_ptr<Outline>>& AssetBatch::GetOutlines() const noexcept {
     return m_outlines;
 }
 

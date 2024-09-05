@@ -141,10 +141,9 @@ void ParseVertices(const aiMesh* pMesh, std::vector<VertexPositionNormalTexture>
     vertices.reserve(pMesh->mNumVertices + vertices.capacity());
     for (int i = 0; i < pMesh->mNumVertices; ++i) {
         vertices.push_back({
-                {{ pMesh->mVertices[i].x, pMesh->mVertices[i].y, pMesh->mVertices[i].z }}, 
-                {{ pMesh->mNormals[i].x, pMesh->mNormals[i].y, pMesh->mNormals[i].z }}, 
-                {{ pMesh->mTextureCoords[0][i].x, pMesh->mTextureCoords[0][i].y }}
-                });
+                { pMesh->mVertices[i].x, pMesh->mVertices[i].y, pMesh->mVertices[i].z }, 
+                { pMesh->mNormals[i].x, pMesh->mNormals[i].y, pMesh->mNormals[i].z }, 
+                { pMesh->mTextureCoords[0][i].x, pMesh->mTextureCoords[0][i].y }});
     }
 }
 
@@ -152,12 +151,11 @@ void ParseSkinnedVertices(const aiMesh* pMesh, std::vector<VertexPositionNormalT
     vertices.reserve(pMesh->mNumVertices + vertices.capacity());
     for (int i = 0; i < pMesh->mNumVertices; ++i) {
         vertices.push_back({
-                {{ pMesh->mVertices[i].x, pMesh->mVertices[i].y, pMesh->mVertices[i].z }}, 
-                {{ pMesh->mNormals[i].x, pMesh->mNormals[i].y, pMesh->mNormals[i].z }}, 
-                {{ pMesh->mTextureCoords[0][i].x, pMesh->mTextureCoords[0][i].y }},
+                { pMesh->mVertices[i].x, pMesh->mVertices[i].y, pMesh->mVertices[i].z },
+                { pMesh->mNormals[i].x, pMesh->mNormals[i].y, pMesh->mNormals[i].z },
+                { pMesh->mTextureCoords[0][i].x, pMesh->mTextureCoords[0][i].y },
                 { 0, 0, 0, 0 },
-                {{ 0.f, 0.f, 0.f, 0.f }}
-                });
+                { 0.f, 0.f, 0.f, 0.f }});
     }
 }
 
@@ -191,7 +189,7 @@ void ParseModel(const aiScene* pScene, Model& model, bool skinned) {
                 VertexBoneData& bd = vertexBoneData[startVertices[meshIndex] + vertexIndex];
                 bd.Calibrate();
                 pSkinnedMesh->GetVertices()[vertexIndex].SetBlendIndices({ bd.Indices[0], bd.Indices[1], bd.Indices[2], bd.Indices[3] });
-                pSkinnedMesh->GetVertices()[vertexIndex].SetBlendWeights({{ bd.Weights[0], bd.Weights[1], bd.Weights[2], bd.Weights[3] }});
+                pSkinnedMesh->GetVertices()[vertexIndex].SetBlendWeights({ bd.Weights[0], bd.Weights[1], bd.Weights[2], bd.Weights[3] });
             }
 
             pSubmesh->SetIndexCount(pSkinnedMesh->GetNumIndices());
@@ -248,7 +246,7 @@ void ParsePackedModel(const aiScene* pScene, Model& model, bool skinned) {
             VertexBoneData& bd = vertexBoneData[i];
             bd.Calibrate();
             skinnedVertices[i].SetBlendIndices({ bd.Indices[0], bd.Indices[1], bd.Indices[2], bd.Indices[3] });
-            skinnedVertices[i].SetBlendWeights({{ bd.Weights[0], bd.Weights[1], bd.Weights[2], bd.Weights[3] }});
+            skinnedVertices[i].SetBlendWeights({ bd.Weights[0], bd.Weights[1], bd.Weights[2], bd.Weights[3] });
         }
 
         pSkinnedMesh->GetVertices() = skinnedVertices;

@@ -11,36 +11,36 @@
 
 class DeviceResourceData : public IDeviceObserver {
     public:
-        DeviceResourceData(Scene& scene, DeviceResources& deviceResources) noexcept;
+        DeviceResourceData(DeviceResources& deviceResources) noexcept;
         ~DeviceResourceData() noexcept;
 
     public:
         void OnDeviceLost() override;
         void OnDeviceRestored() override;
 
+        void Load(Scene& scene);
         void UpdateEffects();
 
         void CreateDeviceDependentResources(bool msaaEnabled);
         void CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch, bool msaaEnabled);
         void CreateWindowSizeDependentResources();
 
-    private:
         void CreateImGuiResources();
 
     public:
         Scene& GetScene() const noexcept;
 
         std::uint8_t GetNumDataBatches() const noexcept;
-        std::uint8_t GetNumStaticBatches() const noexcept;
-        std::uint8_t GetNumDynamicBatches() const noexcept;
-        std::uint8_t GetFirstDynamicBatchIndex() const noexcept;
 
+        const std::unique_ptr<DeviceDataBatch>& GetDataBatche(std::uint8_t batch) const noexcept;
         const std::vector<std::unique_ptr<DeviceDataBatch>>& GetDataBatches() const noexcept;
         DirectX::DescriptorHeap* GetImGuiDescriptorHeap() noexcept;
         DirectX::CommonStates* GetImGuiStates() noexcept;
 
+        bool SceneLoaded() const noexcept;
+
     private:
-        Scene& m_scene;
+        Scene* m_pScene;
         DeviceResources& m_deviceResources;
 
         std::vector<std::unique_ptr<DeviceDataBatch>> m_dataBatches;

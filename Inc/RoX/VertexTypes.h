@@ -22,15 +22,6 @@ struct VertexPositionNormalTexture {
         : position(iposition),
         normal(inormal),
         textureCoordinate(itextureCoordinate) {}
-    VertexPositionNormalTexture(
-            DirectX::FXMVECTOR iposition, 
-            DirectX::FXMVECTOR inormal, 
-            DirectX::FXMVECTOR itextureCoordinate) noexcept 
-    {
-        DirectX::XMStoreFloat3(&this->position, iposition);
-        DirectX::XMStoreFloat3(&this->normal, inormal);
-        DirectX::XMStoreFloat2(&this->textureCoordinate, itextureCoordinate);
-    }
 
     DirectX::XMFLOAT3 position;
     DirectX::XMFLOAT3 normal;
@@ -81,29 +72,12 @@ struct VertexPositionNormalTextureSkinning {
         SetBlendWeights(iweights);
     }
 
-    VertexPositionNormalTextureSkinning(
-            DirectX::FXMVECTOR iposition, 
-            DirectX::FXMVECTOR inormal, 
-            DirectX::FXMVECTOR itextureCoordinate,
-            DirectX::XMUINT4 iindices,
-            DirectX::FXMVECTOR iweights) noexcept 
-    {
-        DirectX::XMStoreFloat3(&this->position, iposition);
-        DirectX::XMStoreFloat3(&this->normal, inormal);
-        DirectX::XMStoreFloat2(&this->textureCoordinate, itextureCoordinate);
-        SetBlendIndices(iindices);
-        SetBlendWeights(iweights);
-    }
-
     void SetBlendIndices(DirectX::XMUINT4 const& iindices) noexcept {
         indices = ((iindices.w & 0xff) << 24) | ((iindices.z & 0xff) << 16) | ((iindices.y & 0xff) << 8) | (iindices.x & 0xff);
     }
 
     void SetBlendWeights(DirectX::XMFLOAT4 const& iweights) noexcept { 
         weights = iweights;
-    }
-    void XM_CALLCONV SetBlendWeights(DirectX::FXMVECTOR iweights) noexcept {
-        DirectX::XMStoreFloat4(&weights, iweights);
     }
 
     DirectX::XMFLOAT3 position;

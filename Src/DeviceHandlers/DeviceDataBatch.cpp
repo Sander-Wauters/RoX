@@ -101,9 +101,9 @@ void DeviceDataBatch::UpdateEffects(DirectX::XMMATRIX view, DirectX::XMMATRIX pr
             pIMatrices->SetProjection(projection);
         }
         if (auto pNormal = dynamic_cast<DirectX::NormalMapEffect*>(materialPair.second.get())) {
-            pNormal->SetDiffuseColor(materialPair.first->GetDiffuseColor());
-            pNormal->SetEmissiveColor(materialPair.first->GetEmissiveColor());
-            pNormal->SetSpecularColor(materialPair.first->GetSpecularColor());
+            pNormal->SetDiffuseColor(DirectX::XMLoadFloat4(&materialPair.first->GetDiffuseColor()));
+            pNormal->SetEmissiveColor(DirectX::XMLoadFloat4(&materialPair.first->GetEmissiveColor()));
+            pNormal->SetSpecularColor(DirectX::XMLoadFloat4(&materialPair.first->GetSpecularColor()));
         }
     }
 }
@@ -219,9 +219,9 @@ void DeviceDataBatch::CreateMaterialResource(ID3D12Device* pDevice, MaterialPair
     else
         pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting | DirectX::EffectFlags::Texture, pd);
 
-    pEffect->SetColorAndAlpha(materialPair.first->GetDiffuseColor());
-    pEffect->SetEmissiveColor(materialPair.first->GetEmissiveColor());
-    pEffect->SetSpecularColor(materialPair.first->GetSpecularColor());
+    pEffect->SetColorAndAlpha(DirectX::XMLoadFloat4(&materialPair.first->GetDiffuseColor()));
+    pEffect->SetEmissiveColor(DirectX::XMLoadFloat4(&materialPair.first->GetEmissiveColor()));
+    pEffect->SetSpecularColor(DirectX::XMLoadFloat4(&materialPair.first->GetSpecularColor()));
 
     pEffect->EnableDefaultLighting();
 

@@ -26,10 +26,11 @@ class Sprite {
             m_origin(origin),
             m_offset(offset), 
             m_scale(scale),
-            m_color(color),
             m_layer(layer), m_angle(angle),
             m_visible(visible)
-            {}
+            {
+                DirectX::XMStoreFloat4(&m_color, color);
+            }
         virtual ~Sprite() noexcept {}
 
     public:
@@ -39,7 +40,7 @@ class Sprite {
         DirectX::XMFLOAT2& GetOrigin() noexcept { return m_origin; }
         DirectX::XMFLOAT2& GetOffset() noexcept { return m_offset; }
         DirectX::XMFLOAT2& GetScale() noexcept { return m_scale; }
-        DirectX::XMVECTOR& GetColor() noexcept { return m_color; }
+        DirectX::XMFLOAT4& GetColor() noexcept { return m_color; }
 
         float GetAngle() const noexcept { return m_angle; }  
         float GetLayer() const noexcept { return m_layer; }
@@ -58,7 +59,7 @@ class Sprite {
         DirectX::XMFLOAT2 m_origin;
         DirectX::XMFLOAT2 m_offset;
         DirectX::XMFLOAT2 m_scale;
-        DirectX::XMVECTOR m_color;
+        DirectX::XMFLOAT4 m_color;
 
         float m_layer;
         float m_angle; // In radians.

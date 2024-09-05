@@ -16,7 +16,7 @@ class Renderer::Impl : public IDeviceObserver {
     public:
         Impl(Renderer* pOwner) noexcept;
         ~Impl() noexcept;
-    
+
         Impl(Impl&&) = default;
         Impl& operator= (Impl&&) = default;
 
@@ -63,18 +63,17 @@ class Renderer::Impl : public IDeviceObserver {
         std::unique_ptr<DeviceResourceData> m_pDeviceResourceData;
 
         bool m_msaaEnabled;
-        
+
 };
 
 Renderer::Impl::Impl(Renderer* pOwner) 
     noexcept : m_pOwner(pOwner),
-    m_pDeviceResources(nullptr),
-    m_pGraphicsMemory(nullptr),
-    m_pDeviceResourceData(nullptr),
     m_msaaEnabled(false)
 {
     m_pDeviceResources = std::make_unique<DeviceResources>();
     m_pDeviceResources->RegisterDeviceObserver(this);
+
+    m_pDeviceResourceData = std::make_unique<DeviceResourceData>(*m_pDeviceResources);
 }
 
 Renderer::Impl::~Impl() noexcept {
@@ -84,10 +83,10 @@ Renderer::Impl::~Impl() noexcept {
     ImGui_ImplDX12_Shutdown();
     ImGui::DestroyContext();
 }
+
 void Renderer::Impl::Initialize(HWND window, int width, int height) {
     m_pDeviceResources->SetWindow(window, width, height);
     m_pDeviceResources->CreateDeviceResources();
-    m_pDeviceResources->CreateWindowSizeDependentResources();
 
     m_pGraphicsMemory = std::make_unique<DirectX::GraphicsMemory>(m_pDeviceResources->GetDevice());
 
@@ -95,14 +94,9 @@ void Renderer::Impl::Initialize(HWND window, int width, int height) {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    ImGui_ImplWin32_Init(window);
-}
+    ImGui_ImplWin32_Init(window);    
 
-void Renderer::Impl::Load(Scene& scene) {
-    m_pDeviceResourceData = std::make_unique<DeviceResourceData>(scene, *m_pDeviceResources.get());
-    CreateDeviceDependentResources();
-    CreateWindowSizeDependentResources();
-
+    m_pDeviceResourceData->CreateImGuiResources();
     DirectX::DescriptorHeap* pDesc = m_pDeviceResourceData->GetImGuiDescriptorHeap();
     ImGui_ImplDX12_Init(m_pDeviceResources->GetDevice(), 
             m_pDeviceResources->GetBackBufferCount(),
@@ -110,19 +104,25 @@ void Renderer::Impl::Load(Scene& scene) {
             pDesc->Heap(),
             pDesc->GetCpuHandle(0),
             pDesc->GetGpuHandle(0));
-            //m_pDeviceResourceData->GetDescriptorHeap()->Heap(),
-            //m_pDeviceResourceData->GetImGuiCpuDescHandle(),
-            //m_pDeviceResourceData->GetImGuiGpuDescHandle());
+
+}
+
+void Renderer::Impl::Load(Scene& scene) {
+    m_pDeviceResources->WaitForGpu();
+    m_pDeviceResourceData->Load(scene);
+
+    CreateDeviceDependentResources();
+    CreateWindowSizeDependentResources();
 }
 
 void Renderer::Impl::Update() {
-    if (m_pDeviceResourceData) 
+    if (m_pDeviceResourceData->SceneLoaded()) 
         m_pDeviceResourceData->UpdateEffects();
 }
 
 void Renderer::Impl::Render(const std::function<void()>& renderImGui) {
     // Don't try to render anything before the first Update and before a Scene is loaded.
-    if (m_pOwner->m_timer.GetFrameCount() == 0 || !m_pDeviceResourceData)
+    if (m_pOwner->m_timer.GetFrameCount() == 0 || !m_pDeviceResourceData->SceneLoaded())
         return;
 
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
@@ -143,7 +143,7 @@ void Renderer::Impl::Render(const std::function<void()>& renderImGui) {
     for (const std::unique_ptr<DeviceDataBatch>& pBatch : m_pDeviceResourceData->GetDataBatches()) {
         RenderBatch(*pBatch);
     }
- 
+
     // Show the new frame.
     if (m_msaaEnabled) {
         CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -357,28 +357,28 @@ void Renderer::Impl::RenderOutlines(const DeviceDataBatch& batch) {
     pOutlineEffect->SetWorld(DirectX::XMMatrixIdentity());
     pOutlineEffect->Apply(pCommandList);
 
-    for (const std::pair<std::string const, std::shared_ptr<IOutline>>& outlinePair : m_pDeviceResourceData->GetScene().GetOutlines(0)) {
-        if (!outlinePair.second->IsVisible())
+    for (const std::pair<std::string const, std::shared_ptr<Outline>>& outlinePair : m_pDeviceResourceData->GetScene().GetOutlines(0)) {
+        if (!outlinePair.second->visible)
             continue;
 
         if (auto p = std::dynamic_pointer_cast<BoundingBodyOutline<DirectX::BoundingBox>>(outlinePair.second)) 
-            Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
+            Draw(pOutlineBatch, p->boundingBody, DirectX::XMLoadFloat4(&p->color));
         else if (auto p = std::dynamic_pointer_cast<BoundingBodyOutline<DirectX::BoundingFrustum>>(outlinePair.second)) 
-            Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
+            Draw(pOutlineBatch, p->boundingBody, DirectX::XMLoadFloat4(&p->color));
         else if (auto p = std::dynamic_pointer_cast<BoundingBodyOutline<DirectX::BoundingOrientedBox>>(outlinePair.second)) 
-            Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
+            Draw(pOutlineBatch, p->boundingBody, DirectX::XMLoadFloat4(&p->color));
         else if (auto p = std::dynamic_pointer_cast<BoundingBodyOutline<DirectX::BoundingSphere>>(outlinePair.second)) 
-            Draw(pOutlineBatch, p->GetBounds(), p->GetColor());
+            Draw(pOutlineBatch, p->boundingBody, DirectX::XMLoadFloat4(&p->color));
         else if (auto p = std::dynamic_pointer_cast<GridOutline>(outlinePair.second))
-            DrawGrid(pOutlineBatch, p->GetXAxis(), p->GetYAxis(), p->GetOrigin(), p->GetXDivsions(), p->GetYDivsions(), p->GetColor());
+            DrawGrid(pOutlineBatch, DirectX::XMLoadFloat3(&p->xAxis), DirectX::XMLoadFloat3(&p->yAxis), DirectX::XMLoadFloat3(&p->origin), p->xDivisions, p->yDivisions, DirectX::XMLoadFloat4(&p->color));
         else if (auto p = std::dynamic_pointer_cast<RingOutline>(outlinePair.second))
-            DrawRing(pOutlineBatch, p->GetOrigin(), p->GetMajorAxis(), p->GetMinorAxis(), p->GetColor());
+            DrawRing(pOutlineBatch, DirectX::XMLoadFloat3(&p->origin), DirectX::XMLoadFloat3(&p->majorAxis), DirectX::XMLoadFloat3(&p->minorAxis), DirectX::XMLoadFloat4(&p->color));
         else if (auto p = std::dynamic_pointer_cast<RayOutline>(outlinePair.second)) 
-            DrawRay(pOutlineBatch, p->GetOrigin(), p->GetDirection(), p->IsNormalized(), p->GetColor());
+            DrawRay(pOutlineBatch, DirectX::XMLoadFloat3(&p->origin), DirectX::XMLoadFloat3(&p->direction), p->normalized, DirectX::XMLoadFloat4(&p->color));
         else if (auto p = std::dynamic_pointer_cast<TriangleOutline>(outlinePair.second)) 
-            DrawTriangle(pOutlineBatch, p->GetPointA(), p->GetPointB(), p->GetPointC(), p->GetColor());
+            DrawTriangle(pOutlineBatch, DirectX::XMLoadFloat3(&p->pointA), DirectX::XMLoadFloat3(&p->pointB), DirectX::XMLoadFloat3(&p->pointC), DirectX::XMLoadFloat4(&p->color));
         else if (auto p = std::dynamic_pointer_cast<QuadOutline>(outlinePair.second)) 
-            DrawQuad(pOutlineBatch, p->GetPointA(), p->GetPointB(), p->GetPointC(), p->GetPointD(), p->GetColor());
+            DrawQuad(pOutlineBatch, DirectX::XMLoadFloat3(&p->pointA), DirectX::XMLoadFloat3(&p->pointB), DirectX::XMLoadFloat3(&p->pointC), DirectX::XMLoadFloat3(&p->pointD), DirectX::XMLoadFloat4(&p->color));
     }
     pOutlineBatch->End();
 }
@@ -409,7 +409,7 @@ void Renderer::Impl::RenderSprites(const DeviceDataBatch& batch) {
                 textureSize,
                 offset,
                 nullptr,
-                spritePair.first->GetColor(),
+                DirectX::XMLoadFloat4(&spritePair.first->GetColor()),
                 spritePair.first->GetAngle(),
                 origin,
                 spritePair.first->GetScale(),
@@ -429,7 +429,7 @@ void Renderer::Impl::RenderText(const DeviceDataBatch& batch) {
                 pSpriteBatch,
                 textPair.first->GetContent().c_str(),
                 textPair.first->GetOffset(),
-                textPair.first->GetColor(),
+                DirectX::XMLoadFloat4(&textPair.first->GetColor()),
                 textPair.first->GetAngle(),
                 { -textPair.first->GetOrigin().x, -textPair.first->GetOrigin().y },
                 textPair.first->GetScale(),
@@ -452,17 +452,17 @@ void Renderer::Impl::CreateDeviceDependentResources() {
         throw std::runtime_error("Shader Model 6.0 is not supported!");
     }
 
-    if (m_pDeviceResourceData)
+    if (m_pDeviceResourceData->SceneLoaded())
         m_pDeviceResourceData->CreateDeviceDependentResources(m_msaaEnabled);
 }
 
 void Renderer::Impl::CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
-    if (m_pDeviceResourceData)
+    if (m_pDeviceResourceData->SceneLoaded())
         m_pDeviceResourceData->CreateRenderTargetDependentResources(resourceUploadBatch, m_msaaEnabled);
 }
 
 void Renderer::Impl::CreateWindowSizeDependentResources() {
-    if (m_pDeviceResourceData)
+    if (m_pDeviceResourceData->SceneLoaded())
         m_pDeviceResourceData->CreateWindowSizeDependentResources();
 }
 
@@ -470,20 +470,68 @@ Renderer::Renderer(Timer& timer)
     noexcept : m_timer(timer), 
     m_pImpl(std::make_unique<Impl>(this)) 
 {} 
-Renderer::~Renderer() noexcept {}
-Renderer::Renderer(Renderer&& other) noexcept : m_timer(other.m_timer), m_pImpl(std::make_unique<Impl>(this)) {}
-void Renderer::Initialize(HWND window, int width, int height) { m_pImpl->Initialize(window, width, height); }
-void Renderer::Load(Scene& scene) { m_pImpl->Load(scene); }
-void Renderer::Update() { m_pImpl->Update(); }
-void Renderer::Render() { m_pImpl->Render([&](){}); }
-void Renderer::Render(const std::function<void()>& renderImGui) { m_pImpl->Render(renderImGui); }
-void Renderer::OnActivated() { m_pImpl->OnActivated(); }
-void Renderer::OnDeactivated() { m_pImpl->OnDeactivated(); }
-void Renderer::OnSuspending() { m_pImpl->OnSuspending(); }
-void Renderer::OnResuming() { m_pImpl->OnResuming(); }
-void Renderer::OnWindowMoved() { m_pImpl->OnWindowMoved(); }
-void Renderer::OnDisplayChange() { m_pImpl->OnDisplayChange(); }
-void Renderer::OnWindowSizeChanged(int width, int height) { m_pImpl->OnWindowSizeChanged(width, height); }
-void Renderer::SetMsaa(bool state) noexcept { m_pImpl->SetMsaa(state); }
-bool Renderer::IsMsaaEnabled() const noexcept { return m_pImpl->IsMsaaEnabled(); }
+
+Renderer::~Renderer() noexcept {
+
+}
+
+Renderer::Renderer(Renderer&& other) noexcept : m_timer(other.m_timer), m_pImpl(std::make_unique<Impl>(this)) {
+
+}
+
+void Renderer::Initialize(HWND window, int width, int height) { 
+    m_pImpl->Initialize(window, width, height); 
+}
+
+void Renderer::Load(Scene& scene) { 
+    m_pImpl->Load(scene); 
+}
+
+void Renderer::Update() { 
+    m_pImpl->Update(); 
+}
+
+void Renderer::Render() { 
+    m_pImpl->Render([&](){}); 
+}
+
+void Renderer::Render(const std::function<void()>& renderImGui) { 
+    m_pImpl->Render(renderImGui); 
+}
+
+void Renderer::OnActivated() { 
+    m_pImpl->OnActivated(); 
+}
+
+void Renderer::OnDeactivated() { 
+    m_pImpl->OnDeactivated(); 
+}
+
+void Renderer::OnSuspending() { 
+    m_pImpl->OnSuspending(); 
+}
+
+void Renderer::OnResuming() { 
+    m_pImpl->OnResuming(); 
+}
+
+void Renderer::OnWindowMoved() { 
+    m_pImpl->OnWindowMoved(); 
+}
+
+void Renderer::OnDisplayChange() { 
+    m_pImpl->OnDisplayChange(); 
+}
+
+void Renderer::OnWindowSizeChanged(int width, int height) { 
+    m_pImpl->OnWindowSizeChanged(width, height); 
+}
+
+void Renderer::SetMsaa(bool state) noexcept { 
+    m_pImpl->SetMsaa(state); 
+}
+
+bool Renderer::IsMsaaEnabled() const noexcept { 
+    return m_pImpl->IsMsaaEnabled(); 
+}
 

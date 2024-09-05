@@ -98,9 +98,9 @@ class Material {
 
         std::uint32_t GetFlags() const noexcept;
 
-        DirectX::XMVECTOR& GetDiffuseColor() noexcept;
-        DirectX::XMVECTOR& GetEmissiveColor() noexcept;
-        DirectX::XMVECTOR& GetSpecularColor() noexcept;
+        DirectX::XMFLOAT4& GetDiffuseColor() noexcept;
+        DirectX::XMFLOAT4& GetEmissiveColor() noexcept;
+        DirectX::XMFLOAT4& GetSpecularColor() noexcept;
 
     private:
         const std::string m_name;
@@ -109,7 +109,7 @@ class Material {
 
         std::uint32_t m_flags;
 
-        DirectX::XMVECTOR m_diffuseColor;
-        DirectX::XMVECTOR m_emissiveColor;
-        DirectX::XMVECTOR m_specularColor;
+        DirectX::XMFLOAT4 m_diffuseColor;
+        DirectX::XMFLOAT4 m_emissiveColor;
+        DirectX::XMFLOAT4 m_specularColor;
 };

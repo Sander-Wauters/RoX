@@ -18,7 +18,7 @@ class AssetBatch {
         void Add(std::shared_ptr<Model> pModel);
         void Add(std::shared_ptr<Sprite> pSprite);
         void Add(std::shared_ptr<Text> pText);
-        void Add(std::shared_ptr<IOutline> pOutline);
+        void Add(std::shared_ptr<Outline> pOutline);
 
         void RemoveMesh(std::string name);
         void RemoveSprite(std::string name);
@@ -26,15 +26,15 @@ class AssetBatch {
         void RemoveOutline(std::string name);
 
     public:
-        const std::shared_ptr<Model>& GetModel(std::string name) const;
-        const std::shared_ptr<Sprite>& GetSprite(std::string name) const;
-        const std::shared_ptr<Text>& GetText(std::string name) const;
-        const std::shared_ptr<IOutline>& GetOutline(std::string name) const;
+        std::shared_ptr<Model>& GetModel(std::string name);
+        std::shared_ptr<Sprite>& GetSprite(std::string name);
+        std::shared_ptr<Text>& GetText(std::string name);
+        std::shared_ptr<Outline>& GetOutline(std::string name);
 
         const std::unordered_map<std::string, std::shared_ptr<Model>>& GetModels() const noexcept;
         const std::unordered_map<std::string, std::shared_ptr<Sprite>>& GetSprites() const noexcept;
         const std::unordered_map<std::string, std::shared_ptr<Text>>& GetTexts() const noexcept;
-        const std::unordered_map<std::string, std::shared_ptr<IOutline>>& GetOutlines() const noexcept;
+        const std::unordered_map<std::string, std::shared_ptr<Outline>>& GetOutlines() const noexcept;
 
         std::uint64_t GetNumModels() const noexcept;
         std::uint64_t GetNumMeshes() const noexcept;
@@ -53,5 +53,5 @@ class AssetBatch {
         std::unordered_map<std::string, std::shared_ptr<Model>> m_models;
         std::unordered_map<std::string, std::shared_ptr<Sprite>> m_sprites;
         std::unordered_map<std::string, std::shared_ptr<Text>> m_texts;
-        std::unordered_map<std::string, std::shared_ptr<IOutline>> m_outlines;
+        std::unordered_map<std::string, std::shared_ptr<Outline>> m_outlines;
 };

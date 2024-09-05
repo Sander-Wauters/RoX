@@ -2,17 +2,10 @@
 
 #include "RoX/VertexTypes.h"
 
-DeviceResourceData::DeviceResourceData(Scene& scene, DeviceResources& deviceResources) 
-    noexcept : m_scene(scene),
-    m_deviceResources(deviceResources)
+DeviceResourceData::DeviceResourceData(DeviceResources& deviceResources) 
+    noexcept : m_deviceResources(deviceResources)
 {
     m_deviceResources.RegisterDeviceObserver(this);
-    m_dataBatches.reserve(m_scene.GetNumAssetBatches());
-    for (std::uint8_t i = 0; i < m_scene.GetNumAssetBatches(); ++i) {
-        auto pBatch = std::make_unique<DeviceDataBatch>(m_deviceResources);
-        pBatch->Add(m_scene.GetAssetBatches()[i]);
-        m_dataBatches.push_back(std::move(pBatch));
-    }
 }
 
 DeviceResourceData::~DeviceResourceData() noexcept {
@@ -26,11 +19,22 @@ void DeviceResourceData::OnDeviceRestored() {
 
 }
 
+void DeviceResourceData::Load(Scene& scene) {
+    m_pScene = &scene;
+    m_dataBatches.clear();
+    m_dataBatches.reserve(m_pScene->GetNumAssetBatches());
+    for (std::uint8_t i = 0; i < m_pScene->GetNumAssetBatches(); ++i) {
+        auto pBatch = std::make_unique<DeviceDataBatch>(m_deviceResources);
+        pBatch->Add(*m_pScene->GetAssetBatches()[i]);
+        m_dataBatches.push_back(std::move(pBatch));
+    }
+}
+
 void DeviceResourceData::UpdateEffects() {
     // TODO: Client should be able to decide this.
     // Store the view and projection in the object that the client has access to.
-    DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&m_scene.GetCamera().GetView());
-    DirectX::XMMATRIX projection = DirectX::XMLoadFloat4x4(&m_scene.GetCamera().GetProjection());
+    DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&m_pScene->GetCamera().GetView());
+    DirectX::XMMATRIX projection = DirectX::XMLoadFloat4x4(&m_pScene->GetCamera().GetProjection());
 
     for (std::uint8_t i = 0; i < GetNumDataBatches(); ++i) {
         m_dataBatches[i]->UpdateEffects(view, projection);
@@ -38,7 +42,6 @@ void DeviceResourceData::UpdateEffects() {
 }
 
 void DeviceResourceData::CreateDeviceDependentResources(bool msaaEnabled) {
-    CreateImGuiResources();
     for (std::unique_ptr<DeviceDataBatch>& pBatch : m_dataBatches) {
         pBatch->CreateDeviceDependentResources(msaaEnabled);
     }
@@ -68,23 +71,15 @@ void DeviceResourceData::CreateImGuiResources() {
 }
 
 Scene& DeviceResourceData::GetScene() const noexcept {
-    return m_scene;
+    return *m_pScene;
 }
 
 std::uint8_t DeviceResourceData::GetNumDataBatches() const noexcept {
-    return m_scene.GetNumAssetBatches();
+    return m_pScene->GetNumAssetBatches();
 }
 
-std::uint8_t DeviceResourceData::GetNumStaticBatches() const noexcept {
-    return m_scene.GetNumStaticBatches();
-}
-
-std::uint8_t DeviceResourceData::GetNumDynamicBatches() const noexcept {
-    return m_scene.GetNumDynamicBatches();
-}
-
-std::uint8_t DeviceResourceData::GetFirstDynamicBatchIndex() const noexcept {
-    return GetNumStaticBatches();
+const std::unique_ptr<DeviceDataBatch>& DeviceResourceData::GetDataBatche(std::uint8_t batch) const noexcept {
+    return m_dataBatches[batch];
 }
 
 const std::vector<std::unique_ptr<DeviceDataBatch>>& DeviceResourceData::GetDataBatches() const noexcept {
@@ -99,9 +94,13 @@ DirectX::CommonStates* DeviceResourceData::GetImGuiStates() noexcept {
     return m_pImGuiStates.get();
 }
 
+bool DeviceResourceData::SceneLoaded() const noexcept {
+    return m_pScene != nullptr;
+}
+
 /*
 DeviceResourceData::DeviceResourceData(Scene& scene, const DeviceResources& deviceResources) 
-    noexcept : m_scene(scene), 
+    noexcept : m_pScene->scene), 
     m_deviceResources(deviceResources),
     m_nextDescriptorHeapIndex(1),
     m_pDescriptorHeap(nullptr),
@@ -110,13 +109,13 @@ DeviceResourceData::DeviceResourceData(Scene& scene, const DeviceResources& devi
     m_pOutlineEffect(nullptr),
     m_pOutlinePrimitiveBatch(nullptr)
 {
-    for (auto& model : m_scene.GetModels(0)) {
+    for (auto& model : m_pScene->GetModels(0)) {
         Add(model.second);
     }
-    for (auto& sprite : m_scene.GetSprites(0)) {
+    for (auto& sprite : m_pScene->GetSprites(0)) {
         Add(sprite.second);
     }
-    for (auto& text : m_scene.GetTexts(0)) {
+    for (auto& text : m_pScene->GetTexts(0)) {
         Add(text.second);
     }
 }
@@ -191,8 +190,8 @@ void DeviceResourceData::Add(std::shared_ptr<Text> pText) {
 void DeviceResourceData::Update() {
     // TODO: Client should be able to decide this.
     // Store the view and projection in the object that the client has access to.
-    DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&m_scene.GetCamera().GetView());
-    DirectX::XMMATRIX projection = DirectX::XMLoadFloat4x4(&m_scene.GetCamera().GetProjection());
+    DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&m_pScene->GetCamera().GetView());
+    DirectX::XMMATRIX projection = DirectX::XMLoadFloat4x4(&m_pScene->GetCamera().GetProjection());
 
     m_pOutlineEffect->SetView(view);
     m_pOutlineEffect->SetProjection(projection);
@@ -454,7 +453,7 @@ void DeviceResourceData::CreateTextureFromFile(std::wstring filePath, ID3D12Reso
 }
 
 Scene& DeviceResourceData::GetScene() const noexcept {
-    return m_scene;
+    return m_pScene->
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE DeviceResourceData::GetImGuiCpuDescHandle() const {

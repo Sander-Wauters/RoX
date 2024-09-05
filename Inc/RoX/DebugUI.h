@@ -16,6 +16,14 @@ namespace DebugUI {
     bool InputTextMultiline(const char* label, std::string* str);
     void HelpMarker(const char* desc);
 
+    void StoreFloat2(DirectX::XMFLOAT2& in, float* out);
+    void StoreFloat3(DirectX::XMFLOAT3& in, float* out);
+    void StoreFloat4(DirectX::XMFLOAT4& in, float* out);
+
+    void LoadFloat2(float* in, DirectX::XMFLOAT2& out);
+    void LoadFloat3(float* in, DirectX::XMFLOAT3& out);
+    void LoadFloat4(float* in, DirectX::XMFLOAT4& out);
+
     void ArrayControls(const char* label, std::uint32_t* pIndex, const std::function<void()>& onAdd, const std::function<void()>& onRemove);
 
     void Vertex(VertexPositionNormalTexture& vertex);
@@ -53,7 +61,7 @@ namespace DebugUI {
     void IMeshMenu(IMesh& iMesh);
     void ModelMenu(Model& model);
     void SpriteMenu(Sprite& sprite);
-    void IOutlineMenu(IOutline& outline);
+    void OutlineMenu(Outline& outline);
 
     void SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags);
 };

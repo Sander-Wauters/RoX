@@ -55,6 +55,42 @@ void DebugUI::HelpMarker(const char* desc) {
     }
 }
 
+void DebugUI::StoreFloat2(DirectX::XMFLOAT2& in, float* out) {
+    out[0] = in.x;
+    out[1] = in.y;
+}
+
+void DebugUI::StoreFloat3(DirectX::XMFLOAT3& in, float* out) {
+    out[0] = in.x;
+    out[1] = in.y;
+    out[2] = in.z;
+}
+
+void DebugUI::StoreFloat4(DirectX::XMFLOAT4& in, float* out) {
+    out[0] = in.x;
+    out[1] = in.y;
+    out[2] = in.z;
+    out[3] = in.w;
+}
+
+void DebugUI::LoadFloat2(float* in, DirectX::XMFLOAT2& out) {
+    out.x = in[0];
+    out.y = in[1];
+}
+
+void DebugUI::LoadFloat3(float* in, DirectX::XMFLOAT3& out) {
+    out.x = in[0];
+    out.y = in[1];
+    out.z = in[2];
+}
+
+void DebugUI::LoadFloat4(float* in, DirectX::XMFLOAT4& out) {
+    out.x = in[0];
+    out.y = in[1];
+    out.z = in[2];
+    out.w = in[3];
+}
+
 void DebugUI::ArrayControls(const char* label, std::uint32_t* pIndex, const std::function<void()>& onAdd, const std::function<void()>& onRemove) {
     static ImU32 steps = 1;
 
@@ -70,36 +106,43 @@ void DebugUI::ArrayControls(const char* label, std::uint32_t* pIndex, const std:
 }
 
 void DebugUI::Vertex(VertexPositionNormalTexture& vertex) {
-    DirectX::XMVECTOR position = DirectX::XMLoadFloat3(&vertex.position);
-    DirectX::XMVECTOR normal = DirectX::XMLoadFloat3(&vertex.normal);
-    DirectX::XMVECTOR texture = DirectX::XMLoadFloat2(&vertex.textureCoordinate);
+    float position[3];
+    StoreFloat3(vertex.position, position);
+    float normal[3];
+    StoreFloat3(vertex.normal, normal);
+    float texture[2];
+    StoreFloat2(vertex.textureCoordinate, texture);
 
-    if (ImGui::DragFloat3("position", position.m128_f32))
-        DirectX::XMStoreFloat3(&vertex.position, position);
-    if (ImGui::DragFloat3("normal", normal.m128_f32))
-        DirectX::XMStoreFloat3(&vertex.normal, normal);
-    if (ImGui::DragFloat2("texture", texture.m128_f32))
-        DirectX::XMStoreFloat2(&vertex.textureCoordinate, texture);
+    if (ImGui::DragFloat3("position", position))
+        LoadFloat3(position, vertex.position);
+    if (ImGui::DragFloat3("normal", normal))
+        LoadFloat3(normal, vertex.normal);
+    if (ImGui::DragFloat2("texture", texture))
+        LoadFloat2(texture, vertex.textureCoordinate);
 }
 
 void DebugUI::Vertex(VertexPositionNormalTextureSkinning& vertex) {
-    DirectX::XMVECTOR position = DirectX::XMLoadFloat3(&vertex.position);
-    DirectX::XMVECTOR normal = DirectX::XMLoadFloat3(&vertex.normal);
-    DirectX::XMVECTOR texture = DirectX::XMLoadFloat2(&vertex.textureCoordinate);
-    DirectX::XMVECTOR weights = DirectX::XMLoadFloat4(&vertex.weights);
+    float position[3];
+    StoreFloat3(vertex.position, position);
+    float normal[3];
+    StoreFloat3(vertex.normal, normal);
+    float texture[2];
+    StoreFloat2(vertex.textureCoordinate, texture);
+    float weights[4];
+    StoreFloat4(vertex.weights, weights);
 
     std::uint32_t indices[4] = { vertex.indices & 0xff, (vertex.indices >> 8) & 0xff, (vertex.indices >> 16) & 0xff, (vertex.indices >> 24) & 0xff };
 
-    if (ImGui::DragFloat3("position", position.m128_f32))
-        DirectX::XMStoreFloat3(&vertex.position, position);
-    if (ImGui::DragFloat3("normal", normal.m128_f32))
-        DirectX::XMStoreFloat3(&vertex.normal, normal);
-    if (ImGui::DragFloat2("texture", texture.m128_f32))
-        DirectX::XMStoreFloat2(&vertex.textureCoordinate, texture);
+    if (ImGui::DragFloat3("position", position))
+        LoadFloat3(position, vertex.position);
+    if (ImGui::DragFloat3("normal", normal))
+        LoadFloat3(normal, vertex.normal);
+    if (ImGui::DragFloat2("texture", texture))
+        LoadFloat2(texture, vertex.textureCoordinate);
     if (ImGui::DragScalarN("blend indices", ImGuiDataType_U32, indices, 4))
         vertex.SetBlendIndices({ indices[0], indices[1], indices[2], indices[3] });
-    if (ImGui::DragFloat4("blend weights", weights.m128_f32, .25f, 0.f, 0.f, "%.5f"))
-        vertex.SetBlendWeights({{ weights.m128_f32[0], weights.m128_f32[1], weights.m128_f32[2], weights.m128_f32[3] }});
+    if (ImGui::DragFloat4("blend weights", weights, .25f, 0.f, 0.f, "%.5f"))
+        vertex.SetBlendWeights({ weights[0], weights[1], weights[2], weights[3] });
 }
 
 void DebugUI::Vertices(std::vector<VertexPositionNormalTexture>& vertices) {
@@ -188,12 +231,10 @@ void DebugUI::Indices(std::vector<std::uint16_t>& indices, std::uint16_t numVert
 }
 
 void DebugUI::Matrix(DirectX::XMMATRIX& matrix) {
-    ImGui::DragFloat4("r0", matrix.r[0].m128_f32, 0.25f);
-    ImGui::SameLine();
-    HelpMarker("matrix row-major");
-    ImGui::DragFloat4("r1", matrix.r[1].m128_f32, 0.25f);
-    ImGui::DragFloat4("r2", matrix.r[2].m128_f32, 0.25f);
-    ImGui::DragFloat4("r3", matrix.r[3].m128_f32, 0.25f);
+    DirectX::XMFLOAT4X4 M;
+    DirectX::XMStoreFloat4x4(&M, matrix);
+    Matrix(M);
+    matrix = DirectX::XMLoadFloat4x4(&M);
 }
 
 void DebugUI::Matrix(DirectX::XMFLOAT4X4& matrix) {
@@ -243,10 +284,17 @@ bool DebugUI::AffineTransformation(DirectX::XMMATRIX& matrix) {
         DirectX::XMFLOAT3 euler = q.ToEuler();
         r = DirectX::XMLoadFloat3(&euler);
 
-        origin[0]      = 0.f;           origin[1]      = 0.f;           origin[2]      = 0.f;
-        translation[0] = t.m128_f32[0]; translation[1] = t.m128_f32[1]; translation[2] = t.m128_f32[2];
-        scale[0]       = s.m128_f32[0]; scale[1]       = s.m128_f32[1]; scale[2]       = s.m128_f32[2];
-        rotation[0]    = r.m128_f32[0]; rotation[1]    = r.m128_f32[1]; rotation[2]    = r.m128_f32[2];
+        DirectX::XMFLOAT3 tf;
+        DirectX::XMFLOAT3 sf;
+        DirectX::XMFLOAT3 rf;
+        DirectX::XMStoreFloat3(&tf, t);
+        DirectX::XMStoreFloat3(&sf, s);
+        DirectX::XMStoreFloat3(&rf, r);
+
+        origin[0]      = 0.f;  origin[1]      = 0.f;  origin[2]      = 0.f;
+        translation[0] = tf.x; translation[1] = tf.y; translation[2] = tf.z;
+        scale[0]       = sf.x; scale[1]       = sf.y; scale[2]       = sf.z;
+        rotation[0]    = rf.x; rotation[1]    = rf.y; rotation[2]    = rf.z;
     }
     ImGui::SameLine();
     if (ImGui::Button("Reset")) {
@@ -338,18 +386,28 @@ void DebugUI::MaterialTextures(Material& material) {
 }
 
 void DebugUI::MaterialColors(Material& material) {
-    ImGui::ColorEdit4(std::string("diffuse##" + material.GetName()).c_str(), material.GetDiffuseColor().m128_f32);
-    ImGui::ColorEdit4(std::string("emissive##" + material.GetName()).c_str(), material.GetEmissiveColor().m128_f32);
-    ImGui::ColorEdit4(std::string("specular##" + material.GetName()).c_str(), material.GetSpecularColor().m128_f32);
+    float diffuse[4];
+    StoreFloat4(material.GetDiffuseColor(), diffuse);
+    float emissive[4];
+    StoreFloat4(material.GetEmissiveColor(), emissive);
+    float specular[4];
+    StoreFloat4(material.GetSpecularColor(), specular);
+
+    if (ImGui::ColorEdit4(std::string("diffuse##" + material.GetName()).c_str(), diffuse))
+        LoadFloat4(diffuse, material.GetDiffuseColor());
+    if (ImGui::ColorEdit4(std::string("emissive##" + material.GetName()).c_str(), emissive))
+        LoadFloat4(emissive, material.GetEmissiveColor());
+    if (ImGui::ColorEdit4(std::string("specular##" + material.GetName()).c_str(), specular))
+        LoadFloat4(specular, material.GetSpecularColor());
 }
 
 void DebugUI::MaterialSelector(std::uint32_t& index, std::vector<std::shared_ptr<Material>>& materials) {
     ImVec2 buttonSize(ImGui::GetFontSize(), ImGui::GetFontSize());
 
     for (std::uint32_t i = 0; i < materials.size(); ++i) {
-        ImVec4 diffuse  = { materials[i]->GetDiffuseColor().m128_f32[0], materials[i]->GetDiffuseColor().m128_f32[1], materials[i]->GetDiffuseColor().m128_f32[2], materials[i]->GetDiffuseColor().m128_f32[3] };
-        ImVec4 emissive = { materials[i]->GetEmissiveColor().m128_f32[0], materials[i]->GetEmissiveColor().m128_f32[1], materials[i]->GetEmissiveColor().m128_f32[2], materials[i]->GetEmissiveColor().m128_f32[3] };
-        ImVec4 specular = { materials[i]->GetSpecularColor().m128_f32[0], materials[i]->GetSpecularColor().m128_f32[1], materials[i]->GetSpecularColor().m128_f32[2], materials[i]->GetSpecularColor().m128_f32[3] };
+        ImVec4 diffuse  = { materials[i]->GetDiffuseColor().x, materials[i]->GetDiffuseColor().y, materials[i]->GetDiffuseColor().z, materials[i]->GetDiffuseColor().w };
+        ImVec4 emissive = { materials[i]->GetEmissiveColor().x, materials[i]->GetEmissiveColor().y, materials[i]->GetEmissiveColor().z, materials[i]->GetEmissiveColor().w };
+        ImVec4 specular = { materials[i]->GetSpecularColor().x, materials[i]->GetSpecularColor().y, materials[i]->GetSpecularColor().z, materials[i]->GetSpecularColor().w };
 
         ImGui::SetNextItemAllowOverlap();
         if (ImGui::Selectable(materials[i]->GetName().c_str(), i == index))
@@ -649,27 +707,28 @@ void DebugUI::SpriteMenu(Sprite& sprite) {
         if (ImGui::DragFloat(std::string("angle##" + sprite.GetName()).c_str(), &angle))
             sprite.SetAngle(DirectX::XMConvertToRadians(angle));
     }
+    float color[4];
+    StoreFloat4(sprite.GetColor(), color);
     if (ImGui::CollapsingHeader("Color"))
-        ImGui::ColorEdit4(std::string("color##" + sprite.GetName()).c_str(), sprite.GetColor().m128_f32);
+        if (ImGui::ColorEdit4(std::string("color##" + sprite.GetName()).c_str(), color))
+            LoadFloat4(color, sprite.GetColor());
 }
 
-void DebugUI::IOutlineMenu(IOutline& outline) {
-    bool visible = outline.IsVisible();
-    if (ImGui::Checkbox("Visible", &visible))
-        outline.SetVisible(visible);
+void DebugUI::OutlineMenu(Outline& outline) {
+    ImGui::Checkbox("Visible", &outline.visible);
     if (ImGui::CollapsingHeader("Position")) {
         if (auto p = dynamic_cast<BoundingBodyOutline<DirectX::BoundingBox>*>(&outline)) {
-            DirectX::BoundingBox& b = p->GetBounds();
+            DirectX::BoundingBox& b = p->boundingBody;
 
             static float center[3] = { b.Center.x, b.Center.y, b.Center.z };
             static float extents[3] = { b.Extents.x, b.Extents.y, b.Extents.z };
 
-            if (ImGui::DragFloat3(std::string("center##" + outline.GetName()).c_str(), center))
+            if (ImGui::DragFloat3(std::string("center##" + outline.name).c_str(), center))
                 b.Center = { center[0], center[1], center[2] };
-            if (ImGui::DragFloat3(std::string("extents##" + outline.GetName()).c_str(), extents))
+            if (ImGui::DragFloat3(std::string("extents##" + outline.name).c_str(), extents))
                 b.Extents = { extents[0], extents[1], extents[2] };
         } else if (auto p = dynamic_cast<BoundingBodyOutline<DirectX::BoundingFrustum>*>(&outline)) {
-            DirectX::BoundingFrustum& b = p->GetBounds();
+            DirectX::BoundingFrustum& b = p->boundingBody;
 
             static float origin[3] = { b.Origin.x, b.Origin.y, b.Origin.z };
 
@@ -677,21 +736,21 @@ void DebugUI::IOutlineMenu(IOutline& outline) {
             DirectX::XMFLOAT3 r = q.ToEuler();
             static float rotation[3] = { r.x, r.y, r.z };
 
-            if (ImGui::DragFloat3(std::string("origin##" + outline.GetName()).c_str(), origin))
+            if (ImGui::DragFloat3(std::string("origin##" + outline.name).c_str(), origin))
                 b.Origin = { origin[0], origin[1], origin[2] };
-            if (ImGui::DragFloat3(std::string("rotation##" + outline.GetName()).c_str(), rotation))
+            if (ImGui::DragFloat3(std::string("rotation##" + outline.name).c_str(), rotation))
                 DirectX::XMStoreFloat4(&b.Orientation, DirectX::XMQuaternionRotationRollPitchYaw(
                             DirectX::XMConvertToRadians(rotation[0]), 
                             DirectX::XMConvertToRadians(rotation[1]), 
                             DirectX::XMConvertToRadians(rotation[2])));
-            ImGui::DragFloat(std::string("right slope##" + outline.GetName()).c_str(), &b.RightSlope);
-            ImGui::DragFloat(std::string("left slope##" + outline.GetName()).c_str(), &b.LeftSlope);
-            ImGui::DragFloat(std::string("top slope##" + outline.GetName()).c_str(), &b.TopSlope);
-            ImGui::DragFloat(std::string("bottom slope##" + outline.GetName()).c_str(), &b.BottomSlope);
-            ImGui::DragFloat(std::string("near##" + outline.GetName()).c_str(), &b.Near);
-            ImGui::DragFloat(std::string("far##" + outline.GetName()).c_str(), &b.Far);
+            ImGui::DragFloat(std::string("right slope##" + outline.name).c_str(), &b.RightSlope);
+            ImGui::DragFloat(std::string("left slope##" + outline.name).c_str(), &b.LeftSlope);
+            ImGui::DragFloat(std::string("top slope##" + outline.name).c_str(), &b.TopSlope);
+            ImGui::DragFloat(std::string("bottom slope##" + outline.name).c_str(), &b.BottomSlope);
+            ImGui::DragFloat(std::string("near##" + outline.name).c_str(), &b.Near);
+            ImGui::DragFloat(std::string("far##" + outline.name).c_str(), &b.Far);
         } else if (auto p = dynamic_cast<BoundingBodyOutline<DirectX::BoundingOrientedBox>*>(&outline)) {
-            DirectX::BoundingOrientedBox& b = p->GetBounds();
+            DirectX::BoundingOrientedBox& b = p->boundingBody;
 
             static float center[3] = { b.Center.x, b.Center.y, b.Center.z };
             static float extents[3] = { b.Extents.x, b.Extents.y, b.Extents.z };
@@ -699,58 +758,105 @@ void DebugUI::IOutlineMenu(IOutline& outline) {
             DirectX::XMFLOAT3 r = q.ToEuler();
             static float rotation[3] = { r.x, r.y, r.z };
 
-            if (ImGui::DragFloat3(std::string("center##" + outline.GetName()).c_str(), center))
+            if (ImGui::DragFloat3(std::string("center##" + outline.name).c_str(), center))
                 b.Center = { center[0], center[1], center[2] };
-            if (ImGui::DragFloat3(std::string("extents##" + outline.GetName()).c_str(), extents))
+            if (ImGui::DragFloat3(std::string("extents##" + outline.name).c_str(), extents))
                 b.Extents = { extents[0], extents[1], extents[2] };
-            if (ImGui::DragFloat3(std::string("rotation##" + outline.GetName()).c_str(), rotation))
+            if (ImGui::DragFloat3(std::string("rotation##" + outline.name).c_str(), rotation))
                 DirectX::XMStoreFloat4(&b.Orientation, DirectX::XMQuaternionRotationRollPitchYaw(
                             DirectX::XMConvertToRadians(rotation[0]), 
                             DirectX::XMConvertToRadians(rotation[1]), 
                             DirectX::XMConvertToRadians(rotation[2])));
         } else if (auto p = dynamic_cast<BoundingBodyOutline<DirectX::BoundingSphere>*>(&outline)) {
-            DirectX::BoundingSphere& b = p->GetBounds();
+            DirectX::BoundingSphere& b = p->boundingBody;
 
             static float center[3] = { b.Center.x, b.Center.y, b.Center.z };
 
-            if (ImGui::DragFloat3(std::string("center##" + outline.GetName()).c_str(), center))
+            if (ImGui::DragFloat3(std::string("center##" + outline.name).c_str(), center))
                 b.Center = { center[0], center[1], center[2] };
-            ImGui::DragFloat(std::string("radius##" + outline.GetName()).c_str(), &b.Radius);
+            ImGui::DragFloat(std::string("radius##" + outline.name).c_str(), &b.Radius);
         } else if (auto p = dynamic_cast<GridOutline*>(&outline)) {
-            static std::uint16_t xDiv = p->GetXDivsions();
-            static std::uint16_t yDiv = p->GetYDivsions();
+            ImGui::DragScalar(std::string("x divisions##" + outline.name).c_str(), ImGuiDataType_U16, &p->xDivisions);
+            ImGui::DragScalar(std::string("y divisions##" + outline.name).c_str(), ImGuiDataType_U16, &p->yDivisions);
 
-            if (ImGui::DragScalar(std::string("x divisions##" + outline.GetName()).c_str(), ImGuiDataType_U16, &xDiv))
-                p->SetXDivisions(xDiv);
-            if (ImGui::DragScalar(std::string("y divisions##" + outline.GetName()).c_str(), ImGuiDataType_U16, &yDiv))
-                p->SetYDivisions(yDiv);
-            ImGui::DragFloat3(std::string("x axis##" + outline.GetName()).c_str(), p->GetXAxis().m128_f32);
-            ImGui::DragFloat3(std::string("y axis##" + outline.GetName()).c_str(), p->GetYAxis().m128_f32);
-            ImGui::DragFloat3(std::string("origin##" + outline.GetName()).c_str(), p->GetOrigin().m128_f32);
+            float xAxis[3];
+            StoreFloat3(p->xAxis, xAxis);
+            float yAxis[3];
+            StoreFloat3(p->yAxis, yAxis);
+            float origin[3];
+            StoreFloat3(p->origin, origin);
+
+            if (ImGui::DragFloat3(std::string("x axis##" + outline.name).c_str(), xAxis))
+                LoadFloat3(xAxis, p->xAxis);
+            if (ImGui::DragFloat3(std::string("y axis##" + outline.name).c_str(), yAxis))
+                LoadFloat3(yAxis, p->yAxis);
+            if (ImGui::DragFloat3(std::string("origin##" + outline.name).c_str(), origin))
+                LoadFloat3(origin, p->origin);
         } else if (auto p = dynamic_cast<RingOutline*>(&outline)) {
-            ImGui::DragFloat3(std::string("minor axis##" + outline.GetName()).c_str(), p->GetMajorAxis().m128_f32);
-            ImGui::DragFloat3(std::string("major axis##" + outline.GetName()).c_str(), p->GetMinorAxis().m128_f32);
-            ImGui::DragFloat3(std::string("origin##" + outline.GetName()).c_str(), p->GetOrigin().m128_f32);
+            float minorAxis[3];
+            StoreFloat3(p->minorAxis, minorAxis);
+            float majorAxis[3];
+            StoreFloat3(p->majorAxis, majorAxis);
+            float origin[3];
+            StoreFloat3(p->origin, origin);
+
+            if (ImGui::DragFloat3(std::string("minor axis##" + outline.name).c_str(), majorAxis))
+                LoadFloat3(minorAxis, p->minorAxis);
+            if (ImGui::DragFloat3(std::string("major axis##" + outline.name).c_str(), minorAxis))
+                LoadFloat3(majorAxis, p->majorAxis);
+            if (ImGui::DragFloat3(std::string("origin##" + outline.name).c_str(), origin))
+                LoadFloat3(origin, p->origin);
         } else if (auto p = dynamic_cast<RayOutline*>(&outline)) {
-            bool normalized = p->IsNormalized();
-            if (ImGui::Checkbox("Normalized", &normalized))
-                p->SetNormalized(normalized);
-            ImGui::DragFloat3(std::string("direction##" + outline.GetName()).c_str(), p->GetDirection().m128_f32);
-            ImGui::DragFloat3(std::string("origin##" + outline.GetName()).c_str(), p->GetOrigin().m128_f32);
+            ImGui::Checkbox("Normalized", &p->normalized);
+
+            float direction[3];
+            StoreFloat3(p->direction, direction);
+            float origin[3];
+            StoreFloat3(p->origin, origin);
+
+            if (ImGui::DragFloat3(std::string("direction##" + outline.name).c_str(), direction))
+                LoadFloat3(direction, p->direction);
+            if (ImGui::DragFloat3(std::string("origin##" + outline.name).c_str(), origin))
+                LoadFloat3(origin, p->origin);
         } else if (auto p = dynamic_cast<TriangleOutline*>(&outline)) {
-            ImGui::DragFloat3(std::string("point A##" + outline.GetName()).c_str(), p->GetPointA().m128_f32);
-            ImGui::DragFloat3(std::string("point B##" + outline.GetName()).c_str(), p->GetPointB().m128_f32);
-            ImGui::DragFloat3(std::string("point C##" + outline.GetName()).c_str(), p->GetPointC().m128_f32);
+            float pointA[3];
+            StoreFloat3(p->pointA, pointA);
+            float pointB[3];
+            StoreFloat3(p->pointB, pointB);
+            float pointC[3];
+            StoreFloat3(p->pointC, pointC);
+
+            if (ImGui::DragFloat3(std::string("point A##" + outline.name).c_str(), pointA))
+                LoadFloat3(pointA, p->pointA);
+            if (ImGui::DragFloat3(std::string("point B##" + outline.name).c_str(), pointB))
+                LoadFloat3(pointB, p->pointB);
+            if (ImGui::DragFloat3(std::string("point C##" + outline.name).c_str(), pointC))
+                LoadFloat3(pointC, p->pointC);
         } else if (auto p = dynamic_cast<QuadOutline*>(&outline)) {
-            ImGui::DragFloat3(std::string("point A##" + outline.GetName()).c_str(), p->GetPointA().m128_f32);
-            ImGui::DragFloat3(std::string("point B##" + outline.GetName()).c_str(), p->GetPointB().m128_f32);
-            ImGui::DragFloat3(std::string("point C##" + outline.GetName()).c_str(), p->GetPointC().m128_f32);
-            ImGui::DragFloat3(std::string("point D##" + outline.GetName()).c_str(), p->GetPointD().m128_f32);
+            float pointA[3];
+            StoreFloat3(p->pointA, pointA);
+            float pointB[3];
+            StoreFloat3(p->pointB, pointB);
+            float pointC[3];
+            StoreFloat3(p->pointC, pointC);
+            float pointD[3];
+            StoreFloat3(p->pointD, pointD);
+
+            if (ImGui::DragFloat3(std::string("point A##" + outline.name).c_str(), pointA))
+                LoadFloat3(pointA, p->pointA);
+            if (ImGui::DragFloat3(std::string("point B##" + outline.name).c_str(), pointB))
+                LoadFloat3(pointB, p->pointB);
+            if (ImGui::DragFloat3(std::string("point C##" + outline.name).c_str(), pointC))
+                LoadFloat3(pointC, p->pointC);
+            if (ImGui::DragFloat3(std::string("point D##" + outline.name).c_str(), pointD))
+                LoadFloat3(pointD, p->pointD);
         }
     }
+    float color[4];
+    StoreFloat4(outline.color, color);
     if (ImGui::CollapsingHeader("Color"))
-        ImGui::ColorEdit4(std::string("color##" + outline.GetName()).c_str(), outline.GetColor().m128_f32);
-
+        if (ImGui::ColorEdit4(std::string("color##" + outline.name).c_str(), color))
+            LoadFloat4(color, outline.color);
 }
 
 void DebugUI::SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags) {
@@ -838,7 +944,7 @@ void DebugUI::SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags) {
     if (ImGui::CollapsingHeader("Outlines")) {
         for (auto& outlinePair : scene.GetOutlines(0)) {
             if (ImGui::TreeNode(outlinePair.first.c_str())) {
-                IOutlineMenu(*outlinePair.second);
+                OutlineMenu(*outlinePair.second);
                 ImGui::TreePop();
             }
         }

@@ -9,9 +9,9 @@ Material::Material(
     m_diffuseMapFilePath(diffuseMapFilePath),
     m_normalMapFilePath(normalMapFilePath),
     m_flags(flags),
-    m_diffuseColor({{ 1.f, 1.f, 1.f, 1.f }}),
-    m_emissiveColor({{ 0.f, 0.f, 0.f }}),
-    m_specularColor({{ 1.f, 1.f, 1.f }})
+    m_diffuseColor({ 1.f, 1.f, 1.f, 1.f }),
+    m_emissiveColor({ 0.f, 0.f, 0.f, 1.f }),
+    m_specularColor({ 1.f, 1.f, 1.f, 1.f })
 {}
 
 Material::~Material() noexcept {
@@ -33,15 +33,15 @@ std::uint32_t Material::GetFlags() const noexcept {
     return m_flags;
 }
 
-DirectX::XMVECTOR& Material::GetDiffuseColor() noexcept {
+DirectX::XMFLOAT4& Material::GetDiffuseColor() noexcept {
     return m_diffuseColor;
 }
 
-DirectX::XMVECTOR& Material::GetEmissiveColor() noexcept {
+DirectX::XMFLOAT4& Material::GetEmissiveColor() noexcept {
     return m_emissiveColor;
 }
 
-DirectX::XMVECTOR& Material::GetSpecularColor() noexcept {
+DirectX::XMFLOAT4& Material::GetSpecularColor() noexcept {
     return m_specularColor;
 }
 
