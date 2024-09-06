@@ -11,8 +11,10 @@
 // Contains data that will be rendered to the display.
 class AssetBatch {
     public:
-        AssetBatch() noexcept;
+        AssetBatch(const std::string name, bool visible = true) noexcept;
         ~AssetBatch() noexcept;
+
+        bool operator== (const AssetBatch& other) const noexcept;
 
     public:
         void Add(std::shared_ptr<Model> pModel);
@@ -26,6 +28,9 @@ class AssetBatch {
         void RemoveOutline(std::string name);
 
     public:
+        std::string GetName() const noexcept;
+        bool IsVisible() const noexcept;
+
         std::shared_ptr<Model>& GetModel(std::string name);
         std::shared_ptr<Sprite>& GetSprite(std::string name);
         std::shared_ptr<Text>& GetText(std::string name);
@@ -49,7 +54,12 @@ class AssetBatch {
         std::uint64_t GetNumLoadedVertices() const noexcept;
         std::uint64_t GetNumRenderedVertices() const noexcept;
 
+        void SetVisible(bool visible);
+
     private:
+        const std::string m_name;
+        bool m_visible;
+
         std::unordered_map<std::string, std::shared_ptr<Model>> m_models;
         std::unordered_map<std::string, std::shared_ptr<Sprite>> m_sprites;
         std::unordered_map<std::string, std::shared_ptr<Text>> m_texts;

@@ -2,8 +2,10 @@
 
 #include "Util/pch.h"
 
-AssetBatch::AssetBatch() 
-    noexcept : m_models({}),
+AssetBatch::AssetBatch(const std::string name, bool visible) 
+    noexcept : m_name(name),
+    m_visible(visible),
+    m_models({}),
     m_sprites({}),
     m_texts({}),
     m_outlines({})
@@ -11,6 +13,10 @@ AssetBatch::AssetBatch()
 
 AssetBatch::~AssetBatch() noexcept 
 {}
+
+bool AssetBatch::operator== (const AssetBatch& other) const noexcept {
+    return m_name == other.m_name;
+}
 
 void AssetBatch::Add(std::shared_ptr<Model> pMesh) {
     std::shared_ptr<Model>& entry = m_models[pMesh->GetName()];
@@ -58,6 +64,14 @@ void AssetBatch::RemoveText(std::string name) {
 
 void AssetBatch::RemoveOutline(std::string name) {
     m_outlines.erase(name);
+}
+
+std::string AssetBatch::GetName() const noexcept {
+    return m_name;
+}
+
+bool AssetBatch::IsVisible() const noexcept {
+    return m_visible;
 }
 
 std::shared_ptr<Model>& AssetBatch::GetModel(std::string name) {
@@ -215,3 +229,8 @@ std::uint64_t AssetBatch::GetNumRenderedVertices() const noexcept {
     }
     return count;
 }
+
+void AssetBatch::SetVisible(bool visible) {
+    m_visible = visible;
+}
+

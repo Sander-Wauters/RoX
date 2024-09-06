@@ -1,9 +1,8 @@
 #include "DeviceResourceData.h"
 
-#include "RoX/VertexTypes.h"
-
 DeviceResourceData::DeviceResourceData(DeviceResources& deviceResources) 
-    noexcept : m_deviceResources(deviceResources)
+    noexcept : m_pScene(nullptr),
+    m_deviceResources(deviceResources)
 {
     m_deviceResources.RegisterDeviceObserver(this);
 }
@@ -20,14 +19,44 @@ void DeviceResourceData::OnDeviceRestored() {
 }
 
 void DeviceResourceData::Load(Scene& scene) {
-    m_pScene = &scene;
-    m_dataBatches.clear();
-    m_dataBatches.reserve(m_pScene->GetNumAssetBatches());
-    for (std::uint8_t i = 0; i < m_pScene->GetNumAssetBatches(); ++i) {
-        auto pBatch = std::make_unique<DeviceDataBatch>(m_deviceResources);
-        pBatch->Add(*m_pScene->GetAssetBatches()[i]);
-        m_dataBatches.push_back(std::move(pBatch));
+    // First time loading a scene so no need to check for loaded batches.
+    if (!m_pScene) {
+        m_pScene = &scene;
+        m_dataBatches.reserve(m_pScene->GetNumAssetBatches());
+        for (std::uint8_t i = 0; i < m_pScene->GetNumAssetBatches(); ++i) {
+            auto pBatch = std::make_unique<DeviceDataBatch>(m_deviceResources);
+            pBatch->Add(*m_pScene->GetAssetBatches()[i]);
+            m_dataBatches.push_back(std::move(pBatch));
+        }
+        return;
     }
+
+    // Find all batches that are already loaded.
+    std::vector<std::string> currentlyLoadedBatches;
+    std::vector<std::unique_ptr<DeviceDataBatch>> currentlyLoadedDataBatches;
+    for (std::uint8_t i = 0; i < m_pScene->GetNumAssetBatches(); ++i) {
+        for (std::uint8_t j = 0; j < scene.GetNumAssetBatches(); ++j) {
+            if (m_pScene->GetAssetBatches()[i]->GetName() == scene.GetAssetBatches()[j]->GetName()) {
+                currentlyLoadedBatches.push_back(scene.GetAssetBatches()[i]->GetName());
+                currentlyLoadedDataBatches.push_back(std::move(m_dataBatches[i]));
+                break;
+            }
+        }
+    }
+
+    // Load in the new batches and move over the previously loaded batches.
+    m_dataBatches.clear();
+    for (std::uint8_t i = 0; i < scene.GetNumAssetBatches(); ++i) {
+        auto pos = std::find(currentlyLoadedBatches.begin(), currentlyLoadedBatches.end(), scene.GetAssetBatches()[i]->GetName()) - currentlyLoadedBatches.begin();
+        if (pos < currentlyLoadedBatches.size()) {
+            m_dataBatches.push_back(std::move(currentlyLoadedDataBatches[pos]));
+        } else {
+            auto pBatch = std::make_unique<DeviceDataBatch>(m_deviceResources);
+            pBatch->Add(*scene.GetAssetBatches()[i]);
+            m_dataBatches.push_back(std::move(pBatch));
+        }
+    }
+    m_pScene = &scene;
 }
 
 void DeviceResourceData::UpdateEffects() {
@@ -76,10 +105,6 @@ Scene& DeviceResourceData::GetScene() const noexcept {
 
 std::uint8_t DeviceResourceData::GetNumDataBatches() const noexcept {
     return m_pScene->GetNumAssetBatches();
-}
-
-const std::unique_ptr<DeviceDataBatch>& DeviceResourceData::GetDataBatche(std::uint8_t batch) const noexcept {
-    return m_dataBatches[batch];
 }
 
 const std::vector<std::unique_ptr<DeviceDataBatch>>& DeviceResourceData::GetDataBatches() const noexcept {

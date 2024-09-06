@@ -140,8 +140,9 @@ void Renderer::Impl::Render(const std::function<void()>& renderImGui) {
     }
 
     Clear();
-    for (const std::unique_ptr<DeviceDataBatch>& pBatch : m_pDeviceResourceData->GetDataBatches()) {
-        RenderBatch(*pBatch);
+    for (std::uint8_t i = 0; i < m_pDeviceResourceData->GetNumDataBatches(); ++i) {
+        if (m_pDeviceResourceData->GetScene().GetAssetBatches()[i]->IsVisible())
+            RenderBatch(*m_pDeviceResourceData->GetDataBatches()[i]);
     }
 
     // Show the new frame.

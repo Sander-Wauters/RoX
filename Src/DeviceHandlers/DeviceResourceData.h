@@ -32,7 +32,6 @@ class DeviceResourceData : public IDeviceObserver {
 
         std::uint8_t GetNumDataBatches() const noexcept;
 
-        const std::unique_ptr<DeviceDataBatch>& GetDataBatche(std::uint8_t batch) const noexcept;
         const std::vector<std::unique_ptr<DeviceDataBatch>>& GetDataBatches() const noexcept;
         DirectX::DescriptorHeap* GetImGuiDescriptorHeap() noexcept;
         DirectX::CommonStates* GetImGuiStates() noexcept;
