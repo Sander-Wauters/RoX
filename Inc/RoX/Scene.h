@@ -26,7 +26,7 @@ class Scene {
         void Add(std::uint8_t batch, std::shared_ptr<Text> pText);
         void Add(std::uint8_t batch, std::shared_ptr<Outline> pOutline);
 
-        void RemoveMesh(std::uint8_t batch, std::string name);
+        void RemoveModel(std::uint8_t batch, std::string name);
         void RemoveSprite(std::uint8_t batch, std::string name);
         void RemoveText(std::uint8_t batch, std::string name);
         void RemoveOutline(std::uint8_t batch, std::string name);

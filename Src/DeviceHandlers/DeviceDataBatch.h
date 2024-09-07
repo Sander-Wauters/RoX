@@ -4,8 +4,9 @@
 #include "../Util/dxtk12pch.h"
 
 #include "RoX/AssetBatch.h"
+#include "RoX/IAssetBatchObserver.h"
 #include "RoX/Material.h"
-#include "Rox/Model.h"
+#include "RoX/Model.h"
 #include "RoX/Sprite.h"
 #include "RoX/Text.h"
 
@@ -23,9 +24,9 @@ using TexturePair  = std::pair<const std::wstring,              std::unique_ptr<
 using SpritePair   = std::pair<const std::shared_ptr<Sprite>,   std::unique_ptr<TextureDeviceData>>;
 using TextPair     = std::pair<const std::shared_ptr<Text>,     std::unique_ptr<TextDeviceData>>;
 
-class DeviceDataBatch : public IDeviceObserver {
+class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
     public:
-        DeviceDataBatch(DeviceResources& deviceResources) noexcept;
+        DeviceDataBatch(DeviceResources& deviceResources, std::uint8_t descriptorHeapSize, bool& msaaEnabled) noexcept;
         ~DeviceDataBatch() noexcept;
 
         DeviceDataBatch(DeviceDataBatch& other) noexcept;
@@ -34,34 +35,46 @@ class DeviceDataBatch : public IDeviceObserver {
         void OnDeviceLost() override;
         void OnDeviceRestored() override;
 
+        // Used when loading in a new Scene.
         void Add(const AssetBatch& batch);
         void Add(std::shared_ptr<Model> pModel);
         void Add(std::shared_ptr<Sprite> pSprite);
         void Add(std::shared_ptr<Text> pText);
 
+        // Used while a Scene is already loaded in.
+        void OnAdd(std::shared_ptr<Model>& pModel) override;
+        void OnAdd(std::shared_ptr<Sprite>& pSprite) override;
+        void OnAdd(std::shared_ptr<Text>& pText) override;
+        void OnAdd(std::shared_ptr<Outline>& pOutline) override;
+
+        void OnRemove(std::shared_ptr<Model>& pModel) override;
+        void OnRemove(std::shared_ptr<Sprite>& pSprite) override;
+        void OnRemove(std::shared_ptr<Text>& pText) override;
+        void OnRemove(std::shared_ptr<Outline>& pOutline) override;
+
         void UpdateEffects(DirectX::XMMATRIX view, DirectX::XMMATRIX projection);
 
-        void CreateDeviceDependentResources(bool msaaEnabled);
-        void CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch, bool msaaEnabled);
+        void CreateDeviceDependentResources();
+        void CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
         void CreateWindowSizeDependentResources();
 
     private:
-        void CreateSpriteResource(ID3D12Device* pDevice, SpritePair& spritePair, DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void CreateTextResource(ID3D12Device* pDevice, TextPair& textPair, DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void CreateTextureResource(ID3D12Device* pDevice, TexturePair& texturePair, DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void CreateSpriteResource(ID3D12Device* pDevice, const std::shared_ptr<Sprite>& pSprite, std::unique_ptr<TextureDeviceData>& pSpriteData, DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void CreateTextResource(ID3D12Device* pDevice, const std::shared_ptr<Text>& pText, std::unique_ptr<TextDeviceData>& pTextData, DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void CreateTextureResource(ID3D12Device* pDevice, const std::wstring& fileName, std::unique_ptr<TextureDeviceData>& pTextureData, DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void CreateModelResource(ID3D12Device* pDevice, std::unique_ptr<ModelDeviceData>& pModelData, DirectX::ResourceUploadBatch& resourceUploadBatch);
 
-        void CreateModelResource(ID3D12Device* pDevice, ModelPair& modelPair, DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void CreateMaterialResource(ID3D12Device* pDevice, MaterialPair& materialPair, DirectX::RenderTargetState& renderTargetState);
+        void CreateMaterialResource(ID3D12Device* pDevice, const std::shared_ptr<Material>& pMaterial, std::unique_ptr<DirectX::IEffect>& pIEffect, DirectX::RenderTargetState& renderTargetState);
         void CreateOutlineBatchResource(ID3D12Device* pDevice, DirectX::RenderTargetState& renderTargetState);
 
-        D3D12_INPUT_LAYOUT_DESC InputLayout(std::uint32_t flags) const;
+        D3D12_INPUT_LAYOUT_DESC InputLayoutDesc(std::uint32_t flags) const;
         D3D12_BLEND_DESC BlendDesc(std::uint32_t flags) const noexcept;
         D3D12_DEPTH_STENCIL_DESC DepthStencilDesc(std::uint32_t flags) const noexcept;
         D3D12_RASTERIZER_DESC RasterizerDesc(std::uint32_t flags) const noexcept;
         D3D12_GPU_DESCRIPTOR_HANDLE SemplerDesc(std::uint32_t flags) const noexcept;
 
         bool CompareFileExtension(std::wstring filePath, std::wstring valid);
-        void CreateTextureFromFile(std::wstring filePath, ID3D12Resource** pTexture, DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void CreateTextureFromFile(std::wstring filePath, ID3D12Resource** ppTexture, DirectX::ResourceUploadBatch& resourceUploadBatch);
 
     public:
         bool HasMaterials() const noexcept;
@@ -78,12 +91,14 @@ class DeviceDataBatch : public IDeviceObserver {
         const std::unordered_map<std::shared_ptr<Sprite>, std::unique_ptr<TextureDeviceData>>& GetSpriteData() const noexcept;
         const std::unordered_map<std::shared_ptr<Text>, std::unique_ptr<TextDeviceData>>& GetTextData() const noexcept;
 
-        std::uint64_t GetNumDescriptors() const noexcept;
+        std::uint8_t GetNumDescriptors() const noexcept;
 
     private:
         DeviceResources& m_deviceResources;
+        bool& m_msaaEnabled;
 
-        std::uint32_t m_nextDescriptorHeapIndex;
+        const std::uint8_t m_descriptorHeapSize;
+        std::uint8_t m_nextDescriptorHeapIndex;
         std::unique_ptr<DirectX::DescriptorHeap> m_pDescriptorHeap;
         std::unique_ptr<DirectX::CommonStates> m_pStates;
 

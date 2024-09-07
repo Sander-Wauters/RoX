@@ -1,17 +1,19 @@
 #pragma once
 
 #include <unordered_map>
+#include <unordered_set>
 #include <memory>
 
 #include "Model.h"
 #include "Sprite.h"
 #include "Text.h"
 #include "Outline.h"
+#include "IAssetBatchObserver.h"
 
 // Contains data that will be rendered to the display.
 class AssetBatch {
     public:
-        AssetBatch(const std::string name, bool visible = true) noexcept;
+        AssetBatch(const std::string name, bool visible = true, std::uint8_t maxAssets = 128) noexcept;
         ~AssetBatch() noexcept;
 
         bool operator== (const AssetBatch& other) const noexcept;
@@ -22,14 +24,18 @@ class AssetBatch {
         void Add(std::shared_ptr<Text> pText);
         void Add(std::shared_ptr<Outline> pOutline);
 
-        void RemoveMesh(std::string name);
+        void RemoveModel(std::string name);
         void RemoveSprite(std::string name);
         void RemoveText(std::string name);
         void RemoveOutline(std::string name);
 
+        void RegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept;
+
     public:
         std::string GetName() const noexcept;
         bool IsVisible() const noexcept;
+
+        std::uint8_t GetMaxAssets() const noexcept;
 
         std::shared_ptr<Model>& GetModel(std::string name);
         std::shared_ptr<Sprite>& GetSprite(std::string name);
@@ -60,8 +66,12 @@ class AssetBatch {
         const std::string m_name;
         bool m_visible;
 
+        const std::uint8_t m_maxAssets;
+
         std::unordered_map<std::string, std::shared_ptr<Model>> m_models;
         std::unordered_map<std::string, std::shared_ptr<Sprite>> m_sprites;
         std::unordered_map<std::string, std::shared_ptr<Text>> m_texts;
         std::unordered_map<std::string, std::shared_ptr<Outline>> m_outlines;
+
+        std::unordered_set<IAssetBatchObserver*> m_assetBatchObservers;
 };

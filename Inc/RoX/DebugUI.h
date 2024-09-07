@@ -7,6 +7,7 @@
 #include "Model.h"
 #include "Scene.h"
 #include "Outline.h"
+#include "AssetBatch.h"
 
 using ImGuiWindowFlags = int;
 
@@ -51,7 +52,7 @@ namespace DebugUI {
     void SubmeshInstances(Submesh& submesh);
     void SubmeshVertexIndexing(Submesh& submesh);
 
-    void ModelHierarchy(Scene& scene, Model** ppSelectedModel, IMesh** ppSelectedIMesh, Submesh** ppSelectedSubmesh);
+    void ModelHierarchy(AssetBatch& batch, Model** ppSelectedModel, IMesh** ppSelectedIMesh, Submesh** ppSelectedSubmesh);
     void BoneHierarchy(Model& model, std::uint32_t& selectedBone);
 
     void CameraMenu(Camera& camera);
@@ -62,6 +63,7 @@ namespace DebugUI {
     void ModelMenu(Model& model);
     void SpriteMenu(Sprite& sprite);
     void OutlineMenu(Outline& outline);
+    void AssetBatchMenu(AssetBatch& batch);
 
     void SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags);
 };

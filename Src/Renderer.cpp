@@ -109,10 +109,7 @@ void Renderer::Impl::Initialize(HWND window, int width, int height) {
 
 void Renderer::Impl::Load(Scene& scene) {
     m_pDeviceResources->WaitForGpu();
-    m_pDeviceResourceData->Load(scene);
-
-    CreateDeviceDependentResources();
-    CreateWindowSizeDependentResources();
+    m_pDeviceResourceData->Load(scene, m_msaaEnabled);
 }
 
 void Renderer::Impl::Update() {
@@ -454,12 +451,12 @@ void Renderer::Impl::CreateDeviceDependentResources() {
     }
 
     if (m_pDeviceResourceData->SceneLoaded())
-        m_pDeviceResourceData->CreateDeviceDependentResources(m_msaaEnabled);
+        m_pDeviceResourceData->CreateDeviceDependentResources();
 }
 
 void Renderer::Impl::CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
     if (m_pDeviceResourceData->SceneLoaded())
-        m_pDeviceResourceData->CreateRenderTargetDependentResources(resourceUploadBatch, m_msaaEnabled);
+        m_pDeviceResourceData->CreateRenderTargetDependentResources(resourceUploadBatch);
 }
 
 void Renderer::Impl::CreateWindowSizeDependentResources() {

@@ -28,8 +28,8 @@ void Scene::Add(std::uint8_t batch, std::shared_ptr<Outline> pOutline) {
     m_assetBatches[batch]->Add(pOutline);
 }
 
-void Scene::RemoveMesh(std::uint8_t batch, std::string name) {
-    m_assetBatches[batch]->RemoveMesh(name);
+void Scene::RemoveModel(std::uint8_t batch, std::string name) {
+    m_assetBatches[batch]->RemoveModel(name);
 }
 
 void Scene::RemoveSprite(std::uint8_t batch, std::string name) {

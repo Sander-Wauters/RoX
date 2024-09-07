@@ -3,6 +3,7 @@
 #include "Util/pch.h"
 #include "Util/dxtk12pch.h"
 
+#undef min
 #undef max
 #include "ImGui/imgui.h"
 
@@ -486,7 +487,7 @@ void DebugUI::SubmeshVertexIndexing(Submesh& submesh) {
     ImGui::PopItemWidth();
 }
 
-void DebugUI::ModelHierarchy(Scene& scene, Model** ppSelectedModel, IMesh** ppSelectedIMesh, Submesh** ppSelectedSubmesh) {
+void DebugUI::ModelHierarchy(AssetBatch& batch, Model** ppSelectedModel, IMesh** ppSelectedIMesh, Submesh** ppSelectedSubmesh) {
     int expandAll = -1;
     if (ImGui::Button("Expand all"))
         expandAll = 1;
@@ -495,7 +496,7 @@ void DebugUI::ModelHierarchy(Scene& scene, Model** ppSelectedModel, IMesh** ppSe
         expandAll = 0;
 
     static ImGuiTreeNodeFlags hierarchyBaseNodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-    for (auto modelPair : scene.GetModels(0)) {
+    for (auto modelPair : batch.GetModels()) {
         ImGuiTreeNodeFlags hierarchyNodeFlags = hierarchyBaseNodeFlags;
 
         if (expandAll != -1)
@@ -859,9 +860,90 @@ void DebugUI::OutlineMenu(Outline& outline) {
             LoadFloat4(color, outline.color);
 }
 
-void DebugUI::SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags) {
+void DebugUI::AssetBatchMenu(AssetBatch& batch) {
     int ID = 0;
 
+    static Model* pSelectedModel = nullptr;
+    static IMesh* pSelectedIMesh = nullptr;
+    static Submesh* pSelectedSubmesh = nullptr;
+
+    if (ImGui::CollapsingHeader(std::string("Stats##" + batch.GetName()).c_str())) {
+        ImGui::Text("Models:                     %llu", batch.GetNumModels());
+        ImGui::Text("Meshes:                     %llu", batch.GetNumMeshes());
+        ImGui::Text("Submeshes:                  %llu", batch.GetNumSubmeshes());
+        ImGui::Separator();
+        ImGui::Text("Materials:                  %llu", batch.GetNumMaterials());
+        ImGui::Text("Sprites:                    %llu", batch.GetNumSprites());
+        ImGui::Text("Texts:                      %llu", batch.GetNumTexts());
+        ImGui::Text("Outlines:                   %llu", batch.GetNumOutlines());
+        ImGui::Separator();
+        ImGui::Text("Submesh instances:          %llu", batch.GetNumSubmeshInstances());
+        ImGui::Text("Rendered submesh instances: %llu", batch.GetNumRenderedSubmeshInstances());
+        ImGui::Text("Loaded vertices:            %llu", batch.GetNumLoadedVertices());
+        ImGui::Text("Rendered vertices:          %llu", batch.GetNumRenderedVertices());
+
+        ImGui::Separator();
+        ImGui::Spacing();
+    }
+    if (ImGui::CollapsingHeader("Models")) {
+        ImGui::BeginChild(ImGui::GetID((void*)(intptr_t)ID++), ImVec2(ImGui::GetWindowWidth() - 15.f, 200.f), ImGuiChildFlags_None);
+        ModelHierarchy(batch, &pSelectedModel, &pSelectedIMesh, &pSelectedSubmesh);
+        ImGui::EndChild();
+
+        ImGui::Separator();
+
+        ImGui::Text("%s > %s > %s", 
+                pSelectedModel ? pSelectedModel->GetName().c_str() : "...", 
+                pSelectedIMesh ? pSelectedIMesh->GetName().c_str() : "...",
+                pSelectedSubmesh ? pSelectedSubmesh->GetName().c_str() : "...");
+        ImGui::SameLine();
+        HelpMarker("Model > Mesh > Submesh");
+
+        if (pSelectedSubmesh)
+            SubmeshMenu(*pSelectedSubmesh, *pSelectedModel);
+        else if (pSelectedIMesh)
+            IMeshMenu(*pSelectedIMesh);
+        else if (pSelectedModel)
+            ModelMenu(*pSelectedModel);
+
+        ImGui::Separator();
+        ImGui::Spacing();
+    }
+    if (ImGui::CollapsingHeader("Sprites")) {
+        for (auto& spritePair : batch.GetSprites()) {
+            if (ImGui::TreeNode(spritePair.first.c_str())) {
+                SpriteMenu(*spritePair.second);
+                ImGui::TreePop();
+            }
+        }
+        ImGui::Separator();
+        ImGui::Spacing();
+    }
+    if (ImGui::CollapsingHeader("Text")) {
+        for (auto& textPair : batch.GetTexts()) {
+            if (ImGui::TreeNode(textPair.first.c_str())) {
+                SpriteMenu(*textPair.second);
+                ImGui::TreePop();
+            }
+        }
+        ImGui::Separator();
+        ImGui::Spacing();
+    }
+    if (ImGui::CollapsingHeader("Outlines")) {
+        for (auto& outlinePair : batch.GetOutlines()) {
+            if (ImGui::TreeNode(outlinePair.first.c_str())) {
+                OutlineMenu(*outlinePair.second);
+                ImGui::TreePop();
+            }
+        }
+
+        ImGui::Separator();
+        ImGui::Spacing();
+    }
+
+}
+
+void DebugUI::SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags) {
     IMGUI_CHECKVERSION();
 
     static bool open = true;
@@ -869,11 +951,6 @@ void DebugUI::SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags) {
         ImGui::End();
         return;
     }
-
-    static Model* pSelectedModel = nullptr;
-    static IMesh* pSelectedIMesh = nullptr;
-    static Submesh* pSelectedSubmesh = nullptr;
-
     if (ImGui::CollapsingHeader("Stats")) {
         ImGui::Text("Models:                     %llu", scene.GetNumModels());
         ImGui::Text("Meshes:                     %llu", scene.GetNumMeshes());
@@ -897,60 +974,16 @@ void DebugUI::SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags) {
         ImGui::Separator();
         ImGui::Spacing();
     }
-    if (ImGui::CollapsingHeader("Models")) {
-        ImGui::BeginChild(ImGui::GetID((void*)(intptr_t)ID++), ImVec2(ImGui::GetWindowWidth() - 15.f, 200.f), ImGuiChildFlags_None);
-        ModelHierarchy(scene, &pSelectedModel, &pSelectedIMesh, &pSelectedSubmesh);
-        ImGui::EndChild();
 
-        ImGui::Separator();
-
-        ImGui::Text("%s > %s > %s", 
-                pSelectedModel ? pSelectedModel->GetName().c_str() : "...", 
-                pSelectedIMesh ? pSelectedIMesh->GetName().c_str() : "...",
-                pSelectedSubmesh ? pSelectedSubmesh->GetName().c_str() : "...");
-        ImGui::SameLine();
-        HelpMarker("Model > Mesh > Submesh");
-
-        if (pSelectedSubmesh)
-            SubmeshMenu(*pSelectedSubmesh, *pSelectedModel);
-        else if (pSelectedIMesh)
-            IMeshMenu(*pSelectedIMesh);
-        else if (pSelectedModel)
-            ModelMenu(*pSelectedModel);
-
-        ImGui::Separator();
-        ImGui::Spacing();
-    }
-    if (ImGui::CollapsingHeader("Sprites")) {
-        for (auto& spritePair : scene.GetSprites(0)) {
-            if (ImGui::TreeNode(spritePair.first.c_str())) {
-                SpriteMenu(*spritePair.second);
-                ImGui::TreePop();
-            }
+    ImGui::SeparatorText("Batches");
+    for (auto pBatch : scene.GetAssetBatches()) {
+        if (ImGui::CollapsingHeader(pBatch->GetName().c_str())) {
+            ImGui::Separator();
+            ImGui::Spacing();
+            AssetBatchMenu(*pBatch);
+            ImGui::Spacing();
+            ImGui::Separator();
         }
-        ImGui::Separator();
-        ImGui::Spacing();
-    }
-    if (ImGui::CollapsingHeader("Text")) {
-        for (auto& textPair : scene.GetTexts(0)) {
-            if (ImGui::TreeNode(textPair.first.c_str())) {
-                SpriteMenu(*textPair.second);
-                ImGui::TreePop();
-            }
-        }
-        ImGui::Separator();
-        ImGui::Spacing();
-    }
-    if (ImGui::CollapsingHeader("Outlines")) {
-        for (auto& outlinePair : scene.GetOutlines(0)) {
-            if (ImGui::TreeNode(outlinePair.first.c_str())) {
-                OutlineMenu(*outlinePair.second);
-                ImGui::TreePop();
-            }
-        }
-
-        ImGui::Separator();
-        ImGui::Spacing();
     }
 
     ImGui::End();

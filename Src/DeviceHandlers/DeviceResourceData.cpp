@@ -18,45 +18,11 @@ void DeviceResourceData::OnDeviceRestored() {
 
 }
 
-void DeviceResourceData::Load(Scene& scene) {
-    // First time loading a scene so no need to check for loaded batches.
-    if (!m_pScene) {
-        m_pScene = &scene;
-        m_dataBatches.reserve(m_pScene->GetNumAssetBatches());
-        for (std::uint8_t i = 0; i < m_pScene->GetNumAssetBatches(); ++i) {
-            auto pBatch = std::make_unique<DeviceDataBatch>(m_deviceResources);
-            pBatch->Add(*m_pScene->GetAssetBatches()[i]);
-            m_dataBatches.push_back(std::move(pBatch));
-        }
-        return;
-    }
-
-    // Find all batches that are already loaded.
-    std::vector<std::string> currentlyLoadedBatches;
-    std::vector<std::unique_ptr<DeviceDataBatch>> currentlyLoadedDataBatches;
-    for (std::uint8_t i = 0; i < m_pScene->GetNumAssetBatches(); ++i) {
-        for (std::uint8_t j = 0; j < scene.GetNumAssetBatches(); ++j) {
-            if (m_pScene->GetAssetBatches()[i]->GetName() == scene.GetAssetBatches()[j]->GetName()) {
-                currentlyLoadedBatches.push_back(scene.GetAssetBatches()[i]->GetName());
-                currentlyLoadedDataBatches.push_back(std::move(m_dataBatches[i]));
-                break;
-            }
-        }
-    }
-
-    // Load in the new batches and move over the previously loaded batches.
-    m_dataBatches.clear();
-    for (std::uint8_t i = 0; i < scene.GetNumAssetBatches(); ++i) {
-        auto pos = std::find(currentlyLoadedBatches.begin(), currentlyLoadedBatches.end(), scene.GetAssetBatches()[i]->GetName()) - currentlyLoadedBatches.begin();
-        if (pos < currentlyLoadedBatches.size()) {
-            m_dataBatches.push_back(std::move(currentlyLoadedDataBatches[pos]));
-        } else {
-            auto pBatch = std::make_unique<DeviceDataBatch>(m_deviceResources);
-            pBatch->Add(*scene.GetAssetBatches()[i]);
-            m_dataBatches.push_back(std::move(pBatch));
-        }
-    }
-    m_pScene = &scene;
+void DeviceResourceData::Load(Scene& scene, bool& msaaEnabled) {
+    if (!m_pScene)
+        FreshLoad(scene, msaaEnabled);
+    else
+        DirtyLoad(scene, msaaEnabled);
 }
 
 void DeviceResourceData::UpdateEffects() {
@@ -70,15 +36,15 @@ void DeviceResourceData::UpdateEffects() {
     }
 }
 
-void DeviceResourceData::CreateDeviceDependentResources(bool msaaEnabled) {
+void DeviceResourceData::CreateDeviceDependentResources() {
     for (std::unique_ptr<DeviceDataBatch>& pBatch : m_dataBatches) {
-        pBatch->CreateDeviceDependentResources(msaaEnabled);
+        pBatch->CreateDeviceDependentResources();
     }
 }
 
-void DeviceResourceData::CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch, bool msaaEnabled) {
+void DeviceResourceData::CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
     for (std::unique_ptr<DeviceDataBatch>& pBatch : m_dataBatches) {
-        pBatch->CreateRenderTargetDependentResources(resourceUploadBatch, msaaEnabled);
+        pBatch->CreateRenderTargetDependentResources(resourceUploadBatch);
     }
 }
 
@@ -97,6 +63,58 @@ void DeviceResourceData::CreateImGuiResources() {
             D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
             1);
     m_pImGuiStates = std::make_unique<DirectX::CommonStates>(pDevice);
+}
+
+void DeviceResourceData::FreshLoad(Scene& scene, bool& msaaEnabled) {
+    m_pScene = &scene;
+    m_dataBatches.reserve(m_pScene->GetNumAssetBatches());
+    for (std::uint8_t i = 0; i < m_pScene->GetNumAssetBatches(); ++i) {
+        auto pAssetBatch = m_pScene->GetAssetBatches()[i];
+
+        auto pDataBatch = std::make_unique<DeviceDataBatch>(m_deviceResources, pAssetBatch->GetMaxAssets(), msaaEnabled);
+        pDataBatch->Add(*m_pScene->GetAssetBatches()[i]);
+        pDataBatch->CreateDeviceDependentResources();
+        pDataBatch->CreateWindowSizeDependentResources();
+
+        pAssetBatch->RegisterAssetBatchObserver(pDataBatch.get());
+        m_dataBatches.push_back(std::move(pDataBatch));
+    }
+}
+
+void DeviceResourceData::DirtyLoad(Scene& scene, bool& msaaEnabled) {
+    // Find all batches that are already loaded.
+    std::vector<std::string> currentlyLoadedBatches;
+    std::vector<std::unique_ptr<DeviceDataBatch>> currentlyLoadedDataBatches;
+    for (std::uint8_t i = 0; i < m_pScene->GetNumAssetBatches(); ++i) {
+        for (std::uint8_t j = 0; j < scene.GetNumAssetBatches(); ++j) {
+            if (m_pScene->GetAssetBatches()[i]->GetName() == scene.GetAssetBatches()[j]->GetName()) {
+                currentlyLoadedBatches.push_back(scene.GetAssetBatches()[i]->GetName());
+                currentlyLoadedDataBatches.push_back(std::move(m_dataBatches[i]));
+                break;
+            }
+        }
+    }
+
+    // Load in the new batches and move over the previously loaded batches.
+    m_dataBatches.clear();
+    for (std::uint8_t i = 0; i < scene.GetNumAssetBatches(); ++i) {
+        auto pAssetBatch = scene.GetAssetBatches()[i];
+
+        auto pos = std::find(currentlyLoadedBatches.begin(), currentlyLoadedBatches.end(), scene.GetAssetBatches()[i]->GetName()) - currentlyLoadedBatches.begin();
+        if (pos < currentlyLoadedBatches.size()) {
+            pAssetBatch->RegisterAssetBatchObserver(currentlyLoadedDataBatches[pos].get());
+            m_dataBatches.push_back(std::move(currentlyLoadedDataBatches[pos]));
+        } else {
+            auto pDataBatch = std::make_unique<DeviceDataBatch>(m_deviceResources, scene.GetAssetBatches()[i]->GetMaxAssets(), msaaEnabled);
+            pDataBatch->Add(*scene.GetAssetBatches()[i]);
+            pDataBatch->CreateDeviceDependentResources();
+            pDataBatch->CreateWindowSizeDependentResources();
+
+            pAssetBatch->RegisterAssetBatchObserver(pDataBatch.get());
+            m_dataBatches.push_back(std::move(pDataBatch));
+        }
+    }
+    m_pScene = &scene;
 }
 
 Scene& DeviceResourceData::GetScene() const noexcept {

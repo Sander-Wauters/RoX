@@ -2,13 +2,10 @@
 
 #include "Util/pch.h"
 
-AssetBatch::AssetBatch(const std::string name, bool visible) 
+AssetBatch::AssetBatch(const std::string name, bool visible, std::uint8_t maxAssets) 
     noexcept : m_name(name),
     m_visible(visible),
-    m_models({}),
-    m_sprites({}),
-    m_texts({}),
-    m_outlines({})
+    m_maxAssets(maxAssets)
 {}
 
 AssetBatch::~AssetBatch() noexcept 
@@ -20,50 +17,78 @@ bool AssetBatch::operator== (const AssetBatch& other) const noexcept {
 
 void AssetBatch::Add(std::shared_ptr<Model> pMesh) {
     std::shared_ptr<Model>& entry = m_models[pMesh->GetName()];
-    if (!entry) 
+    if (!entry) {
         entry = pMesh;
-    else
+        for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
+            pAssetBatchObserver->OnAdd(entry);
+        }
+    } else
         throw std::invalid_argument("Scene already contains this mesh.");
 }
 
 void AssetBatch::Add(std::shared_ptr<Sprite> pSprite) {
     std::shared_ptr<Sprite>& entry = m_sprites[pSprite->GetName()];
-    if (!entry)
+    if (!entry) {
         entry = pSprite;
-    else
+        for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
+            pAssetBatchObserver->OnAdd(entry);
+        }
+    } else
         throw std::invalid_argument("Scene already contains this sprite.");
 }
 
 void AssetBatch::Add(std::shared_ptr<Text> pText) {
     std::shared_ptr<Text>& entry = m_texts[pText->GetName()];
-    if (!entry) 
+    if (!entry) {
         entry = pText;
-    else
+        for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
+            pAssetBatchObserver->OnAdd(entry);
+        }
+    } else
         throw std::invalid_argument("Scene already contains this text.");
 }
 
 void AssetBatch::Add(std::shared_ptr<Outline> pOutline) {
     std::shared_ptr<Outline>& entry = m_outlines[pOutline->name];
-    if (!entry) 
+    if (!entry) {
         entry = pOutline;
-    else
+        for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
+            pAssetBatchObserver->OnAdd(entry);
+        }
+    } else
         throw std::invalid_argument("Scene already contains this outline.");
 }
 
-void AssetBatch::RemoveMesh(std::string name) {
+void AssetBatch::RemoveModel(std::string name) {
+    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
+        pAssetBatchObserver->OnRemove(m_models.at(name));
+    }
     m_models.erase(name);
 }
 
 void AssetBatch::RemoveSprite(std::string name) {
+    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
+        pAssetBatchObserver->OnRemove(m_sprites.at(name));
+    }
     m_sprites.erase(name);
 }
 
 void AssetBatch::RemoveText(std::string name) {
+    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
+        pAssetBatchObserver->OnRemove(m_texts.at(name));
+    }
     m_texts.erase(name);
 }
 
 void AssetBatch::RemoveOutline(std::string name) {
+    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
+        pAssetBatchObserver->OnRemove(m_outlines.at(name));
+    }
     m_outlines.erase(name);
+}
+
+void AssetBatch::RegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept {
+    m_assetBatchObservers.insert(assetBatchObserver);
 }
 
 std::string AssetBatch::GetName() const noexcept {
@@ -72,6 +97,10 @@ std::string AssetBatch::GetName() const noexcept {
 
 bool AssetBatch::IsVisible() const noexcept {
     return m_visible;
+}
+
+std::uint8_t AssetBatch::GetMaxAssets() const noexcept {
+    return m_maxAssets;
 }
 
 std::shared_ptr<Model>& AssetBatch::GetModel(std::string name) {

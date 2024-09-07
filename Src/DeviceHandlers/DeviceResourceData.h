@@ -18,14 +18,18 @@ class DeviceResourceData : public IDeviceObserver {
         void OnDeviceLost() override;
         void OnDeviceRestored() override;
 
-        void Load(Scene& scene);
+        void Load(Scene& scene, bool& msaaEnabled);
         void UpdateEffects();
 
-        void CreateDeviceDependentResources(bool msaaEnabled);
-        void CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch, bool msaaEnabled);
+        void CreateDeviceDependentResources();
+        void CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
         void CreateWindowSizeDependentResources();
 
         void CreateImGuiResources();
+
+    private:
+        void FreshLoad(Scene& scene, bool& msaaEnabled); // First scene ever loaded in.
+        void DirtyLoad(Scene& scene, bool& msaaEnabled); // Every scene following the first.
 
     public:
         Scene& GetScene() const noexcept;

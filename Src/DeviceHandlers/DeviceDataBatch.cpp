@@ -1,7 +1,9 @@
 #include "DeviceDataBatch.h"
 
-DeviceDataBatch::DeviceDataBatch(DeviceResources& deviceResources) 
+DeviceDataBatch::DeviceDataBatch(DeviceResources& deviceResources, std::uint8_t descriptorHeapSize, bool& msaaEnabled) 
     noexcept : m_deviceResources(deviceResources),
+    m_msaaEnabled(msaaEnabled),
+    m_descriptorHeapSize(descriptorHeapSize),
     m_nextDescriptorHeapIndex(0)
 {
     m_deviceResources.RegisterDeviceObserver(this);
@@ -11,7 +13,9 @@ DeviceDataBatch::~DeviceDataBatch() noexcept {
 }
 
 DeviceDataBatch::DeviceDataBatch(DeviceDataBatch& other) 
-    noexcept : m_deviceResources(other.m_deviceResources)
+    noexcept : m_deviceResources(other.m_deviceResources),
+    m_msaaEnabled(other.m_msaaEnabled),
+    m_descriptorHeapSize(other.m_descriptorHeapSize)
 {}
 
 void DeviceDataBatch::OnDeviceLost() {
@@ -91,6 +95,110 @@ void DeviceDataBatch::Add(std::shared_ptr<Text> pText) {
     m_textData[pText] = std::make_unique<TextDeviceData>(m_nextDescriptorHeapIndex++);
 }
 
+void DeviceDataBatch::OnAdd(std::shared_ptr<Model>& pModel) {
+    ID3D12Device* pDevice = m_deviceResources.GetDevice();
+    std::unique_ptr<ModelDeviceData>& pModelData = m_modelData[pModel];
+
+
+    if (!pModelData) {
+        DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
+        resourceUploadBatch.Begin();
+
+        pModelData = std::make_unique<ModelDeviceData>(pDevice, pModel.get(), m_meshData);
+        CreateModelResource(pDevice, pModelData, resourceUploadBatch);
+
+        // Materials can be shared so check if the materials aren't already loaded in.
+        pModelData->GetEffects().reserve(pModel->GetNumMaterials());
+        for (std::uint8_t i = 0; i < pModel->GetNumMaterials(); ++i) {
+            std::shared_ptr<Material> pMaterial = pModel->GetMaterials()[i];
+
+            DirectX::RenderTargetState rtState(
+                    m_deviceResources.GetBackBufferFormat(), 
+                    m_deviceResources.GetDepthBufferFormat());
+            if (m_msaaEnabled) {
+                rtState.sampleDesc.Count = DeviceResources::MSAA_COUNT;
+                rtState.sampleDesc.Quality = DeviceResources::MSAA_QUALITY;
+            }
+
+            std::unique_ptr<DirectX::IEffect>& pEffect = m_materialData[pMaterial];
+            if (!pEffect) {
+                pModelData->GetEffects().push_back(&pEffect);
+                CreateMaterialResource(pDevice, pMaterial, pEffect, rtState);
+            }
+
+            std::unique_ptr<TextureDeviceData>& pDiffData = m_textureData[pMaterial->GetDiffuseMapFilePath()];
+            if (!pDiffData) {
+                pDiffData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
+                CreateTextureResource(pDevice, pMaterial->GetDiffuseMapFilePath(), pDiffData, resourceUploadBatch);
+            }
+
+            std::unique_ptr<TextureDeviceData>& pNormData = m_textureData[pMaterial->GetNormalMapFilePath()];
+            if (!pNormData) {
+                pNormData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
+                CreateTextureResource(pDevice, pMaterial->GetNormalMapFilePath(), pNormData, resourceUploadBatch);
+            }
+        }
+        pModelData->GetEffects().shrink_to_fit();
+
+        std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
+        uploadResourceFinished.wait();
+    }
+}
+
+void DeviceDataBatch::OnAdd(std::shared_ptr<Sprite>& pSprite) {
+    ID3D12Device* pDevice = m_deviceResources.GetDevice();
+
+    std::unique_ptr<TextureDeviceData>& pSpriteData = m_spriteData[pSprite]; 
+
+    if (!pSpriteData) {
+        DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
+        resourceUploadBatch.Begin();
+
+        pSpriteData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
+        CreateSpriteResource(pDevice, pSprite, pSpriteData, resourceUploadBatch);
+
+        std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
+        uploadResourceFinished.wait();
+    }
+}
+
+void DeviceDataBatch::OnAdd(std::shared_ptr<Text>& pText) {
+    ID3D12Device* pDevice = m_deviceResources.GetDevice();
+
+    std::unique_ptr<TextDeviceData>& pTextData = m_textData[pText];
+
+    if (!pTextData) {
+        DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
+        resourceUploadBatch.Begin();
+
+        pTextData = std::make_unique<TextDeviceData>(m_nextDescriptorHeapIndex++);
+        CreateTextResource(pDevice, pText, pTextData, resourceUploadBatch);
+
+        std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
+        uploadResourceFinished.wait();
+    }
+}
+
+void DeviceDataBatch::OnAdd(std::shared_ptr<Outline>& pOutline) {
+
+}
+
+void DeviceDataBatch::OnRemove(std::shared_ptr<Model>& pModel) {
+
+}
+
+void DeviceDataBatch::OnRemove(std::shared_ptr<Sprite>& pSprite) {
+
+}
+
+void DeviceDataBatch::OnRemove(std::shared_ptr<Text>& pText) {
+
+}
+
+void DeviceDataBatch::OnRemove(std::shared_ptr<Outline>& pOutline) {
+
+}
+
 void DeviceDataBatch::UpdateEffects(DirectX::XMMATRIX view, DirectX::XMMATRIX projection) {
     m_pOutlineEffect->SetView(view);
     m_pOutlineEffect->SetProjection(projection);
@@ -108,52 +216,51 @@ void DeviceDataBatch::UpdateEffects(DirectX::XMMATRIX view, DirectX::XMMATRIX pr
     }
 }
 
-void DeviceDataBatch::CreateDeviceDependentResources(bool msaaEnabled) {
+void DeviceDataBatch::CreateDeviceDependentResources() {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
     m_pDescriptorHeap = std::make_unique<DirectX::DescriptorHeap>(
             pDevice,
             D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
             D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-            GetNumDescriptors());
+            m_descriptorHeapSize);
     m_pStates = std::make_unique<DirectX::CommonStates>(pDevice);
 
     DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
     resourceUploadBatch.Begin();
 
     for (SpritePair& spritePair : m_spriteData) {
-        CreateSpriteResource(pDevice, spritePair, resourceUploadBatch);
+        CreateSpriteResource(pDevice, spritePair.first, spritePair.second, resourceUploadBatch);
     }
     for (TextPair& textPair : m_textData) {
-        CreateTextResource(pDevice, textPair, resourceUploadBatch);
+        CreateTextResource(pDevice, textPair.first, textPair.second, resourceUploadBatch);
     }
     for (TexturePair& texturePair : m_textureData) {
-        CreateTextureResource(pDevice, texturePair, resourceUploadBatch);
+        CreateTextureResource(pDevice, texturePair.first, texturePair.second, resourceUploadBatch);
+    }
+    for (ModelPair& modelPair : m_modelData) {
+        CreateModelResource(pDevice, modelPair.second, resourceUploadBatch);
     }
 
-    CreateRenderTargetDependentResources(resourceUploadBatch, msaaEnabled);
+    CreateRenderTargetDependentResources(resourceUploadBatch);
 
     std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
     uploadResourceFinished.wait();
 }
 
-void DeviceDataBatch::CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch, bool msaaEnabled) {
+void DeviceDataBatch::CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
     DirectX::RenderTargetState rtState(
             m_deviceResources.GetBackBufferFormat(), 
             m_deviceResources.GetDepthBufferFormat());
-
-    if (msaaEnabled) {
+    if (m_msaaEnabled) {
         rtState.sampleDesc.Count = DeviceResources::MSAA_COUNT;
         rtState.sampleDesc.Quality = DeviceResources::MSAA_QUALITY;
     }
 
-    for (ModelPair& modelPair : m_modelData) {
-        CreateModelResource(pDevice, modelPair, rtState, resourceUploadBatch);
-    }
     for (MaterialPair& materialPair : m_materialData) {
-        CreateMaterialResource(pDevice, materialPair, rtState);
+        CreateMaterialResource(pDevice, materialPair.first, materialPair.second, rtState);
     }
     CreateOutlineBatchResource(pDevice, rtState);
 
@@ -166,45 +273,45 @@ void DeviceDataBatch::CreateWindowSizeDependentResources() {
     m_pSpriteBatch->SetViewport(viewport);
 }
 
-void DeviceDataBatch::CreateSpriteResource(ID3D12Device* pDevice, SpritePair& spritePair, DirectX::ResourceUploadBatch& resourceUploadBatch) {
-    CreateTextureFromFile(spritePair.first->GetFilePath(), spritePair.second->GetTexture().ReleaseAndGetAddressOf(), resourceUploadBatch);
-    DirectX::CreateShaderResourceView(pDevice, spritePair.second->GetTexture().Get(),
-            m_pDescriptorHeap->GetCpuHandle(spritePair.second->GetHeapIndex()));
+void DeviceDataBatch::CreateSpriteResource(ID3D12Device* pDevice, const std::shared_ptr<Sprite>& pSprite, std::unique_ptr<TextureDeviceData>& pSpriteData, DirectX::ResourceUploadBatch& resourceUploadBatch) {
+    CreateTextureFromFile(pSprite->GetFilePath(), pSpriteData->GetTexture().ReleaseAndGetAddressOf(), resourceUploadBatch);
+    DirectX::CreateShaderResourceView(pDevice, pSpriteData->GetTexture().Get(),
+            m_pDescriptorHeap->GetCpuHandle(pSpriteData->GetHeapIndex()));
 }
 
-void DeviceDataBatch::CreateTextResource(ID3D12Device* pDevice, TextPair& textPair, DirectX::ResourceUploadBatch& resourceUploadBatch) {
-    if (!CompareFileExtension(textPair.first->GetFilePath(), L".spritefont")) 
+void DeviceDataBatch::CreateTextResource(ID3D12Device* pDevice, const std::shared_ptr<Text>& pText, std::unique_ptr<TextDeviceData>& pTextData, DirectX::ResourceUploadBatch& resourceUploadBatch) {
+    if (!CompareFileExtension(pText->GetFilePath(), L".spritefont")) 
         throw std::invalid_argument("Unsupported file extension detected.");
 
     auto pFont = std::make_unique<DirectX::SpriteFont>(
             pDevice,
             resourceUploadBatch,
-            textPair.first->GetFilePath().c_str(),
-            m_pDescriptorHeap->GetCpuHandle(textPair.second->GetHeapIndex()),
-            m_pDescriptorHeap->GetGpuHandle(textPair.second->GetHeapIndex()));
-    textPair.second->SetSpriteFont(std::move(pFont));
+            pText->GetFilePath().c_str(),
+            m_pDescriptorHeap->GetCpuHandle(pTextData->GetHeapIndex()),
+            m_pDescriptorHeap->GetGpuHandle(pTextData->GetHeapIndex()));
+    pTextData->SetSpriteFont(std::move(pFont));
 }
 
-void DeviceDataBatch::CreateTextureResource(ID3D12Device* pDevice, TexturePair& texturePair, DirectX::ResourceUploadBatch& resourceUploadBatch) {
+void DeviceDataBatch::CreateTextureResource(ID3D12Device* pDevice, const std::wstring& fileName, std::unique_ptr<TextureDeviceData>& pTextureData, DirectX::ResourceUploadBatch& resourceUploadBatch) {
     CreateTextureFromFile(
-            texturePair.first,
-            texturePair.second->GetTexture().ReleaseAndGetAddressOf(), 
+            fileName,
+            pTextureData->GetTexture().ReleaseAndGetAddressOf(), 
             resourceUploadBatch);
     DirectX::CreateShaderResourceView(
             pDevice, 
-            texturePair.second->GetTexture().Get(),
-            m_pDescriptorHeap->GetCpuHandle(texturePair.second->GetHeapIndex()));
+            pTextureData->GetTexture().Get(),
+            m_pDescriptorHeap->GetCpuHandle(pTextureData->GetHeapIndex()));
 }
 
-void DeviceDataBatch::CreateModelResource(ID3D12Device* pDevice, ModelPair& modelPair, DirectX::RenderTargetState& renderTargetState, DirectX::ResourceUploadBatch& resourceUploadBatch) {
-    modelPair.second->LoadStaticBuffers(pDevice, resourceUploadBatch);
+void DeviceDataBatch::CreateModelResource(ID3D12Device* pDevice, std::unique_ptr<ModelDeviceData>& pModelData, DirectX::ResourceUploadBatch& resourceUploadBatch) {
+    pModelData->LoadStaticBuffers(pDevice, resourceUploadBatch);
 }
 
-void DeviceDataBatch::CreateMaterialResource(ID3D12Device* pDevice, MaterialPair& materialPair, DirectX::RenderTargetState& renderTargetState) {
-    std::uint32_t flags = materialPair.first->GetFlags();
+void DeviceDataBatch::CreateMaterialResource(ID3D12Device* pDevice, const std::shared_ptr<Material>& pMaterial, std::unique_ptr<DirectX::IEffect>& pIEffect, DirectX::RenderTargetState& renderTargetState) {
+    std::uint32_t flags = pMaterial->GetFlags();
     std::unique_ptr<DirectX::NormalMapEffect> pEffect;
 
-    D3D12_INPUT_LAYOUT_DESC inputLayout = InputLayout(materialPair.first->GetFlags());
+    D3D12_INPUT_LAYOUT_DESC inputLayout = InputLayoutDesc(pMaterial->GetFlags());
     DirectX::EffectPipelineStateDescription pd(
             &inputLayout,
             BlendDesc(flags),
@@ -219,19 +326,19 @@ void DeviceDataBatch::CreateMaterialResource(ID3D12Device* pDevice, MaterialPair
     else
         pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting | DirectX::EffectFlags::Texture, pd);
 
-    pEffect->SetColorAndAlpha(DirectX::XMLoadFloat4(&materialPair.first->GetDiffuseColor()));
-    pEffect->SetEmissiveColor(DirectX::XMLoadFloat4(&materialPair.first->GetEmissiveColor()));
-    pEffect->SetSpecularColor(DirectX::XMLoadFloat4(&materialPair.first->GetSpecularColor()));
+    pEffect->SetColorAndAlpha(DirectX::XMLoadFloat4(&pMaterial->GetDiffuseColor()));
+    pEffect->SetEmissiveColor(DirectX::XMLoadFloat4(&pMaterial->GetEmissiveColor()));
+    pEffect->SetSpecularColor(DirectX::XMLoadFloat4(&pMaterial->GetSpecularColor()));
 
     pEffect->EnableDefaultLighting();
 
     pEffect->SetTexture(
-            m_pDescriptorHeap->GetGpuHandle(m_textureData.at(materialPair.first->GetDiffuseMapFilePath())->GetHeapIndex()),
+            m_pDescriptorHeap->GetGpuHandle(m_textureData.at(pMaterial->GetDiffuseMapFilePath())->GetHeapIndex()),
             m_pStates->AnisotropicWrap());
     pEffect->SetNormalTexture(
-            m_pDescriptorHeap->GetGpuHandle(m_textureData.at(materialPair.first->GetNormalMapFilePath())->GetHeapIndex()));
+            m_pDescriptorHeap->GetGpuHandle(m_textureData.at(pMaterial->GetNormalMapFilePath())->GetHeapIndex()));
 
-    materialPair.second = std::move(pEffect);
+    pIEffect = std::move(pEffect);
 }
 
 void DeviceDataBatch::CreateOutlineBatchResource(ID3D12Device* pDevice, DirectX::RenderTargetState& renderTargetState) {
@@ -253,7 +360,7 @@ void DeviceDataBatch::CreateOutlineBatchResource(ID3D12Device* pDevice, DirectX:
     m_pOutlineEffect = std::make_unique<DirectX::BasicEffect>(pDevice, DirectX::EffectFlags::VertexColor, pd);
 }
 
-D3D12_INPUT_LAYOUT_DESC DeviceDataBatch::InputLayout(std::uint32_t flags) const {
+D3D12_INPUT_LAYOUT_DESC DeviceDataBatch::InputLayoutDesc(std::uint32_t flags) const {
     if (flags & RenderFlags::Effect::Instanced)
         return VertexPositionNormalTexture::InputLayoutInstancing;
     if (flags & RenderFlags::Effect::Skinned)
@@ -320,18 +427,18 @@ bool DeviceDataBatch::CompareFileExtension(std::wstring filePath, std::wstring v
     return extension == valid;
 }
 
-void DeviceDataBatch::CreateTextureFromFile(std::wstring filePath, ID3D12Resource** pTexture, DirectX::ResourceUploadBatch& resourceUploadBatch) {
+void DeviceDataBatch::CreateTextureFromFile(std::wstring filePath, ID3D12Resource** ppTexture, DirectX::ResourceUploadBatch& resourceUploadBatch) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
     bool isDDS = CompareFileExtension(filePath, L".dds");
     if (isDDS) {
-        ThrowIfFailed(DirectX::CreateDDSTextureFromFile(pDevice, resourceUploadBatch, filePath.c_str(), pTexture));
+        ThrowIfFailed(DirectX::CreateDDSTextureFromFile(pDevice, resourceUploadBatch, filePath.c_str(), ppTexture));
     } else if (CompareFileExtension(filePath, L".png") || 
             CompareFileExtension(filePath, L".jpg") ||
             CompareFileExtension(filePath, L".bmp") ||
             CompareFileExtension(filePath, L".gif") || 
             CompareFileExtension(filePath, L".tiff")) {
-        ThrowIfFailed(DirectX::CreateWICTextureFromFile(pDevice, resourceUploadBatch, filePath.c_str(), pTexture));  
+        ThrowIfFailed(DirectX::CreateWICTextureFromFile(pDevice, resourceUploadBatch, filePath.c_str(), ppTexture));  
     } else {
         throw std::invalid_argument("Unsupported file extension detected.");
     }
@@ -377,7 +484,7 @@ const std::unordered_map<std::shared_ptr<Text>, std::unique_ptr<TextDeviceData>>
     return m_textData;
 }
 
-std::uint64_t DeviceDataBatch::GetNumDescriptors() const noexcept {
+std::uint8_t DeviceDataBatch::GetNumDescriptors() const noexcept {
     return m_spriteData.size() + m_textData.size() + m_textureData.size() + 1; // +1 for ImGui font texture's.
 }
 
