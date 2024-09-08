@@ -1,5 +1,7 @@
 #include "RoX/DebugUI.h"
 
+#include "RoX/AssetIO.h"
+
 #include "Util/pch.h"
 #include "Util/dxtk12pch.h"
 
@@ -552,6 +554,84 @@ void DebugUI::BoneHierarchy(Model& model, std::uint32_t& selectedBone) {
     ImGui::EndChild();
 }
 
+void DebugUI::AddMaterial(Model& model) {
+
+}
+
+void DebugUI::AddSubmesh(IMesh& iMesh) {
+
+}
+
+void DebugUI::AddIMesh(Model& model) {
+
+}
+
+void DebugUI::AddModel(AssetBatch& batch) {
+    static char file[128];
+    static bool skinned = false;
+    static bool packed = false;
+
+    if (ImGui::Button("Add##openPopupAddModel"))
+        ImGui::OpenPopup("addModelToBatch");
+    if (ImGui::BeginPopup("addModelToBatch")) {
+        ImGui::InputText("File##addModel", file, 128);
+        ImGui::Checkbox("Skinned", &skinned);
+        ImGui::SameLine();
+        ImGui::Checkbox("Packed", &packed);
+        if (ImGui::Button("Add##addModelToBatch"))
+            batch.Add(AssetIO::ImportModel(file, std::make_shared<Material>("test_mat", L"assets/default_diffuse.png", L"assets/flat_map.png"), skinned, packed));
+        ImGui::EndPopup();
+    }
+}
+
+void DebugUI::AddSprite(AssetBatch& batch) {
+    static char name[128];
+    static char file[128];
+
+    if (ImGui::Button("Add##openPopupAddSprite"))
+        ImGui::OpenPopup("addSpriteToBatch");
+    if (ImGui::BeginPopup("addSpriteToBatch")) {
+        ImGui::InputText("Name##addSprite", name, 128);
+        ImGui::InputText("File##addSprite", file, 128);
+        if (ImGui::Button("Add##addSpriteToBatch"))
+            batch.Add(std::make_shared<Sprite>((name), AnsiToWString(file)));
+        ImGui::EndPopup();
+    }
+}
+
+void DebugUI::AddOutline(AssetBatch& batch) {
+    static char name[128];
+    static const char* options[] = { "grid", "ring", "ray", "triangle", "quad" };
+    static int selectedOption = 0;
+
+    if (ImGui::Button("Add##openPopupAddOutline"))
+        ImGui::OpenPopup("addOutlineToBatch");
+    if (ImGui::BeginPopup("addOutlineToBatch")) {
+        ImGui::InputText("Name##addOutline", name, 128);
+        ImGui::Combo("Type##addOutline", &selectedOption, options, std::size(options));
+        if (ImGui::Button("Add##addOutlineToBatch")) {
+            switch (selectedOption) {
+                case 0:
+                    batch.Add(std::make_shared<GridOutline>(name));
+                    break;
+                case 1:
+                    batch.Add(std::make_shared<RingOutline>(name));
+                    break;
+                case 2:
+                    batch.Add(std::make_shared<RayOutline>(name));
+                    break;
+                case 3:
+                    batch.Add(std::make_shared<TriangleOutline>(name));
+                    break;
+                case 4:
+                    batch.Add(std::make_shared<QuadOutline>(name));
+                    break;
+            }
+        }
+        ImGui::EndPopup();
+    }
+}
+
 void DebugUI::CameraMenu(Camera& camera) {
     ImGuiViewport* pViewport = ImGui::GetMainViewport();
     static float z[2] = { camera.GetNearZ(), camera.GetFarZ() };
@@ -715,143 +795,178 @@ void DebugUI::SpriteMenu(Sprite& sprite) {
             LoadFloat4(color, sprite.GetColor());
 }
 
+void DebugUI::BoundingBoxOutlineMenu(BoundingBodyOutline<DirectX::BoundingBox>& outline) {
+    DirectX::BoundingBox& b = outline.boundingBody;
+
+    float center[3] = { b.Center.x, b.Center.y, b.Center.z };
+    float extents[3] = { b.Extents.x, b.Extents.y, b.Extents.z };
+
+    if (ImGui::DragFloat3(std::string("center##" + outline.name).c_str(), center))
+        b.Center = { center[0], center[1], center[2] };
+    if (ImGui::DragFloat3(std::string("extents##" + outline.name).c_str(), extents))
+        b.Extents = { extents[0], extents[1], extents[2] };
+}
+
+void DebugUI::BoundingFrustumOutlineMenu(BoundingBodyOutline<DirectX::BoundingFrustum>& outline) {
+    DirectX::BoundingFrustum& b = outline.boundingBody;
+
+    float origin[3] = { b.Origin.x, b.Origin.y, b.Origin.z };
+
+    DirectX::SimpleMath::Quaternion q = b.Orientation;
+    DirectX::XMFLOAT3 r = q.ToEuler();
+    float rotation[3] = { r.x, r.y, r.z };
+
+    if (ImGui::DragFloat3(std::string("origin##" + outline.name).c_str(), origin))
+        b.Origin = { origin[0], origin[1], origin[2] };
+    if (ImGui::DragFloat3(std::string("rotation##" + outline.name).c_str(), rotation))
+        DirectX::XMStoreFloat4(&b.Orientation, DirectX::XMQuaternionRotationRollPitchYaw(
+                    DirectX::XMConvertToRadians(rotation[0]), 
+                    DirectX::XMConvertToRadians(rotation[1]), 
+                    DirectX::XMConvertToRadians(rotation[2])));
+    ImGui::DragFloat(std::string("right slope##" + outline.name).c_str(), &b.RightSlope);
+    ImGui::DragFloat(std::string("left slope##" + outline.name).c_str(), &b.LeftSlope);
+    ImGui::DragFloat(std::string("top slope##" + outline.name).c_str(), &b.TopSlope);
+    ImGui::DragFloat(std::string("bottom slope##" + outline.name).c_str(), &b.BottomSlope);
+    ImGui::DragFloat(std::string("near##" + outline.name).c_str(), &b.Near);
+    ImGui::DragFloat(std::string("far##" + outline.name).c_str(), &b.Far);
+}
+
+void DebugUI::BoundingOrientedBoxOutlineMenu(BoundingBodyOutline<DirectX::BoundingOrientedBox>& outline) {
+    DirectX::BoundingOrientedBox& b = outline.boundingBody;
+
+    float center[3] = { b.Center.x, b.Center.y, b.Center.z };
+    float extents[3] = { b.Extents.x, b.Extents.y, b.Extents.z };
+    DirectX::SimpleMath::Quaternion q = b.Orientation;
+    DirectX::XMFLOAT3 r = q.ToEuler();
+    float rotation[3] = { r.x, r.y, r.z };
+
+    if (ImGui::DragFloat3(std::string("center##" + outline.name).c_str(), center))
+        b.Center = { center[0], center[1], center[2] };
+    if (ImGui::DragFloat3(std::string("extents##" + outline.name).c_str(), extents))
+        b.Extents = { extents[0], extents[1], extents[2] };
+    if (ImGui::DragFloat3(std::string("rotation##" + outline.name).c_str(), rotation))
+        DirectX::XMStoreFloat4(&b.Orientation, DirectX::XMQuaternionRotationRollPitchYaw(
+                    DirectX::XMConvertToRadians(rotation[0]), 
+                    DirectX::XMConvertToRadians(rotation[1]), 
+                    DirectX::XMConvertToRadians(rotation[2])));
+}
+
+void DebugUI::BoundingSphereOutlineMenu(BoundingBodyOutline<DirectX::BoundingSphere>& outline) {
+    DirectX::BoundingSphere& b = outline.boundingBody;
+
+    float center[3] = { b.Center.x, b.Center.y, b.Center.z };
+
+    if (ImGui::DragFloat3(std::string("center##" + outline.name).c_str(), center))
+        b.Center = { center[0], center[1], center[2] };
+    ImGui::DragFloat(std::string("radius##" + outline.name).c_str(), &b.Radius);
+}
+
+void DebugUI::GridOutlineMenu(GridOutline& outline) {
+    ImGui::DragScalar(std::string("x divisions##" + outline.name).c_str(), ImGuiDataType_U16, &outline.xDivisions);
+    ImGui::DragScalar(std::string("y divisions##" + outline.name).c_str(), ImGuiDataType_U16, &outline.yDivisions);
+
+    float xAxis[3];
+    StoreFloat3(outline.xAxis, xAxis);
+    float yAxis[3];
+    StoreFloat3(outline.yAxis, yAxis);
+    float origin[3];
+    StoreFloat3(outline.origin, origin);
+
+    if (ImGui::DragFloat3(std::string("x axis##" + outline.name).c_str(), xAxis))
+        LoadFloat3(xAxis, outline.xAxis);
+    if (ImGui::DragFloat3(std::string("y axis##" + outline.name).c_str(), yAxis))
+        LoadFloat3(yAxis, outline.yAxis);
+    if (ImGui::DragFloat3(std::string("origin##" + outline.name).c_str(), origin))
+        LoadFloat3(origin, outline.origin);
+}
+
+void DebugUI::RingOutlineMenu(RingOutline& outline) {
+    float minorAxis[3];
+    StoreFloat3(outline.minorAxis, minorAxis);
+    float majorAxis[3];
+    StoreFloat3(outline.majorAxis, majorAxis);
+    float origin[3];
+    StoreFloat3(outline.origin, origin);
+
+    if (ImGui::DragFloat3(std::string("minor axis##" + outline.name).c_str(), minorAxis))
+        LoadFloat3(minorAxis, outline.minorAxis);
+    if (ImGui::DragFloat3(std::string("major axis##" + outline.name).c_str(), majorAxis))
+        LoadFloat3(majorAxis, outline.majorAxis);
+    if (ImGui::DragFloat3(std::string("origin##" + outline.name).c_str(), origin))
+        LoadFloat3(origin, outline.origin);
+}
+
+void DebugUI::RayOutlineMenu(RayOutline& outline) {
+    ImGui::Checkbox("Normalized", &outline.normalized);
+
+    float direction[3];
+    StoreFloat3(outline.direction, direction);
+    float origin[3];
+    StoreFloat3(outline.origin, origin);
+
+    if (ImGui::DragFloat3(std::string("direction##" + outline.name).c_str(), direction))
+        LoadFloat3(direction, outline.direction);
+    if (ImGui::DragFloat3(std::string("origin##" + outline.name).c_str(), origin))
+        LoadFloat3(origin, outline.origin);
+}
+
+void DebugUI::TriangleOutlineMenu(TriangleOutline& outline) {
+    float pointA[3];
+    StoreFloat3(outline.pointA, pointA);
+    float pointB[3];
+    StoreFloat3(outline.pointB, pointB);
+    float pointC[3];
+    StoreFloat3(outline.pointC, pointC);
+
+    if (ImGui::DragFloat3(std::string("point A##" + outline.name).c_str(), pointA))
+        LoadFloat3(pointA, outline.pointA);
+    if (ImGui::DragFloat3(std::string("point B##" + outline.name).c_str(), pointB))
+        LoadFloat3(pointB, outline.pointB);
+    if (ImGui::DragFloat3(std::string("point C##" + outline.name).c_str(), pointC))
+        LoadFloat3(pointC, outline.pointC);
+}
+
+void DebugUI::QuadOutlineMenu(QuadOutline& outline) {
+    float pointA[3];
+    StoreFloat3(outline.pointA, pointA);
+    float pointB[3];
+    StoreFloat3(outline.pointB, pointB);
+    float pointC[3];
+    StoreFloat3(outline.pointC, pointC);
+    float pointD[3];
+    StoreFloat3(outline.pointD, pointD);
+
+    if (ImGui::DragFloat3(std::string("point A##" + outline.name).c_str(), pointA))
+        LoadFloat3(pointA, outline.pointA);
+    if (ImGui::DragFloat3(std::string("point B##" + outline.name).c_str(), pointB))
+        LoadFloat3(pointB, outline.pointB);
+    if (ImGui::DragFloat3(std::string("point C##" + outline.name).c_str(), pointC))
+        LoadFloat3(pointC, outline.pointC);
+    if (ImGui::DragFloat3(std::string("point D##" + outline.name).c_str(), pointD))
+        LoadFloat3(pointD, outline.pointD);
+}
+
 void DebugUI::OutlineMenu(Outline& outline) {
     ImGui::Checkbox("Visible", &outline.visible);
     if (ImGui::CollapsingHeader("Position")) {
-        if (auto p = dynamic_cast<BoundingBodyOutline<DirectX::BoundingBox>*>(&outline)) {
-            DirectX::BoundingBox& b = p->boundingBody;
-
-            static float center[3] = { b.Center.x, b.Center.y, b.Center.z };
-            static float extents[3] = { b.Extents.x, b.Extents.y, b.Extents.z };
-
-            if (ImGui::DragFloat3(std::string("center##" + outline.name).c_str(), center))
-                b.Center = { center[0], center[1], center[2] };
-            if (ImGui::DragFloat3(std::string("extents##" + outline.name).c_str(), extents))
-                b.Extents = { extents[0], extents[1], extents[2] };
-        } else if (auto p = dynamic_cast<BoundingBodyOutline<DirectX::BoundingFrustum>*>(&outline)) {
-            DirectX::BoundingFrustum& b = p->boundingBody;
-
-            static float origin[3] = { b.Origin.x, b.Origin.y, b.Origin.z };
-
-            DirectX::SimpleMath::Quaternion q = b.Orientation;
-            DirectX::XMFLOAT3 r = q.ToEuler();
-            static float rotation[3] = { r.x, r.y, r.z };
-
-            if (ImGui::DragFloat3(std::string("origin##" + outline.name).c_str(), origin))
-                b.Origin = { origin[0], origin[1], origin[2] };
-            if (ImGui::DragFloat3(std::string("rotation##" + outline.name).c_str(), rotation))
-                DirectX::XMStoreFloat4(&b.Orientation, DirectX::XMQuaternionRotationRollPitchYaw(
-                            DirectX::XMConvertToRadians(rotation[0]), 
-                            DirectX::XMConvertToRadians(rotation[1]), 
-                            DirectX::XMConvertToRadians(rotation[2])));
-            ImGui::DragFloat(std::string("right slope##" + outline.name).c_str(), &b.RightSlope);
-            ImGui::DragFloat(std::string("left slope##" + outline.name).c_str(), &b.LeftSlope);
-            ImGui::DragFloat(std::string("top slope##" + outline.name).c_str(), &b.TopSlope);
-            ImGui::DragFloat(std::string("bottom slope##" + outline.name).c_str(), &b.BottomSlope);
-            ImGui::DragFloat(std::string("near##" + outline.name).c_str(), &b.Near);
-            ImGui::DragFloat(std::string("far##" + outline.name).c_str(), &b.Far);
-        } else if (auto p = dynamic_cast<BoundingBodyOutline<DirectX::BoundingOrientedBox>*>(&outline)) {
-            DirectX::BoundingOrientedBox& b = p->boundingBody;
-
-            static float center[3] = { b.Center.x, b.Center.y, b.Center.z };
-            static float extents[3] = { b.Extents.x, b.Extents.y, b.Extents.z };
-            DirectX::SimpleMath::Quaternion q = b.Orientation;
-            DirectX::XMFLOAT3 r = q.ToEuler();
-            static float rotation[3] = { r.x, r.y, r.z };
-
-            if (ImGui::DragFloat3(std::string("center##" + outline.name).c_str(), center))
-                b.Center = { center[0], center[1], center[2] };
-            if (ImGui::DragFloat3(std::string("extents##" + outline.name).c_str(), extents))
-                b.Extents = { extents[0], extents[1], extents[2] };
-            if (ImGui::DragFloat3(std::string("rotation##" + outline.name).c_str(), rotation))
-                DirectX::XMStoreFloat4(&b.Orientation, DirectX::XMQuaternionRotationRollPitchYaw(
-                            DirectX::XMConvertToRadians(rotation[0]), 
-                            DirectX::XMConvertToRadians(rotation[1]), 
-                            DirectX::XMConvertToRadians(rotation[2])));
-        } else if (auto p = dynamic_cast<BoundingBodyOutline<DirectX::BoundingSphere>*>(&outline)) {
-            DirectX::BoundingSphere& b = p->boundingBody;
-
-            static float center[3] = { b.Center.x, b.Center.y, b.Center.z };
-
-            if (ImGui::DragFloat3(std::string("center##" + outline.name).c_str(), center))
-                b.Center = { center[0], center[1], center[2] };
-            ImGui::DragFloat(std::string("radius##" + outline.name).c_str(), &b.Radius);
-        } else if (auto p = dynamic_cast<GridOutline*>(&outline)) {
-            ImGui::DragScalar(std::string("x divisions##" + outline.name).c_str(), ImGuiDataType_U16, &p->xDivisions);
-            ImGui::DragScalar(std::string("y divisions##" + outline.name).c_str(), ImGuiDataType_U16, &p->yDivisions);
-
-            float xAxis[3];
-            StoreFloat3(p->xAxis, xAxis);
-            float yAxis[3];
-            StoreFloat3(p->yAxis, yAxis);
-            float origin[3];
-            StoreFloat3(p->origin, origin);
-
-            if (ImGui::DragFloat3(std::string("x axis##" + outline.name).c_str(), xAxis))
-                LoadFloat3(xAxis, p->xAxis);
-            if (ImGui::DragFloat3(std::string("y axis##" + outline.name).c_str(), yAxis))
-                LoadFloat3(yAxis, p->yAxis);
-            if (ImGui::DragFloat3(std::string("origin##" + outline.name).c_str(), origin))
-                LoadFloat3(origin, p->origin);
-        } else if (auto p = dynamic_cast<RingOutline*>(&outline)) {
-            float minorAxis[3];
-            StoreFloat3(p->minorAxis, minorAxis);
-            float majorAxis[3];
-            StoreFloat3(p->majorAxis, majorAxis);
-            float origin[3];
-            StoreFloat3(p->origin, origin);
-
-            if (ImGui::DragFloat3(std::string("minor axis##" + outline.name).c_str(), majorAxis))
-                LoadFloat3(minorAxis, p->minorAxis);
-            if (ImGui::DragFloat3(std::string("major axis##" + outline.name).c_str(), minorAxis))
-                LoadFloat3(majorAxis, p->majorAxis);
-            if (ImGui::DragFloat3(std::string("origin##" + outline.name).c_str(), origin))
-                LoadFloat3(origin, p->origin);
-        } else if (auto p = dynamic_cast<RayOutline*>(&outline)) {
-            ImGui::Checkbox("Normalized", &p->normalized);
-
-            float direction[3];
-            StoreFloat3(p->direction, direction);
-            float origin[3];
-            StoreFloat3(p->origin, origin);
-
-            if (ImGui::DragFloat3(std::string("direction##" + outline.name).c_str(), direction))
-                LoadFloat3(direction, p->direction);
-            if (ImGui::DragFloat3(std::string("origin##" + outline.name).c_str(), origin))
-                LoadFloat3(origin, p->origin);
-        } else if (auto p = dynamic_cast<TriangleOutline*>(&outline)) {
-            float pointA[3];
-            StoreFloat3(p->pointA, pointA);
-            float pointB[3];
-            StoreFloat3(p->pointB, pointB);
-            float pointC[3];
-            StoreFloat3(p->pointC, pointC);
-
-            if (ImGui::DragFloat3(std::string("point A##" + outline.name).c_str(), pointA))
-                LoadFloat3(pointA, p->pointA);
-            if (ImGui::DragFloat3(std::string("point B##" + outline.name).c_str(), pointB))
-                LoadFloat3(pointB, p->pointB);
-            if (ImGui::DragFloat3(std::string("point C##" + outline.name).c_str(), pointC))
-                LoadFloat3(pointC, p->pointC);
-        } else if (auto p = dynamic_cast<QuadOutline*>(&outline)) {
-            float pointA[3];
-            StoreFloat3(p->pointA, pointA);
-            float pointB[3];
-            StoreFloat3(p->pointB, pointB);
-            float pointC[3];
-            StoreFloat3(p->pointC, pointC);
-            float pointD[3];
-            StoreFloat3(p->pointD, pointD);
-
-            if (ImGui::DragFloat3(std::string("point A##" + outline.name).c_str(), pointA))
-                LoadFloat3(pointA, p->pointA);
-            if (ImGui::DragFloat3(std::string("point B##" + outline.name).c_str(), pointB))
-                LoadFloat3(pointB, p->pointB);
-            if (ImGui::DragFloat3(std::string("point C##" + outline.name).c_str(), pointC))
-                LoadFloat3(pointC, p->pointC);
-            if (ImGui::DragFloat3(std::string("point D##" + outline.name).c_str(), pointD))
-                LoadFloat3(pointD, p->pointD);
-        }
+        if (auto p = dynamic_cast<BoundingBodyOutline<DirectX::BoundingBox>*>(&outline))
+            BoundingBoxOutlineMenu(*p);
+        else if (auto p = dynamic_cast<BoundingBodyOutline<DirectX::BoundingFrustum>*>(&outline))
+            BoundingFrustumOutlineMenu(*p);
+        else if (auto p = dynamic_cast<BoundingBodyOutline<DirectX::BoundingOrientedBox>*>(&outline))
+            BoundingOrientedBoxOutlineMenu(*p);
+        else if (auto p = dynamic_cast<BoundingBodyOutline<DirectX::BoundingSphere>*>(&outline))
+            BoundingSphereOutlineMenu(*p);
+        else if (auto p = dynamic_cast<GridOutline*>(&outline))
+            GridOutlineMenu(*p);
+        else if (auto p = dynamic_cast<RingOutline*>(&outline))
+            RingOutlineMenu(*p);
+        else if (auto p = dynamic_cast<RayOutline*>(&outline))
+            RayOutlineMenu(*p);
+        else if (auto p = dynamic_cast<TriangleOutline*>(&outline))
+            TriangleOutlineMenu(*p);
+        else if (auto p = dynamic_cast<QuadOutline*>(&outline))
+            QuadOutlineMenu(*p);
     }
     float color[4];
     StoreFloat4(outline.color, color);
@@ -886,6 +1001,7 @@ void DebugUI::AssetBatchMenu(AssetBatch& batch) {
         ImGui::Spacing();
     }
     if (ImGui::CollapsingHeader("Models")) {
+        AddModel(batch);
         ImGui::BeginChild(ImGui::GetID((void*)(intptr_t)ID++), ImVec2(ImGui::GetWindowWidth() - 15.f, 200.f), ImGuiChildFlags_None);
         ModelHierarchy(batch, &pSelectedModel, &pSelectedIMesh, &pSelectedSubmesh);
         ImGui::EndChild();
@@ -910,6 +1026,9 @@ void DebugUI::AssetBatchMenu(AssetBatch& batch) {
         ImGui::Spacing();
     }
     if (ImGui::CollapsingHeader("Sprites")) {
+        AddSprite(batch);
+        ImGui::Separator();
+        ImGui::Spacing();
         for (auto& spritePair : batch.GetSprites()) {
             if (ImGui::TreeNode(spritePair.first.c_str())) {
                 SpriteMenu(*spritePair.second);
@@ -930,13 +1049,15 @@ void DebugUI::AssetBatchMenu(AssetBatch& batch) {
         ImGui::Spacing();
     }
     if (ImGui::CollapsingHeader("Outlines")) {
+        AddOutline(batch);
+        ImGui::Separator();
+        ImGui::Spacing();
         for (auto& outlinePair : batch.GetOutlines()) {
             if (ImGui::TreeNode(outlinePair.first.c_str())) {
                 OutlineMenu(*outlinePair.second);
                 ImGui::TreePop();
             }
         }
-
         ImGui::Separator();
         ImGui::Spacing();
     }
@@ -947,7 +1068,7 @@ void DebugUI::SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags) {
     IMGUI_CHECKVERSION();
 
     static bool open = true;
-    if (!ImGui::Begin("Scene", &open, windowFlags)) {
+    if (!ImGui::Begin(scene.GetName().c_str(), &open, windowFlags)) {
         ImGui::End();
         return;
     }
@@ -974,17 +1095,20 @@ void DebugUI::SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags) {
         ImGui::Separator();
         ImGui::Spacing();
     }
-
     ImGui::SeparatorText("Batches");
-    for (auto pBatch : scene.GetAssetBatches()) {
-        if (ImGui::CollapsingHeader(pBatch->GetName().c_str())) {
-            ImGui::Separator();
-            ImGui::Spacing();
-            AssetBatchMenu(*pBatch);
-            ImGui::Spacing();
-            ImGui::Separator();
+    static std::uint8_t selectedBatch = 0;
+    if (ImGui::BeginListBox("##Batches")) {
+        for (std::uint8_t i = 0; i < scene.GetNumAssetBatches(); ++i) {
+            const bool isSelected = (selectedBatch == i);
+            if (ImGui::Selectable(scene.GetAssetBatches()[i]->GetName().c_str(), isSelected))
+                selectedBatch = i;
+            if (isSelected)
+                ImGui::SetItemDefaultFocus();
         }
+        ImGui::EndListBox();
     }
+    selectedBatch = selectedBatch >= scene.GetNumAssetBatches() ? 0 : selectedBatch;
+    AssetBatchMenu(*scene.GetAssetBatches()[selectedBatch]);
 
     ImGui::End();
 }

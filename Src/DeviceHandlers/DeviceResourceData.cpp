@@ -82,6 +82,12 @@ void DeviceResourceData::FreshLoad(Scene& scene, bool& msaaEnabled) {
 }
 
 void DeviceResourceData::DirtyLoad(Scene& scene, bool& msaaEnabled) {
+    // Deregister the data batches.
+    for (std::uint8_t i = 0; i < m_pScene->GetNumAssetBatches(); ++i) {
+        m_pScene->GetAssetBatches()[i]->DeRegisterAssetBatchObserver(m_dataBatches[i].get());
+        m_deviceResources.DeRegisterDeviceObserver(m_dataBatches[i].get());
+    }
+
     // Find all batches that are already loaded.
     std::vector<std::string> currentlyLoadedBatches;
     std::vector<std::unique_ptr<DeviceDataBatch>> currentlyLoadedDataBatches;

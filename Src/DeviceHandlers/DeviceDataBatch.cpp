@@ -120,12 +120,6 @@ void DeviceDataBatch::OnAdd(std::shared_ptr<Model>& pModel) {
                 rtState.sampleDesc.Quality = DeviceResources::MSAA_QUALITY;
             }
 
-            std::unique_ptr<DirectX::IEffect>& pEffect = m_materialData[pMaterial];
-            if (!pEffect) {
-                pModelData->GetEffects().push_back(&pEffect);
-                CreateMaterialResource(pDevice, pMaterial, pEffect, rtState);
-            }
-
             std::unique_ptr<TextureDeviceData>& pDiffData = m_textureData[pMaterial->GetDiffuseMapFilePath()];
             if (!pDiffData) {
                 pDiffData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
@@ -136,6 +130,12 @@ void DeviceDataBatch::OnAdd(std::shared_ptr<Model>& pModel) {
             if (!pNormData) {
                 pNormData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
                 CreateTextureResource(pDevice, pMaterial->GetNormalMapFilePath(), pNormData, resourceUploadBatch);
+            }
+
+            std::unique_ptr<DirectX::IEffect>& pEffect = m_materialData[pMaterial];
+            if (!pEffect) {
+                pModelData->GetEffects().push_back(&pEffect);
+                CreateMaterialResource(pDevice, pMaterial, pEffect, rtState);
             }
         }
         pModelData->GetEffects().shrink_to_fit();

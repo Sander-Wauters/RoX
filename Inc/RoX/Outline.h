@@ -43,10 +43,10 @@ template<typename Bounds> struct BoundingBodyOutline : public Outline {
 
 struct GridOutline : public Outline {
     GridOutline(const std::string iname,
-            std::uint16_t ixDivisions,
-            std::uint16_t iyDivisions,
-            DirectX::XMFLOAT3 ixAxis, 
-            DirectX::XMFLOAT3 iyAxis, 
+            std::uint16_t ixDivisions = 2,
+            std::uint16_t iyDivisions = 2,
+            DirectX::XMFLOAT3 ixAxis = { 1.f, 0.f, 0.f }, 
+            DirectX::XMFLOAT3 iyAxis = { 0.f, 0.f, 1.f },
             DirectX::XMFLOAT3 iorigin = { 0.f, 0.f, 0.f },
             DirectX::XMVECTOR icolor = DirectX::Colors::White,
             bool ivisible = true) noexcept;
@@ -61,8 +61,8 @@ struct GridOutline : public Outline {
 
 struct RingOutline : public Outline {
     RingOutline(const std::string iname,
-            DirectX::XMFLOAT3 imajorAxis,
-            DirectX::XMFLOAT3 iminorAxis,
+            DirectX::XMFLOAT3 imajorAxis = { .5f, 0.f, 0.f },
+            DirectX::XMFLOAT3 iminorAxis = { 0.f, 0.f, .5f },
             DirectX::XMFLOAT3 iorigin = { 0.f, 0.f, 0.f },
             DirectX::XMVECTOR icolor = DirectX::Colors::White,
             bool ivisible = true) noexcept;
@@ -75,7 +75,7 @@ struct RingOutline : public Outline {
 
 struct RayOutline : public Outline {
     RayOutline(const std::string iname,
-            DirectX::XMFLOAT3 idirection,
+            DirectX::XMFLOAT3 idirection = { 1.f, 0.f, 0.f },
             DirectX::XMFLOAT3 iorigin = { 0.f, 0.f, 0.f },
             bool inormalized = false,
             DirectX::XMVECTOR icolor = DirectX::Colors::White,
@@ -88,9 +88,9 @@ struct RayOutline : public Outline {
 
 struct TriangleOutline : public Outline {
     TriangleOutline(const std::string iname,
-            DirectX::XMFLOAT3 ipointA,
-            DirectX::XMFLOAT3 ipointB,
-            DirectX::XMFLOAT3 ipointC,
+            DirectX::XMFLOAT3 ipointA = { 0.f, 0.f, 0.f },
+            DirectX::XMFLOAT3 ipointB = { 1.f, 0.f, 0.f },
+            DirectX::XMFLOAT3 ipointC = { .5f, 1.f, 0.f },
             DirectX::XMVECTOR icolor = DirectX::Colors::White,
             bool ivisible = true) noexcept;
 
@@ -101,10 +101,10 @@ struct TriangleOutline : public Outline {
 
 struct QuadOutline : public Outline {
     QuadOutline(const std::string iname,
-            DirectX::XMFLOAT3 ipointA,
-            DirectX::XMFLOAT3 ipointB,
-            DirectX::XMFLOAT3 ipointC,
-            DirectX::XMFLOAT3 ipointD,
+            DirectX::XMFLOAT3 ipointA = { 0.f, 0.f, 0.f },
+            DirectX::XMFLOAT3 ipointB = { 0.f, 1.f, 0.f },
+            DirectX::XMFLOAT3 ipointC = { 1.f, 0.f, 0.f },
+            DirectX::XMFLOAT3 ipointD = { 1.f, 1.f, 0.f },
             DirectX::XMVECTOR icolor = DirectX::Colors::White,
             bool ivisible = true) noexcept;
 

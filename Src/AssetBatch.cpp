@@ -91,6 +91,10 @@ void AssetBatch::RegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObser
     m_assetBatchObservers.insert(assetBatchObserver);
 }
 
+void AssetBatch::DeRegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept {
+    m_assetBatchObservers.erase(assetBatchObserver);
+}
+
 std::string AssetBatch::GetName() const noexcept {
     return m_name;
 }

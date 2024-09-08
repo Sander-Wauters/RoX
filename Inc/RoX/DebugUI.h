@@ -55,6 +55,13 @@ namespace DebugUI {
     void ModelHierarchy(AssetBatch& batch, Model** ppSelectedModel, IMesh** ppSelectedIMesh, Submesh** ppSelectedSubmesh);
     void BoneHierarchy(Model& model, std::uint32_t& selectedBone);
 
+    void AddMaterial(Model& model);
+    void AddSubmesh(IMesh& iMesh);
+    void AddIMesh(Model& model);
+    void AddModel(AssetBatch& batch);
+    void AddSprite(AssetBatch& batch);
+    void AddOutline(AssetBatch& batch);
+
     void CameraMenu(Camera& camera);
     void MaterialMenu(Material& material);
     void BoneMenu(Model& model, std::uint32_t boneIndex);
@@ -62,6 +69,15 @@ namespace DebugUI {
     void IMeshMenu(IMesh& iMesh);
     void ModelMenu(Model& model);
     void SpriteMenu(Sprite& sprite);
+    void BoundingBoxOutlineMenu(BoundingBodyOutline<DirectX::BoundingBox>& outline);
+    void BoundingFrustumOutlineMenu(BoundingBodyOutline<DirectX::BoundingFrustum>& outline);
+    void BoundingOrientedBoxOutlineMenu(BoundingBodyOutline<DirectX::BoundingOrientedBox>& outline);
+    void BoundingSphereOutlineMenu(BoundingBodyOutline<DirectX::BoundingSphere>& outline);
+    void GridOutlineMenu(GridOutline& outline);
+    void RingOutlineMenu(RingOutline& outline);
+    void RayOutlineMenu(RayOutline& outline);
+    void TriangleOutlineMenu(TriangleOutline& outline);
+    void QuadOutlineMenu(QuadOutline& outline);
     void OutlineMenu(Outline& outline);
     void AssetBatchMenu(AssetBatch& batch);
 

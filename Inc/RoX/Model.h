@@ -200,6 +200,7 @@ class SkinnedMesh : public IMesh {
 };
 
 // Contains 1 or more meshes, all the materials used by there submeshes and a collection of tranformations to animate the model.
+// All **Material**s need assigned to the **Model** before being added to a **Scene**.
 class Model {
     public:
         Model(const std::string name, 

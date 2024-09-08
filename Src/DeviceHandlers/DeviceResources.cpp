@@ -661,6 +661,10 @@ void DeviceResources::RegisterDeviceObserver(IDeviceObserver* pDeviceObserver) n
     m_deviceObservers.insert(pDeviceObserver);
 }
 
+void DeviceResources::DeRegisterDeviceObserver(IDeviceObserver* pDeviceObserver) noexcept {
+    m_deviceObservers.erase(pDeviceObserver);
+}
+
 void DeviceResources::SetWindow(HWND window, int width, int height) noexcept {
     m_window = window;
 

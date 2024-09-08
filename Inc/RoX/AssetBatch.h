@@ -30,6 +30,7 @@ class AssetBatch {
         void RemoveOutline(std::string name);
 
         void RegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept;
+        void DeRegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept;
 
     public:
         std::string GetName() const noexcept;
