@@ -55,10 +55,10 @@ namespace DebugUI {
     void ModelHierarchy(AssetBatch& batch, Model** ppSelectedModel, IMesh** ppSelectedIMesh, Submesh** ppSelectedSubmesh);
     void BoneHierarchy(Model& model, std::uint32_t& selectedBone);
 
-    void AddMaterial(Model& model);
     void AddSubmesh(IMesh& iMesh);
     void AddIMesh(Model& model);
     void AddModel(AssetBatch& batch);
+    void AddMaterial(AssetBatch& batch);
     void AddSprite(AssetBatch& batch);
     void AddOutline(AssetBatch& batch);
 

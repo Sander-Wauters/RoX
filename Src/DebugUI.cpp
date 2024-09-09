@@ -554,10 +554,6 @@ void DebugUI::BoneHierarchy(Model& model, std::uint32_t& selectedBone) {
     ImGui::EndChild();
 }
 
-void DebugUI::AddMaterial(Model& model) {
-
-}
-
 void DebugUI::AddSubmesh(IMesh& iMesh) {
 
 }
@@ -582,6 +578,10 @@ void DebugUI::AddModel(AssetBatch& batch) {
             batch.Add(AssetIO::ImportModel(file, std::make_shared<Material>("test_mat", L"assets/default_diffuse.png", L"assets/flat_map.png"), skinned, packed));
         ImGui::EndPopup();
     }
+}
+
+void DebugUI::AddMaterial(AssetBatch& batch) {
+
 }
 
 void DebugUI::AddSprite(AssetBatch& batch) {

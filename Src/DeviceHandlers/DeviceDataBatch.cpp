@@ -58,6 +58,17 @@ void DeviceDataBatch::Add(const AssetBatch& batch) {
     }
 }
 
+void DeviceDataBatch::Add(std::shared_ptr<Material> pMaterial, bool addToMaterialData) {
+    std::unique_ptr<TextureDeviceData>& pDiffData = m_textureData[pMaterial->GetDiffuseMapFilePath()];
+    if (!pDiffData)
+        pDiffData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
+    std::unique_ptr<TextureDeviceData>& pNormData = m_textureData[pMaterial->GetNormalMapFilePath()];
+    if (!pNormData) 
+        pNormData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
+    if (addToMaterialData)
+        m_materialData[pMaterial];
+}
+
 void DeviceDataBatch::Add(std::shared_ptr<Model> pModel) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
     std::unique_ptr<ModelDeviceData>& pModelData = m_modelData[pModel];
@@ -69,19 +80,17 @@ void DeviceDataBatch::Add(std::shared_ptr<Model> pModel) {
         pModelData->GetEffects().reserve(pModel->GetNumMaterials());
         for (std::uint8_t i = 0; i < pModel->GetNumMaterials(); ++i) {
             std::shared_ptr<Material> pMaterial = pModel->GetMaterials()[i];
+            Add(pMaterial, false);
 
             std::unique_ptr<DirectX::IEffect>& pEffect = m_materialData[pMaterial];
             if (!pEffect) {
                 pModelData->GetEffects().push_back(&pEffect);
+            } else {
+                // Effect may already be loaded in but not used by this model.
+                std::vector<std::unique_ptr<DirectX::IEffect>*>& pEffects = pModelData->GetEffects();
+                if (std::find(pEffects.begin(), pEffects.end(), &pEffect) == pEffects.end())
+                    pEffects.push_back(&pEffect);
             }
-
-            std::unique_ptr<TextureDeviceData>& pDiffData = m_textureData[pMaterial->GetDiffuseMapFilePath()];
-            if (!pDiffData)
-                pDiffData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
-
-            std::unique_ptr<TextureDeviceData>& pNormData = m_textureData[pMaterial->GetNormalMapFilePath()];
-            if (!pNormData) 
-                pNormData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
         }
         pModelData->GetEffects().shrink_to_fit();
     }
@@ -93,6 +102,38 @@ void DeviceDataBatch::Add(std::shared_ptr<Sprite> pSprite) {
 
 void DeviceDataBatch::Add(std::shared_ptr<Text> pText) {
     m_textData[pText] = std::make_unique<TextDeviceData>(m_nextDescriptorHeapIndex++);
+}
+
+void DeviceDataBatch::OnAdd(std::shared_ptr<Material>& pMaterial) {
+    ID3D12Device* pDevice = m_deviceResources.GetDevice();
+
+    DirectX::RenderTargetState rtState(
+            m_deviceResources.GetBackBufferFormat(), 
+            m_deviceResources.GetDepthBufferFormat());
+    if (m_msaaEnabled) {
+        rtState.sampleDesc.Count = DeviceResources::MSAA_COUNT;
+        rtState.sampleDesc.Quality = DeviceResources::MSAA_QUALITY;
+    }
+
+    DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
+    resourceUploadBatch.Begin();
+
+    std::unique_ptr<TextureDeviceData>& pDiffData = m_textureData[pMaterial->GetDiffuseMapFilePath()];
+    if (!pDiffData) {
+        pDiffData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
+        CreateTextureResource(pDevice, pMaterial->GetDiffuseMapFilePath(), pDiffData, resourceUploadBatch);
+    }
+    std::unique_ptr<TextureDeviceData>& pNormData = m_textureData[pMaterial->GetNormalMapFilePath()];
+    if (!pNormData) {
+        pNormData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
+        CreateTextureResource(pDevice, pMaterial->GetNormalMapFilePath(), pNormData, resourceUploadBatch);
+    }
+    std::unique_ptr<DirectX::IEffect>& pEffect = m_materialData[pMaterial];
+    if (!pEffect)
+        CreateMaterialResource(pDevice, pMaterial, pEffect, rtState);
+
+    std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
+    uploadResourceFinished.wait();
 }
 
 void DeviceDataBatch::OnAdd(std::shared_ptr<Model>& pModel) {
@@ -136,6 +177,11 @@ void DeviceDataBatch::OnAdd(std::shared_ptr<Model>& pModel) {
             if (!pEffect) {
                 pModelData->GetEffects().push_back(&pEffect);
                 CreateMaterialResource(pDevice, pMaterial, pEffect, rtState);
+            } else {
+                // Effect may already be loaded in but not used by this model.
+                std::vector<std::unique_ptr<DirectX::IEffect>*>& pEffects = pModelData->GetEffects();
+                if (std::find(pEffects.begin(), pEffects.end(), &pEffect) == pEffects.end())
+                    pEffects.push_back(&pEffect);
             }
         }
         pModelData->GetEffects().shrink_to_fit();
@@ -180,6 +226,10 @@ void DeviceDataBatch::OnAdd(std::shared_ptr<Text>& pText) {
 }
 
 void DeviceDataBatch::OnAdd(std::shared_ptr<Outline>& pOutline) {
+
+}
+
+void DeviceDataBatch::OnRemove(std::shared_ptr<Material>& pMaterial) {
 
 }
 

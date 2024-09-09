@@ -15,12 +15,26 @@ bool AssetBatch::operator== (const AssetBatch& other) const noexcept {
     return m_name == other.m_name;
 }
 
-void AssetBatch::Add(std::shared_ptr<Model> pMesh) {
-    std::shared_ptr<Model>& entry = m_models[pMesh->GetName()];
+void AssetBatch::Add(std::shared_ptr<Material> pMaterial) {
+    std::shared_ptr<Material>& pMappedMaterial = m_materials[pMaterial->GetName()];
+    if (!pMappedMaterial) {
+        pMappedMaterial = pMaterial;
+        for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
+            pAssetBatchObserver->OnAdd(pMaterial);
+        }
+    }
+}
+
+void AssetBatch::Add(std::shared_ptr<Model> pModel) {
+    std::shared_ptr<Model>& entry = m_models[pModel->GetName()];
     if (!entry) {
-        entry = pMesh;
+        entry = pModel;
         for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
             pAssetBatchObserver->OnAdd(entry);
+        }
+        // Material can be shared so check if they aren't already loaded in.
+        for (std::uint8_t i = 0; i < pModel->GetNumMaterials(); ++i) {
+            Add(pModel->GetMaterials()[i]);
         }
     } else
         throw std::invalid_argument("Scene already contains this mesh.");
@@ -57,6 +71,13 @@ void AssetBatch::Add(std::shared_ptr<Outline> pOutline) {
         }
     } else
         throw std::invalid_argument("Scene already contains this outline.");
+}
+
+void AssetBatch::RemoveMaterial(std::string name) {
+    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
+        pAssetBatchObserver->OnRemove(m_materials.at(name));
+    }
+    m_materials.erase(name);
 }
 
 void AssetBatch::RemoveModel(std::string name) {
@@ -107,6 +128,10 @@ std::uint8_t AssetBatch::GetMaxAssets() const noexcept {
     return m_maxAssets;
 }
 
+std::shared_ptr<Material>& AssetBatch::GetMaterial(std::string name) {
+    return m_materials.at(name);
+}
+
 std::shared_ptr<Model>& AssetBatch::GetModel(std::string name) {
     return m_models.at(name);
 }
@@ -123,6 +148,10 @@ std::shared_ptr<Outline>& AssetBatch::GetOutline(std::string name) {
     return m_outlines.at(name); 
 }
 
+const std::unordered_map<std::string, std::shared_ptr<Material>> AssetBatch::GetMaterials() const noexcept {
+    return m_materials;
+}
+
 const std::unordered_map<std::string, std::shared_ptr<Model>>& AssetBatch::GetModels() const noexcept {
     return m_models;
 }
@@ -137,6 +166,11 @@ const std::unordered_map<std::string, std::shared_ptr<Text>>& AssetBatch::GetTex
 
 const std::unordered_map<std::string, std::shared_ptr<Outline>>& AssetBatch::GetOutlines() const noexcept {
     return m_outlines;
+}
+
+
+std::uint64_t AssetBatch::GetNumMaterials() const noexcept {
+    return m_materials.size();
 }
 
 std::uint64_t AssetBatch::GetNumModels() const noexcept {
@@ -166,16 +200,6 @@ std::uint64_t AssetBatch::GetNumSubmeshes() const noexcept {
         count += iMesh->GetNumSubmeshes();
     } 
     return count;
-}
-
-std::uint64_t AssetBatch::GetNumMaterials() const noexcept {
-    std::unordered_set<std::string> materialNames;
-    for (auto& modelPair : m_models) {
-        for (std::shared_ptr<Material>& material : modelPair.second->GetMaterials()) {
-            materialNames.insert(material->GetName());
-        }
-    }
-    return materialNames.size();
 }
 
 std::uint64_t AssetBatch::GetNumSprites() const noexcept {

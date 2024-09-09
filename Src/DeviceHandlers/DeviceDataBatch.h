@@ -37,16 +37,19 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
 
         // Used when loading in a new Scene.
         void Add(const AssetBatch& batch);
+        void Add(std::shared_ptr<Material> pMaterial, bool addToMaterialData = true);
         void Add(std::shared_ptr<Model> pModel);
         void Add(std::shared_ptr<Sprite> pSprite);
         void Add(std::shared_ptr<Text> pText);
 
         // Used while a Scene is already loaded in.
+        void OnAdd(std::shared_ptr<Material>& pMaterial) override;
         void OnAdd(std::shared_ptr<Model>& pModel) override;
         void OnAdd(std::shared_ptr<Sprite>& pSprite) override;
         void OnAdd(std::shared_ptr<Text>& pText) override;
         void OnAdd(std::shared_ptr<Outline>& pOutline) override;
 
+        void OnRemove(std::shared_ptr<Material>& pMaterial) override;
         void OnRemove(std::shared_ptr<Model>& pModel) override;
         void OnRemove(std::shared_ptr<Sprite>& pSprite) override;
         void OnRemove(std::shared_ptr<Text>& pText) override;
