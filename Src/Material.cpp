@@ -1,11 +1,11 @@
 #include "RoX/Material.h"
 
 Material::Material(
-        const std::string name,
         const std::wstring diffuseMapFilePath,
         const std::wstring normalMapFilePath,
+        std::string name,
         std::uint32_t flags)
-    noexcept : m_name(name),
+    noexcept : Asset("material", name),
     m_diffuseMapFilePath(diffuseMapFilePath),
     m_normalMapFilePath(normalMapFilePath),
     m_flags(flags),
@@ -15,10 +15,6 @@ Material::Material(
 {}
 
 Material::~Material() noexcept {
-}
-
-std::string Material::GetName() const noexcept {
-    return m_name;
 }
 
 std::wstring Material::GetDiffuseMapFilePath() const noexcept {

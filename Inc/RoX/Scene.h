@@ -7,7 +7,6 @@
 #include "Camera.h"
 #include "Model.h"
 #include "Sprite.h"
-#include "Text.h"
 #include "Outline.h"
 #include "AssetBatch.h"
 

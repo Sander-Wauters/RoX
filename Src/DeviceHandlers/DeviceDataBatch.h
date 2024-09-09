@@ -8,7 +8,6 @@
 #include "RoX/Material.h"
 #include "RoX/Model.h"
 #include "RoX/Sprite.h"
-#include "RoX/Text.h"
 
 #include "IDeviceObserver.h"
 #include "DeviceResources.h"
@@ -26,7 +25,7 @@ using TextPair     = std::pair<const std::shared_ptr<Text>,     std::unique_ptr<
 
 class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
     public:
-        DeviceDataBatch(DeviceResources& deviceResources, std::uint8_t descriptorHeapSize, bool& msaaEnabled) noexcept;
+        DeviceDataBatch(DeviceResources& deviceResources, std::uint8_t descriptorHeapSize, const bool& msaaEnabled) noexcept;
         ~DeviceDataBatch() noexcept;
 
         DeviceDataBatch(DeviceDataBatch& other) noexcept;
@@ -98,7 +97,7 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
 
     private:
         DeviceResources& m_deviceResources;
-        bool& m_msaaEnabled;
+        const bool& m_msaaEnabled;
 
         const std::uint8_t m_descriptorHeapSize;
         std::uint8_t m_nextDescriptorHeapIndex;

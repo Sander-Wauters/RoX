@@ -32,7 +32,7 @@ class DeviceResources {
 
     public:
         void RegisterDeviceObserver(IDeviceObserver* pDeviceObserver) noexcept;
-        void DeRegisterDeviceObserver(IDeviceObserver* pDeviceObserver) noexcept;
+        void DeregisterDeviceObserver(IDeviceObserver* pDeviceObserver) noexcept;
         void SetWindow(HWND window, int width, int height) noexcept;
 
         RECT GetOutputSize() const noexcept;

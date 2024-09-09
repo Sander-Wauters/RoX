@@ -6,7 +6,6 @@
 
 #include "Model.h"
 #include "Sprite.h"
-#include "Text.h"
 #include "Outline.h"
 #include "IAssetBatchObserver.h"
 
@@ -32,7 +31,7 @@ class AssetBatch {
         void RemoveOutline(std::string name);
 
         void RegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept;
-        void DeRegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept;
+        void DeregisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept;
 
     public:
         std::string GetName() const noexcept;

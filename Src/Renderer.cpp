@@ -356,27 +356,89 @@ void Renderer::Impl::RenderOutlines(const DeviceDataBatch& batch) {
     pOutlineEffect->Apply(pCommandList);
 
     for (const std::pair<std::string const, std::shared_ptr<Outline>>& outlinePair : m_pDeviceResourceData->GetScene().GetOutlines(0)) {
-        if (!outlinePair.second->visible)
+        Outline* pOutline = outlinePair.second.get();
+        if (!pOutline->IsVisible())
             continue;
 
-        if (auto p = std::dynamic_pointer_cast<BoundingBodyOutline<DirectX::BoundingBox>>(outlinePair.second)) 
-            Draw(pOutlineBatch, p->boundingBody, DirectX::XMLoadFloat4(&p->color));
-        else if (auto p = std::dynamic_pointer_cast<BoundingBodyOutline<DirectX::BoundingFrustum>>(outlinePair.second)) 
-            Draw(pOutlineBatch, p->boundingBody, DirectX::XMLoadFloat4(&p->color));
-        else if (auto p = std::dynamic_pointer_cast<BoundingBodyOutline<DirectX::BoundingOrientedBox>>(outlinePair.second)) 
-            Draw(pOutlineBatch, p->boundingBody, DirectX::XMLoadFloat4(&p->color));
-        else if (auto p = std::dynamic_pointer_cast<BoundingBodyOutline<DirectX::BoundingSphere>>(outlinePair.second)) 
-            Draw(pOutlineBatch, p->boundingBody, DirectX::XMLoadFloat4(&p->color));
-        else if (auto p = std::dynamic_pointer_cast<GridOutline>(outlinePair.second))
-            DrawGrid(pOutlineBatch, DirectX::XMLoadFloat3(&p->xAxis), DirectX::XMLoadFloat3(&p->yAxis), DirectX::XMLoadFloat3(&p->origin), p->xDivisions, p->yDivisions, DirectX::XMLoadFloat4(&p->color));
-        else if (auto p = std::dynamic_pointer_cast<RingOutline>(outlinePair.second))
-            DrawRing(pOutlineBatch, DirectX::XMLoadFloat3(&p->origin), DirectX::XMLoadFloat3(&p->majorAxis), DirectX::XMLoadFloat3(&p->minorAxis), DirectX::XMLoadFloat4(&p->color));
-        else if (auto p = std::dynamic_pointer_cast<RayOutline>(outlinePair.second)) 
-            DrawRay(pOutlineBatch, DirectX::XMLoadFloat3(&p->origin), DirectX::XMLoadFloat3(&p->direction), p->normalized, DirectX::XMLoadFloat4(&p->color));
-        else if (auto p = std::dynamic_pointer_cast<TriangleOutline>(outlinePair.second)) 
-            DrawTriangle(pOutlineBatch, DirectX::XMLoadFloat3(&p->pointA), DirectX::XMLoadFloat3(&p->pointB), DirectX::XMLoadFloat3(&p->pointC), DirectX::XMLoadFloat4(&p->color));
-        else if (auto p = std::dynamic_pointer_cast<QuadOutline>(outlinePair.second)) 
-            DrawQuad(pOutlineBatch, DirectX::XMLoadFloat3(&p->pointA), DirectX::XMLoadFloat3(&p->pointB), DirectX::XMLoadFloat3(&p->pointC), DirectX::XMLoadFloat3(&p->pointD), DirectX::XMLoadFloat4(&p->color));
+        switch (pOutline->GetType()) {
+            case Outline::Type::BoundingBox: 
+                {
+                    auto p = static_cast<BoundingBodyOutline<DirectX::BoundingBox>*>(pOutline);
+                    Draw(pOutlineBatch, p->GetBoundingBody(), DirectX::XMLoadFloat4(&p->GetColor()));
+                }
+                break;
+            case Outline::Type::BoundingFrustum:
+                {
+                    auto p = static_cast<BoundingBodyOutline<DirectX::BoundingFrustum>*>(pOutline);
+                    Draw(pOutlineBatch, p->GetBoundingBody(), DirectX::XMLoadFloat4(&p->GetColor()));
+                }
+                break;
+            case Outline::Type::BoundingOrientedBox:
+                {
+                    auto p = static_cast<BoundingBodyOutline<DirectX::BoundingOrientedBox>*>(pOutline);
+                    Draw(pOutlineBatch, p->GetBoundingBody(), DirectX::XMLoadFloat4(&p->GetColor()));
+                }
+                break;
+            case Outline::Type::BoundingSphere:
+                {
+                    auto p = static_cast<BoundingBodyOutline<DirectX::BoundingSphere>*>(pOutline);
+                    Draw(pOutlineBatch, p->GetBoundingBody(), DirectX::XMLoadFloat4(&p->GetColor()));
+                }
+                break;
+            case Outline::Type::Grid: 
+                {
+                    auto p = static_cast<GridOutline*>(pOutline);
+                    DrawGrid(pOutlineBatch, 
+                            DirectX::XMLoadFloat3(&p->GetXAxis()), 
+                            DirectX::XMLoadFloat3(&p->GetYAxis()), 
+                            DirectX::XMLoadFloat3(&p->GetOrigin()), 
+                            p->GetXDivisions(), 
+                            p->GetYDivisions(), 
+                            DirectX::XMLoadFloat4(&p->GetColor()));
+                }
+                break;
+            case Outline::Type::Ring:
+                {
+                    auto p = static_cast<RingOutline*>(pOutline);
+                    DrawRing(pOutlineBatch, 
+                            DirectX::XMLoadFloat3(&p->GetOrigin()), 
+                            DirectX::XMLoadFloat3(&p->GetMajorAxis()), 
+                            DirectX::XMLoadFloat3(&p->GetMinorAxis()), 
+                            DirectX::XMLoadFloat4(&p->GetColor()));
+                }
+                break;
+            case Outline::Type::Ray:
+                {
+                    auto p = static_cast<RayOutline*>(pOutline);
+                    DrawRay(pOutlineBatch, 
+                            DirectX::XMLoadFloat3(&p->GetOrigin()), 
+                            DirectX::XMLoadFloat3(&p->GetDirection()), 
+                            p->IsNormalized(), 
+                            DirectX::XMLoadFloat4(&p->GetColor()));
+                }
+                break;
+            case Outline::Type::Triangle:
+                {
+                    auto p = static_cast<TriangleOutline*>(pOutline);
+                    DrawTriangle(pOutlineBatch, 
+                            DirectX::XMLoadFloat3(&p->GetPointA()), 
+                            DirectX::XMLoadFloat3(&p->GetPointB()), 
+                            DirectX::XMLoadFloat3(&p->GetPointC()), 
+                            DirectX::XMLoadFloat4(&p->GetColor()));
+                }
+                break;
+            case Outline::Type::Quad:
+                {
+                    auto p = static_cast<QuadOutline*>(pOutline);
+                    DrawQuad(pOutlineBatch, 
+                            DirectX::XMLoadFloat3(&p->GetPointA()), 
+                            DirectX::XMLoadFloat3(&p->GetPointB()), 
+                            DirectX::XMLoadFloat3(&p->GetPointC()), 
+                            DirectX::XMLoadFloat3(&p->GetPointD()), 
+                            DirectX::XMLoadFloat4(&p->GetColor()));
+                }
+                break;
+        }
     }
     pOutlineBatch->End();
 }

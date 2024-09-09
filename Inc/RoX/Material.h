@@ -3,6 +3,8 @@
 #include <string>
 #include <DirectXMath.h>
 
+#include "Asset.h"
+
 // Collection of flags that **Renderer** uses to determine how a material (and by association a submesh) should be rendered.
 namespace RenderFlags {
     constexpr std::uint32_t None =                     0;
@@ -81,18 +83,17 @@ namespace RenderFlags {
 // Describes the texture, color and effects of a submesh.
 // Name must be unique as it is used as a key internally.
 // **Renderer** requires a material to have both a diffuse and normal map.
-class Material {
+class Material : public Asset {
     public:
         Material(
-                const std::string name,
                 const std::wstring diffuseMapFilePath,
                 const std::wstring normalMapFilePath,
+                std::string name = "",
                 std::uint32_t flags = RenderFlags::Default
                 ) noexcept;
         ~Material() noexcept;
 
     public:
-        std::string GetName() const noexcept;
         std::wstring GetDiffuseMapFilePath() const noexcept;
         std::wstring GetNormalMapFilePath() const noexcept;
 
@@ -103,7 +104,6 @@ class Material {
         DirectX::XMFLOAT4& GetSpecularColor() noexcept;
 
     private:
-        const std::string m_name;
         const std::wstring m_diffuseMapFilePath;
         const std::wstring m_normalMapFilePath;
 

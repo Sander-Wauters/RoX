@@ -266,7 +266,7 @@ std::shared_ptr<Model> AssetIO::ImportModel(std::string filepath, std::shared_pt
     if (!pScene)
         throw std::runtime_error("Error parsing '" + filepath + "': " + importer.GetErrorString());
 
-    Model model(GetNameFromFilePath(filepath), material);
+    Model model(material, GetNameFromFilePath(filepath));
     ParseBones(pScene, model);
     if (packMeshes)
         ParsePackedModel(pScene, model, skinned);

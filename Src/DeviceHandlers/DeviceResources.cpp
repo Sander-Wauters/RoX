@@ -661,7 +661,7 @@ void DeviceResources::RegisterDeviceObserver(IDeviceObserver* pDeviceObserver) n
     m_deviceObservers.insert(pDeviceObserver);
 }
 
-void DeviceResources::DeRegisterDeviceObserver(IDeviceObserver* pDeviceObserver) noexcept {
+void DeviceResources::DeregisterDeviceObserver(IDeviceObserver* pDeviceObserver) noexcept {
     m_deviceObservers.erase(pDeviceObserver);
 }
 

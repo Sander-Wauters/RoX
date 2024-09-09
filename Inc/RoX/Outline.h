@@ -7,348 +7,193 @@
 #include <DirectXColors.h>
 #include <DirectXCollision.h>
 
+#include "Asset.h"
+
 
 // Collection of structs that hold data to renderer the outline of shape.
 
-// Abstract struct representing the outline of a shape.
-struct Outline {
-    protected:
-        Outline(const std::string iname, DirectX::XMVECTOR icolor = DirectX::Colors::White, bool ivisible = true) noexcept;
-
+// Abstract class that contains properties that every outline has in common.
+class Outline : public Asset {
     public:
+        enum class Type {
+            BoundingBox,
+            BoundingFrustum,
+            BoundingOrientedBox,
+            BoundingSphere,
+            Grid,
+            Ring,
+            Ray,
+            Triangle,
+            Quad
+        };
+
+    protected:
+        Outline(Type type, std::string name = "", DirectX::XMVECTOR color = DirectX::Colors::White, bool visible = true) noexcept;
         virtual ~Outline() = default;
 
-        const std::string name;
-        DirectX::XMFLOAT4 color;
-        bool visible;
-};
-
-// Outlines a boundind body in **DirectXCollision**.
-template<typename Bounds> struct BoundingBodyOutline : public Outline {
-    static_assert(
-            std::is_base_of<DirectX::BoundingBox,         Bounds>::value ||
-            std::is_base_of<DirectX::BoundingFrustum,     Bounds>::value ||
-            std::is_base_of<DirectX::BoundingOrientedBox, Bounds>::value ||
-            std::is_base_of<DirectX::BoundingSphere,      Bounds>::value,
-            "Bounds must either be a DirectX::BoundingBox, DirectX::BoundingFrustum, DirectX::BoundingOrientedBox or DirectX::BoundingSphere"
-            );
-
-    BoundingBodyOutline(const std::string iname, Bounds& iboundingBody, DirectX::XMVECTOR icolor = DirectX::Colors::White, bool ivisible = true) noexcept
-        : Outline(iname, icolor, ivisible), boundingBody(iboundingBody)
-        {}
-
-
-    Bounds& boundingBody;
-};
-
-struct GridOutline : public Outline {
-    GridOutline(const std::string iname,
-            std::uint16_t ixDivisions = 2,
-            std::uint16_t iyDivisions = 2,
-            DirectX::XMFLOAT3 ixAxis = { 1.f, 0.f, 0.f }, 
-            DirectX::XMFLOAT3 iyAxis = { 0.f, 0.f, 1.f },
-            DirectX::XMFLOAT3 iorigin = { 0.f, 0.f, 0.f },
-            DirectX::XMVECTOR icolor = DirectX::Colors::White,
-            bool ivisible = true) noexcept;
-
-    std::uint16_t xDivisions;
-    std::uint16_t yDivisions;
-
-    DirectX::XMFLOAT3 xAxis;
-    DirectX::XMFLOAT3 yAxis;
-    DirectX::XMFLOAT3 origin;
-};
-
-struct RingOutline : public Outline {
-    RingOutline(const std::string iname,
-            DirectX::XMFLOAT3 imajorAxis = { .5f, 0.f, 0.f },
-            DirectX::XMFLOAT3 iminorAxis = { 0.f, 0.f, .5f },
-            DirectX::XMFLOAT3 iorigin = { 0.f, 0.f, 0.f },
-            DirectX::XMVECTOR icolor = DirectX::Colors::White,
-            bool ivisible = true) noexcept;
-
-
-    DirectX::XMFLOAT3 majorAxis;
-    DirectX::XMFLOAT3 minorAxis;
-    DirectX::XMFLOAT3 origin;
-};
-
-struct RayOutline : public Outline {
-    RayOutline(const std::string iname,
-            DirectX::XMFLOAT3 idirection = { 1.f, 0.f, 0.f },
-            DirectX::XMFLOAT3 iorigin = { 0.f, 0.f, 0.f },
-            bool inormalized = false,
-            DirectX::XMVECTOR icolor = DirectX::Colors::White,
-            bool ivisible = true) noexcept;
-
-    DirectX::XMFLOAT3 direction;
-    DirectX::XMFLOAT3 origin;
-    bool normalized;
-};
-
-struct TriangleOutline : public Outline {
-    TriangleOutline(const std::string iname,
-            DirectX::XMFLOAT3 ipointA = { 0.f, 0.f, 0.f },
-            DirectX::XMFLOAT3 ipointB = { 1.f, 0.f, 0.f },
-            DirectX::XMFLOAT3 ipointC = { .5f, 1.f, 0.f },
-            DirectX::XMVECTOR icolor = DirectX::Colors::White,
-            bool ivisible = true) noexcept;
-
-    DirectX::XMFLOAT3 pointA;
-    DirectX::XMFLOAT3 pointB;
-    DirectX::XMFLOAT3 pointC;
-};
-
-struct QuadOutline : public Outline {
-    QuadOutline(const std::string iname,
-            DirectX::XMFLOAT3 ipointA = { 0.f, 0.f, 0.f },
-            DirectX::XMFLOAT3 ipointB = { 0.f, 1.f, 0.f },
-            DirectX::XMFLOAT3 ipointC = { 1.f, 0.f, 0.f },
-            DirectX::XMFLOAT3 ipointD = { 1.f, 1.f, 0.f },
-            DirectX::XMVECTOR icolor = DirectX::Colors::White,
-            bool ivisible = true) noexcept;
-
-    DirectX::XMFLOAT3 pointA;
-    DirectX::XMFLOAT3 pointB;
-    DirectX::XMFLOAT3 pointC;
-    DirectX::XMFLOAT3 pointD;
-};
-
-
-/*
-// Collection of classes that hold data to renderer the outline of shape.
-
-// Abstract interface representing the outline of a shape.
-class IOutline {
-protected:
-IOutline() = default;
-IOutline(IOutline&) = default;
-IOutline(IOutline&&) = default;
-IOutline& operator= (IOutline&&) = default;
-
-public:
-virtual ~IOutline() = default;
-
-virtual std::string GetName() const noexcept = 0;
-virtual DirectX::XMFLOAT4& GetColor() noexcept = 0;
-virtual bool IsVisible() const noexcept = 0;
-
-virtual void SetVisible(bool visible) noexcept = 0;
-};
-
-// Outlines a boundind body in **DirectXCollision**.
-template<typename Bounds> class BoundingBodyOutline : public IOutline {
-private:
-static_assert(
-std::is_base_of<DirectX::BoundingBox,         Bounds>::value ||
-std::is_base_of<DirectX::BoundingFrustum,     Bounds>::value ||
-std::is_base_of<DirectX::BoundingOrientedBox, Bounds>::value ||
-std::is_base_of<DirectX::BoundingSphere,      Bounds>::value,
-"T must either be a DirectX::BoundingBox, DirectX::BoundingFrustum, DirectX::BoundingOrientedBox or DirectX::BoundingSphere"
-);
-
-public:
-BoundingBodyOutline(
-const std::string name,
-Bounds& bounds,
-DirectX::XMVECTOR color = DirectX::Colors::White,
-bool visible = true) noexcept : 
-m_name(name),
-m_visible(visible),
-m_bounds(bounds) 
-{
-DirectX::XMStoreFloat4(&m_color, color);
-}
-
-public:
-std::string GetName() const noexcept override { return m_name; }
-DirectX::XMFLOAT4& GetColor() noexcept override { return m_color; }
-bool IsVisible() const noexcept override { return m_visible; }
-
-Bounds& GetBounds() noexcept { return m_bounds; }
-
-void SetVisible(bool visible) noexcept override { m_visible = visible; }
-
-private:
-const std::string m_name;
-DirectX::XMFLOAT4 m_color;
-bool m_visible;
-
-Bounds& m_bounds;
-};
-
-class GridOutline : public IOutline {
-public:
-GridOutline(
-const std::string name,
-std::uint16_t xDivsions,
-std::uint16_t yDivsions,
-DirectX::XMFLOAT3 xAxis, 
-DirectX::XMFLOAT3 yAxis, 
-DirectX::XMFLOAT3 origin = { 0.f, 0.f, 0.f },
-DirectX::XMVECTOR color = DirectX::Colors::White,
-    bool visible = true
-    ) noexcept;
     public:
-    std::string GetName() const noexcept override;
-    DirectX::XMFLOAT4& GetColor() noexcept override;
-    bool IsVisible() const noexcept override;
+        DirectX::XMFLOAT4& GetColor() noexcept;
+        bool IsVisible() const noexcept;
+        Type GetType() const noexcept;
 
-    std::uint16_t GetXDivsions() const noexcept;
-    std::uint16_t GetYDivsions() const noexcept;
-
-    DirectX::XMFLOAT3& GetXAxis() noexcept;
-    DirectX::XMFLOAT3& GetYAxis() noexcept;
-    DirectX::XMFLOAT3& GetOrigin() noexcept;
-
-    void SetVisible(bool visible) noexcept override;
-
-    void SetXDivisions(std::uint16_t xDivsions) noexcept;
-    void SetYDivisions(std::uint16_t yDivsions) noexcept;
-
-    private:
-    const std::string m_name;
-    DirectX::XMFLOAT4 m_color;
-    bool m_visible;
-
-    std::uint16_t m_xDivsions;
-    std::uint16_t m_yDivsions;
-
-    DirectX::XMFLOAT3 m_xAxis;
-    DirectX::XMFLOAT3 m_yAxis;
-    DirectX::XMFLOAT3 m_origin;
-    };
-
-class RingOutline : public IOutline {
-    public:
-        RingOutline(
-                const std::string name,
-                DirectX::XMFLOAT3 majorAxis,
-                DirectX::XMFLOAT3 minorAxis,
-                DirectX::XMFLOAT3 origin = { 0.f, 0.f, 0.f },
-                DirectX::XMVECTOR color = DirectX::Colors::White,
-                bool visible = true
-                ) noexcept;
+        void SetVisible(bool visible) noexcept;
 
     public:
-        std::string GetName() const noexcept override;
-        DirectX::XMFLOAT4& GetColor() noexcept override;
-        bool IsVisible() const noexcept override;
-
-        DirectX::XMFLOAT3& GetMajorAxis() noexcept;
-        DirectX::XMFLOAT3& GetMinorAxis() noexcept;
-        DirectX::XMFLOAT3& GetOrigin() noexcept;           
-
-        void SetVisible(bool visible) noexcept override;
-
-    private:
-        const std::string m_name;
+        const Type m_type;
         DirectX::XMFLOAT4 m_color;
         bool m_visible;
+};
 
+// Outlines a boundind body in **DirectXCollision**.
+template<typename Bounds> class BoundingBodyOutline : public Outline {
+    private:
+        static_assert(
+                std::is_base_of<DirectX::BoundingBox,         Bounds>::value ||
+                std::is_base_of<DirectX::BoundingFrustum,     Bounds>::value ||
+                std::is_base_of<DirectX::BoundingOrientedBox, Bounds>::value ||
+                std::is_base_of<DirectX::BoundingSphere,      Bounds>::value,
+                "Bounds must either be a DirectX::BoundingBox, DirectX::BoundingFrustum, DirectX::BoundingOrientedBox or DirectX::BoundingSphere"
+                );
+
+        constexpr Type GetType() {
+            if (std::is_base_of<DirectX::BoundingBox, Bounds>::value == true)
+                return Type::BoundingBox;
+            if (std::is_base_of<DirectX::BoundingFrustum, Bounds>::value == true)
+                return Type::BoundingFrustum;
+            if (std::is_base_of<DirectX::BoundingOrientedBox, Bounds>::value == true)
+                return Type::BoundingOrientedBox;
+            if (std::is_base_of<DirectX::BoundingSphere, Bounds>:: value == true)
+                return Type::BoundingSphere;
+        }
+
+    public:
+        BoundingBodyOutline(Bounds& boundingBody, std::string name = "", DirectX::XMVECTOR color = DirectX::Colors::White, bool visible = true) noexcept
+            : Outline(GetType(), name, color, visible), 
+            m_boundingBody(boundingBody)
+            {}
+
+    public:
+        Bounds& GetBoundingBody() noexcept {
+            return m_boundingBody;
+        }
+
+    private:
+        Bounds& m_boundingBody;
+};
+
+class GridOutline : public Outline {
+    public:
+        GridOutline(std::string name = "",
+                std::uint16_t xDivisions = 2,
+                std::uint16_t yDivisions = 2,
+                DirectX::XMFLOAT3 xAxis = { 1.f, 0.f, 0.f }, 
+                DirectX::XMFLOAT3 yAxis = { 0.f, 0.f, 1.f },
+                DirectX::XMFLOAT3 origin = { 0.f, 0.f, 0.f },
+                DirectX::XMVECTOR color = DirectX::Colors::White,
+                bool visible = true) noexcept;
+
+    public:
+        std::uint16_t GetXDivisions() const noexcept;
+        std::uint16_t GetYDivisions() const noexcept;
+
+        DirectX::XMFLOAT3& GetXAxis() noexcept;
+        DirectX::XMFLOAT3& GetYAxis() noexcept;
+        DirectX::XMFLOAT3& GetOrigin() noexcept;
+
+        void SetXDivisions(std::uint16_t xDivsions) noexcept;
+        void SetYDivisions(std::uint16_t yDivsions) noexcept;
+
+    private:
+        std::uint16_t m_xDivisions;
+        std::uint16_t m_yDivisions;
+
+        DirectX::XMFLOAT3 m_xAxis;
+        DirectX::XMFLOAT3 m_yAxis;
+        DirectX::XMFLOAT3 m_origin;
+};
+
+class RingOutline : public Outline {
+    public:
+        RingOutline(std::string name = "",
+                DirectX::XMFLOAT3 majorAxis = { .5f, 0.f, 0.f },
+                DirectX::XMFLOAT3 minorAxis = { 0.f, 0.f, .5f },
+                DirectX::XMFLOAT3 origin = { 0.f, 0.f, 0.f },
+                DirectX::XMVECTOR color = DirectX::Colors::White,
+                bool visible = true) noexcept;
+
+    public:
+        DirectX::XMFLOAT3& GetMajorAxis() noexcept;
+        DirectX::XMFLOAT3& GetMinorAxis() noexcept;
+        DirectX::XMFLOAT3& GetOrigin() noexcept;
+
+    private:
         DirectX::XMFLOAT3 m_majorAxis;
         DirectX::XMFLOAT3 m_minorAxis;
         DirectX::XMFLOAT3 m_origin;
 };
 
-class RayOutline : public IOutline {
+class RayOutline : public Outline {
     public:
-        RayOutline(
-                const std::string name,
-                DirectX::XMFLOAT3 direction,
+        RayOutline(std::string name = "",
+                DirectX::XMFLOAT3 direction = { 1.f, 0.f, 0.f },
                 DirectX::XMFLOAT3 origin = { 0.f, 0.f, 0.f },
-                bool normalized = false,
                 DirectX::XMVECTOR color = DirectX::Colors::White,
-                bool visible = true
-                ) noexcept;
+                bool normalized = false,
+                bool visible = true) noexcept;
 
     public:
-        std::string GetName() const noexcept override;
-        DirectX::XMFLOAT4& GetColor() noexcept override;
-        bool IsVisible() const noexcept override;
-
         DirectX::XMFLOAT3& GetDirection() noexcept;
         DirectX::XMFLOAT3& GetOrigin() noexcept;
         bool IsNormalized() const noexcept;
 
-        void SetVisible(bool visible) noexcept override;
         void SetNormalized(bool normalized) noexcept;
 
     private:
-        const std::string m_name;
-        DirectX::XMFLOAT4 m_color;
-        bool m_visible;
-
         DirectX::XMFLOAT3 m_direction;
         DirectX::XMFLOAT3 m_origin;
         bool m_normalized;
 };
 
-class TriangleOutline : public IOutline {
+class TriangleOutline : public Outline {
     public:
-        TriangleOutline(
-                const std::string name,
-                DirectX::XMFLOAT3 pointA,
-                DirectX::XMFLOAT3 pointB,
-                DirectX::XMFLOAT3 pointC,
+        TriangleOutline(std::string name = "",
+                DirectX::XMFLOAT3 pointA = { 0.f, 0.f, 0.f },
+                DirectX::XMFLOAT3 pointB = { 1.f, 0.f, 0.f },
+                DirectX::XMFLOAT3 pointC = { .5f, 1.f, 0.f },
                 DirectX::XMVECTOR color = DirectX::Colors::White,
-                bool visible = true
-                ) noexcept;
+                bool visible = true) noexcept;
 
     public:
-        std::string GetName() const noexcept override;
-        DirectX::XMFLOAT4& GetColor() noexcept override;
-        bool IsVisible() const noexcept override;
-
         DirectX::XMFLOAT3& GetPointA() noexcept;
         DirectX::XMFLOAT3& GetPointB() noexcept;
         DirectX::XMFLOAT3& GetPointC() noexcept;
 
-        void SetVisible(bool visible) noexcept override;
-
     private:
-        const std::string m_name;
-        DirectX::XMFLOAT4 m_color;
-        bool m_visible;
-
         DirectX::XMFLOAT3 m_pointA;
         DirectX::XMFLOAT3 m_pointB;
         DirectX::XMFLOAT3 m_pointC;
 };
 
-class QuadOutline : public IOutline {
+class QuadOutline : public Outline {
     public:
-        QuadOutline(
-                const std::string name,
-                DirectX::XMFLOAT3 pointA,
-                DirectX::XMFLOAT3 pointB,
-                DirectX::XMFLOAT3 pointC,
-                DirectX::XMFLOAT3 pointD,
+        QuadOutline(std::string name = "",
+                DirectX::XMFLOAT3 pointA = { 0.f, 0.f, 0.f },
+                DirectX::XMFLOAT3 pointB = { 0.f, 1.f, 0.f },
+                DirectX::XMFLOAT3 pointC = { 1.f, 0.f, 0.f },
+                DirectX::XMFLOAT3 pointD = { 1.f, 1.f, 0.f },
                 DirectX::XMVECTOR color = DirectX::Colors::White,
-                bool visible = true
-                ) noexcept;
+                bool visible = true) noexcept;
 
     public:
-        std::string GetName() const noexcept override;
-        DirectX::XMFLOAT4& GetColor() noexcept override;
-        bool IsVisible() const noexcept override;
-
         DirectX::XMFLOAT3& GetPointA() noexcept;
         DirectX::XMFLOAT3& GetPointB() noexcept;
         DirectX::XMFLOAT3& GetPointC() noexcept;
         DirectX::XMFLOAT3& GetPointD() noexcept;
 
-        void SetVisible(bool visible) noexcept override;
-
     private:
-        const std::string m_name;
-        DirectX::XMFLOAT4 m_color;
-        bool m_visible;
-
         DirectX::XMFLOAT3 m_pointA;
         DirectX::XMFLOAT3 m_pointB;
         DirectX::XMFLOAT3 m_pointC;
         DirectX::XMFLOAT3 m_pointD;
 };
 
-*/

@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include "Asset.h"
 #include "VertexTypes.h"
 #include "Material.h"
 
@@ -10,12 +11,12 @@
 class Model;
 
 // Represents a node in the bone hierarchy.
-class Bone {
+class Bone : public Asset {
     public:
         static constexpr std::uint32_t INVALID_INDEX = std::uint32_t(-1);
 
-        Bone(const std::string name) noexcept;
-        Bone(const std::string name, std::uint32_t parentIndex) noexcept;
+        Bone(std::string name) noexcept;
+        Bone(std::string name, std::uint32_t parentIndex) noexcept;
 
     public:
         struct aligned_deleter { void operator()(void* p) noexcept { _aligned_free(p); }};
@@ -29,8 +30,6 @@ class Bone {
             return TransformArray(static_cast<DirectX::XMMATRIX*>(temp));
         }
 
-        std::string GetName() const noexcept;
-
         std::uint32_t GetParentIndex() const noexcept;
 
         bool IsRoot() const noexcept;
@@ -38,8 +37,6 @@ class Bone {
         void SetParentIndex(std::uint32_t index) noexcept;
 
     private:
-        const std::string m_name;
-
         std::uint32_t m_parentIndex;
 };
 
@@ -48,13 +45,11 @@ class Bone {
 // The location of a submesh in world space is determined by the transformation in **m_instances**.
 // There need to be 1 instance available at all time.
 // If multiple instances need to be rendered then the **RenderFlags::Effect::Instances** should be set in the used material.
-class Submesh {
+class Submesh : public Asset {
     public:
-        Submesh(const std::string name, std::uint32_t materialIndex, bool visible = true) noexcept;
+        Submesh(std::string name, std::uint32_t materialIndex, bool visible = true) noexcept;
 
     public:
-        std::string GetName() const noexcept;
-
         std::uint32_t GetNumCulled() const noexcept;
         std::uint32_t GetNumInstances() const noexcept;
         std::uint32_t GetNumVisibleInstances() const noexcept;
@@ -78,8 +73,6 @@ class Submesh {
         void SetVisible(bool visible) noexcept;
 
     private:
-        const std::string m_name;
-
         // The last m_numberCulled instances in m_instances will not be sent to the GPU.
         std::uint32_t m_numCulled;
         std::vector<DirectX::XMFLOAT3X4> m_instances;
@@ -124,9 +117,9 @@ class IMesh {
 };
 
 // Used in models that do not require skinned animations.
-class Mesh : public IMesh {
+class Mesh : public IMesh, public Asset {
     public:
-        Mesh(const std::string name, bool visible = true) noexcept; 
+        Mesh(std::string name = "", bool visible = true) noexcept; 
 
         void Add(std::unique_ptr<Submesh> pSubmesh) noexcept override;
 
@@ -149,8 +142,6 @@ class Mesh : public IMesh {
         void SetVisible(bool visible) noexcept override;
 
     private:
-        const std::string m_name;
-
         std::uint32_t m_boneIndex;
 
         std::vector<std::uint32_t> m_boneInfluences;
@@ -162,9 +153,9 @@ class Mesh : public IMesh {
 };
 
 // Used in models that require skinned animations.
-class SkinnedMesh : public IMesh {
+class SkinnedMesh : public IMesh, public Asset {
     public:
-        SkinnedMesh(const std::string name, bool visible = true) noexcept; 
+        SkinnedMesh(std::string name = "", bool visible = true) noexcept; 
 
         void Add(std::unique_ptr<Submesh> pSubmesh) noexcept override;
 
@@ -187,8 +178,6 @@ class SkinnedMesh : public IMesh {
         void SetVisible(bool visible) noexcept override;
 
     private:
-        const std::string m_name;
-
         std::uint32_t m_boneIndex;
 
         std::vector<std::uint32_t> m_boneInfluences;
@@ -201,10 +190,10 @@ class SkinnedMesh : public IMesh {
 
 // Contains 1 or more meshes, all the materials used by there submeshes and a collection of tranformations to animate the model.
 // All **Material**s need assigned to the **Model** before being added to a **Scene**.
-class Model {
+class Model : public Asset {
     public:
-        Model(const std::string name, 
-                std::shared_ptr<Material> pMaterial,
+        Model(std::shared_ptr<Material> pMaterial,
+                std::string name = "", 
                 bool visible = true);
 
         Model(Model& other);
@@ -216,8 +205,6 @@ class Model {
         void MakeInverseBoneMatricesArray(std::uint64_t count);
 
     public:
-        std::string GetName() const noexcept;
-
         std::uint32_t GetNumBones() const noexcept;
         std::uint32_t GetNumMeshes() const noexcept;
         std::uint32_t GetNumMaterials() const noexcept;
@@ -235,8 +222,6 @@ class Model {
         void SetWorldTransform(DirectX::XMFLOAT3X4 W);
     
     private:
-        const std::string m_name;
-
         std::vector<std::shared_ptr<Material>> m_materials;
         std::vector<std::shared_ptr<IMesh>> m_meshes;
         std::vector<Bone> m_bones;

@@ -40,6 +40,7 @@ set(SOURCE
     Src/Util/pch.h
 
     Src/Animation.cpp
+    Src/Asset.cpp
     Src/AssetBatch.cpp
     Src/AssetIO.cpp
     Src/Camera.cpp
@@ -52,6 +53,7 @@ set(SOURCE
     Src/Outline.cpp
     Src/Renderer.cpp
     Src/Scene.cpp
+    Src/Sprite.cpp
     Src/Timer.cpp
     Src/Window.cpp
 )

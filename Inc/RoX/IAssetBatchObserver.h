@@ -2,7 +2,6 @@
 
 #include "Model.h"
 #include "Sprite.h"
-#include "Text.h"
 #include "Outline.h"
 
 // Mainly used internally but can be used by the client to execute code when an asset gets added and/or removed.

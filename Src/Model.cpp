@@ -6,19 +6,15 @@
 //                          Bone
 // ---------------------------------------------------------------- //
 
-Bone::Bone(const std::string name) 
-    noexcept : m_name(name),
+Bone::Bone(std::string name) 
+    noexcept : Asset("bone", name),
     m_parentIndex(-1)
 {}
 
 Bone::Bone(const std::string name, std::uint32_t parentIndex) 
-    noexcept : m_name(name),
+    noexcept : Asset("bone", name),
     m_parentIndex(parentIndex)
 {}
-
-std::string Bone::GetName() const noexcept {
-    return m_name;
-}
 
 std::uint32_t Bone::GetParentIndex() const noexcept {
     return m_parentIndex;
@@ -36,8 +32,8 @@ void Bone::SetParentIndex(std::uint32_t index) noexcept {
 //                          Submesh
 // ---------------------------------------------------------------- //
 
-Submesh::Submesh(const std::string name, std::uint32_t materialIndex, bool visible) 
-    noexcept : m_name(name),
+Submesh::Submesh(std::string name, std::uint32_t materialIndex, bool visible) 
+    noexcept : Asset("submesh", name),
     m_numCulled(0),
     m_instances({{
             1.f, 0.f, 0.f, 0.f,
@@ -50,10 +46,6 @@ Submesh::Submesh(const std::string name, std::uint32_t materialIndex, bool visib
     m_vertexOffset(0),
     m_visible(visible)
 {}
-
-std::string Submesh::GetName() const noexcept {
-    return m_name;
-}
 
 std::uint32_t Submesh::GetNumCulled() const noexcept {
     return m_numCulled;
@@ -125,8 +117,8 @@ void Submesh::SetVisible(bool visible) noexcept {
 //                          Mesh
 // ---------------------------------------------------------------- //
 
-Mesh::Mesh(const std::string name, bool visible) 
-    noexcept : m_name(name),
+Mesh::Mesh(std::string name, bool visible) 
+    noexcept : Asset("mesh", name),
     m_boneIndex(Bone::INVALID_INDEX),
     m_visible(visible)
 {}
@@ -136,7 +128,7 @@ void Mesh::Add(std::unique_ptr<Submesh> pSubmesh) noexcept {
 }
 
 std::string Mesh::GetName() const noexcept {
-    return m_name;
+    return Asset::GetName();
 }
 
 std::uint32_t Mesh::GetBoneIndex() const noexcept {
@@ -187,8 +179,8 @@ void Mesh::SetVisible(bool visible) noexcept {
 //                          SkinnedMesh
 // ---------------------------------------------------------------- //
 
-SkinnedMesh::SkinnedMesh(const std::string name, bool visible) 
-    noexcept : m_name(name),
+SkinnedMesh::SkinnedMesh(std::string name, bool visible) 
+    noexcept : Asset("skinned_mesh", name),
     m_boneIndex(Bone::INVALID_INDEX),
     m_visible(visible)
 {}
@@ -198,7 +190,7 @@ void SkinnedMesh::Add(std::unique_ptr<Submesh> pSubmesh) noexcept {
 }
 
 std::string SkinnedMesh::GetName() const noexcept {
-    return m_name;
+    return Asset::GetName();
 }
 
 std::uint32_t SkinnedMesh::GetBoneIndex() const noexcept {
@@ -250,20 +242,19 @@ void SkinnedMesh::SetVisible(bool visible) noexcept {
 // ---------------------------------------------------------------- //
 
 Model::Model(
-        const std::string name, 
         std::shared_ptr<Material> pMaterial,
+        std::string name, 
         bool visible) : 
-    m_name(name),
+    Asset("model", name),
     m_visible(visible)
 {
     if (!pMaterial)
-        throw std::runtime_error("Mesh '" + name + "' initialized without material");
+        throw std::runtime_error("Model '" + GetName() + "' initialized without material");
 
     m_materials.push_back(std::move(pMaterial));
 }
 
-Model::Model(Model& other) :
-    m_name(other.GetName()),
+Model::Model(Model& other) : Asset(other),
     m_materials(other.GetMaterials()),
     m_meshes(other.GetMeshes()),
     m_bones(other.GetBones())
@@ -290,10 +281,6 @@ void Model::MakeBoneMatricesArray(std::uint64_t count) {
 
 void Model::MakeInverseBoneMatricesArray(std::uint64_t count) {
     m_inverseBindPoseMatrices = Bone::MakeArray(count);
-}
-
-std::string Model::GetName() const noexcept {
-    return m_name;
 }
 
 std::uint32_t Model::GetNumBones() const noexcept {

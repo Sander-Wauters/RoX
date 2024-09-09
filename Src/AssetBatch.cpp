@@ -63,7 +63,7 @@ void AssetBatch::Add(std::shared_ptr<Text> pText) {
 }
 
 void AssetBatch::Add(std::shared_ptr<Outline> pOutline) {
-    std::shared_ptr<Outline>& entry = m_outlines[pOutline->name];
+    std::shared_ptr<Outline>& entry = m_outlines[pOutline->GetName()];
     if (!entry) {
         entry = pOutline;
         for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
@@ -112,7 +112,7 @@ void AssetBatch::RegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObser
     m_assetBatchObservers.insert(assetBatchObserver);
 }
 
-void AssetBatch::DeRegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept {
+void AssetBatch::DeregisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept {
     m_assetBatchObservers.erase(assetBatchObserver);
 }
 

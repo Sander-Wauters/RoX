@@ -1,6 +1,10 @@
 #pragma once
 
-#include "../../Src/Util/pch.h"
+#include <string>
+#include <DirectXMath.h>
+#include <DirectXColors.h>
+
+#include "Asset.h"
 
 // Describes a 2D texture.
 // Positioning
@@ -9,51 +13,39 @@
 // -x --+-- +x
 //      |
 //      +y
-class Sprite {
+class Sprite : public Asset {
     public: 
-        Sprite(
-                const std::string name,
-                const std::wstring filePath,
+        Sprite(const std::wstring filePath,
+                std::string name = "",
                 DirectX::XMFLOAT2 origin = { 0.f, 0.f },
                 DirectX::XMFLOAT2 offset = { 0.f, 0.f }, 
                 DirectX::XMFLOAT2 scale = { 1.f, 1.f },
-                float layer = 0.f, float angle = 0.f,
+                float layer = 0.f, 
+                float angle = 0.f,
                 DirectX::XMVECTOR color = DirectX::Colors::White,
                 bool visible = true
-              ) noexcept :
-            m_name(name),
-            m_filePath(filePath),
-            m_origin(origin),
-            m_offset(offset), 
-            m_scale(scale),
-            m_layer(layer), m_angle(angle),
-            m_visible(visible)
-            {
-                DirectX::XMStoreFloat4(&m_color, color);
-            }
-        virtual ~Sprite() noexcept {}
+              ) noexcept;
+        virtual ~Sprite() noexcept = default;
 
     public:
-        std::string GetName() const noexcept { return m_name; }
-        std::wstring GetFilePath() const noexcept { return m_filePath; }
+        std::wstring GetFilePath() const noexcept;
 
-        DirectX::XMFLOAT2& GetOrigin() noexcept { return m_origin; }
-        DirectX::XMFLOAT2& GetOffset() noexcept { return m_offset; }
-        DirectX::XMFLOAT2& GetScale() noexcept { return m_scale; }
-        DirectX::XMFLOAT4& GetColor() noexcept { return m_color; }
+        DirectX::XMFLOAT2& GetOrigin() noexcept;
+        DirectX::XMFLOAT2& GetOffset() noexcept;
+        DirectX::XMFLOAT2& GetScale() noexcept;
+        DirectX::XMFLOAT4& GetColor() noexcept;
 
-        float GetAngle() const noexcept { return m_angle; }  
-        float GetLayer() const noexcept { return m_layer; }
+        float GetAngle() const noexcept;  
+        float GetLayer() const noexcept;
 
-        bool IsVisible() const noexcept { return m_visible; }
+        bool IsVisible() const noexcept;
 
-        void SetAngle(float angle) noexcept { m_angle = angle; }
-        void SetLayer(float layer) noexcept { m_layer = layer; }
+        void SetAngle(float angle) noexcept;
+        void SetLayer(float layer) noexcept;
 
-        void SetVisible(bool visible) noexcept { m_visible = visible; }
+        void SetVisible(bool visible) noexcept;
 
     private:
-        const std::string m_name;
         const std::wstring m_filePath;
 
         DirectX::XMFLOAT2 m_origin;
@@ -66,3 +58,28 @@ class Sprite {
 
         bool m_visible;
 };
+
+// Describes a 2D texture containing a text string.
+class Text : public Sprite {
+    public:
+        Text(const std::wstring filePath,
+                std::wstring content,
+                std::string name = "",
+                DirectX::XMFLOAT2 origin = { 0.f, 0.f },
+                DirectX::XMFLOAT2 offset = { 0.f, 0.f }, 
+                DirectX::XMFLOAT2 scale = { 1.f, 1.f },
+                float layer = 0.f, 
+                float angle = 0.f,
+                DirectX::XMVECTOR color = DirectX::Colors::Black,
+                bool visible = true
+            ) noexcept;
+
+    public:
+        std::wstring GetContent() const noexcept;
+
+        void SetContent(std::wstring content) noexcept;
+
+    private:
+        std::wstring m_content;
+};
+

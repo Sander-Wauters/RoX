@@ -1,124 +1,60 @@
 #include "RoX/Outline.h"
 
+// ---------------------------------------------------------------- //
+//                          Outline
+// ---------------------------------------------------------------- //
 
-Outline::Outline(const std::string iname, DirectX::XMVECTOR icolor, bool ivisible) 
-    noexcept : name(iname), 
-    visible(ivisible)
+Outline::Outline(Type type, std::string name, DirectX::XMVECTOR color, bool visible) 
+    noexcept : Asset("outline", name), 
+    m_type(type),
+    m_visible(visible)
 {
-    DirectX::XMStoreFloat4(&color, icolor);
+    DirectX::XMStoreFloat4(&m_color, color);
 }
 
-GridOutline::GridOutline(
-        const std::string iname,
-        std::uint16_t ixDivisions,
-        std::uint16_t iyDivisions,
-        DirectX::XMFLOAT3 ixAxis, 
-        DirectX::XMFLOAT3 iyAxis, 
-        DirectX::XMFLOAT3 iorigin,
-        DirectX::XMVECTOR icolor,
-        bool ivisible) 
-    noexcept : Outline(iname, icolor, ivisible),
-    xDivisions(ixDivisions),
-    yDivisions(iyDivisions),
-    xAxis(ixAxis),
-    yAxis(iyAxis),
-    origin(iorigin)
-{}
+DirectX::XMFLOAT4& Outline::GetColor() noexcept {
+    return m_color;
+}
 
-RingOutline::RingOutline(
-        const std::string iname,
-        DirectX::XMFLOAT3 imajorAxis,
-        DirectX::XMFLOAT3 iminorAxis,
-        DirectX::XMFLOAT3 iorigin,
-        DirectX::XMVECTOR icolor,
-        bool ivisible) 
-    noexcept : Outline(iname, icolor, ivisible),
-    majorAxis(imajorAxis),
-    minorAxis(iminorAxis),
-    origin(iorigin)
-{}
+bool Outline::IsVisible() const noexcept {
+    return m_visible;
+}
 
-RayOutline::RayOutline(const std::string iname,
-        DirectX::XMFLOAT3 idirection,
-        DirectX::XMFLOAT3 iorigin,
-        bool inormalized,
-        DirectX::XMVECTOR icolor,
-        bool ivisible) 
-    noexcept : Outline(iname, icolor, ivisible),
-    direction(idirection),
-    origin(iorigin),
-    normalized(inormalized)
-{}
+Outline::Type Outline::GetType() const noexcept {
+    return m_type;
+}
 
-TriangleOutline::TriangleOutline(const std::string iname,
-        DirectX::XMFLOAT3 ipointA,
-        DirectX::XMFLOAT3 ipointB,
-        DirectX::XMFLOAT3 ipointC,
-        DirectX::XMVECTOR icolor,
-        bool ivisible)
-    noexcept : Outline(iname, icolor, ivisible),
-    pointA(ipointA),
-    pointB(ipointB),
-    pointC(ipointC)
-{}
+void Outline::SetVisible(bool visible) noexcept {
+    m_visible = visible;
+}
 
-QuadOutline::QuadOutline(const std::string iname,
-        DirectX::XMFLOAT3 ipointA,
-        DirectX::XMFLOAT3 ipointB,
-        DirectX::XMFLOAT3 ipointC,
-        DirectX::XMFLOAT3 ipointD,
-        DirectX::XMVECTOR icolor,
-        bool ivisible)
-    noexcept : Outline(iname, icolor, ivisible),
-    pointA(ipointA),
-    pointB(ipointB),
-    pointC(ipointC),
-    pointD(ipointD)
-{}
-
-/*
 // ---------------------------------------------------------------- //
 //                          GridOutline
 // ---------------------------------------------------------------- //
 
 GridOutline::GridOutline(
-        const std::string name,
-        std::uint16_t xDivsions,
-        std::uint16_t yDivsions,
+        std::string name,
+        std::uint16_t xDivisions,
+        std::uint16_t yDivisions,
         DirectX::XMFLOAT3 xAxis, 
         DirectX::XMFLOAT3 yAxis, 
         DirectX::XMFLOAT3 origin,
         DirectX::XMVECTOR color,
         bool visible) 
-    noexcept : m_name(name),
-    m_visible(visible),
-    m_xDivsions(xDivsions),
-    m_yDivsions(yDivsions),
+    noexcept : Outline(Type::Grid, name, color, visible),
+    m_xDivisions(xDivisions),
+    m_yDivisions(yDivisions),
     m_xAxis(xAxis),
     m_yAxis(yAxis),
     m_origin(origin)
-{
-    DirectX::XMStoreFloat4(&m_color, color);
+{}
+
+std::uint16_t GridOutline::GetXDivisions() const noexcept {
+    return m_xDivisions;
 }
 
-std::string GridOutline::GetName() const noexcept {
-    return m_name;
-}
-
-DirectX::XMFLOAT4& GridOutline::GetColor() noexcept {
-    return m_color;
-}
-
-bool GridOutline::IsVisible() const noexcept {
-    return m_visible;
-}
-
-std::uint16_t GridOutline::GetXDivsions() const noexcept {
-    return m_xDivsions;
-}
-
-std::uint16_t GridOutline::GetYDivsions() const noexcept {
-    return m_yDivsions;
+std::uint16_t GridOutline::GetYDivisions() const noexcept {
+    return m_yDivisions;
 }
 
 DirectX::XMFLOAT3& GridOutline::GetXAxis() noexcept {
@@ -133,16 +69,12 @@ DirectX::XMFLOAT3& GridOutline::GetOrigin() noexcept {
     return m_origin;
 }
 
-void GridOutline::SetVisible(bool visible) noexcept {
-    m_visible = visible;
-}
-
 void GridOutline::SetXDivisions(std::uint16_t xDivsions) noexcept {
-    m_xDivsions = xDivsions;
+    m_xDivisions = xDivsions;
 }
 
 void GridOutline::SetYDivisions(std::uint16_t yDivsions) noexcept {
-    m_yDivsions = yDivsions;
+    m_yDivisions = yDivsions;
 }
 
 // ---------------------------------------------------------------- //
@@ -150,95 +82,56 @@ void GridOutline::SetYDivisions(std::uint16_t yDivsions) noexcept {
 // ---------------------------------------------------------------- //
 
 RingOutline::RingOutline(
-        const std::string name,
-        DirectX::XMVECTOR majorAxis,
-        DirectX::XMVECTOR minorAxis,
-        DirectX::XMVECTOR origin,
+        std::string name,
+        DirectX::XMFLOAT3 majorAxis,
+        DirectX::XMFLOAT3 minorAxis,
+        DirectX::XMFLOAT3 origin,
         DirectX::XMVECTOR color,
         bool visible) 
-    noexcept: m_name(name),
-    m_visible(visible),
+    noexcept : Outline(Type::Ring, name, color, visible),
     m_majorAxis(majorAxis),
     m_minorAxis(minorAxis),
     m_origin(origin)
-{
-    DirectX::XMStoreFloat4(&m_color, color);
-}
+{}
 
-std::string RingOutline::GetName() const noexcept {
-    return m_name;
-}
-
-DirectX::XMFLOAT4& RingOutline::GetColor() noexcept {
-    return m_color;
-}
-
-bool RingOutline::IsVisible() const noexcept {
-    return m_visible;
-}
-
-DirectX::XMVECTOR& RingOutline::GetMajorAxis() noexcept {
+DirectX::XMFLOAT3& RingOutline::GetMajorAxis() noexcept {
     return m_majorAxis;
 }
 
-DirectX::XMVECTOR& RingOutline::GetMinorAxis() noexcept {
+DirectX::XMFLOAT3& RingOutline::GetMinorAxis() noexcept {
     return m_minorAxis;
 }
 
-DirectX::XMVECTOR& RingOutline::GetOrigin() noexcept {
+DirectX::XMFLOAT3& RingOutline::GetOrigin() noexcept {
     return m_origin;
-}
-
-void RingOutline::SetVisible(bool visible) noexcept {
-    m_visible = visible;
 }
 
 // ---------------------------------------------------------------- //
 //                          RayOutline
 // ---------------------------------------------------------------- //
 
-RayOutline::RayOutline(
-        const std::string name,
-        DirectX::XMVECTOR direction,
-        DirectX::XMVECTOR origin,
-        bool normalized,
+RayOutline::RayOutline(std::string name,
+        DirectX::XMFLOAT3 direction,
+        DirectX::XMFLOAT3 origin,
         DirectX::XMVECTOR color,
+        bool normalized,
         bool visible) 
-    noexcept : m_name(name),
-    m_visible(visible),
+    noexcept : Outline(Type::Ray, name, color, visible),
     m_direction(direction),
     m_origin(origin),
     m_normalized(normalized)
-{
-    DirectX::XMStoreFloat4(&m_color, color);
-}
+{}
 
-std::string RayOutline::GetName() const noexcept {
-    return m_name;
-}
-
-DirectX::XMFLOAT4& RayOutline::GetColor() noexcept {
-    return m_color;
-}
-
-bool RayOutline::IsVisible() const noexcept {
-    return m_visible;
-}
-
-DirectX::XMVECTOR& RayOutline::GetDirection() noexcept {
+DirectX::XMFLOAT3& RayOutline::GetDirection() noexcept {
     return m_direction;
 }
 
-DirectX::XMVECTOR& RayOutline::GetOrigin() noexcept {
+DirectX::XMFLOAT3& RayOutline::GetOrigin() noexcept {
     return m_origin;
 }
 
 bool RayOutline::IsNormalized() const noexcept {
     return m_normalized;
-}
-
-void RayOutline::SetVisible(bool visible) noexcept {
-    m_visible = visible;
 }
 
 void RayOutline::SetNormalized(bool normalized) noexcept {
@@ -249,101 +142,61 @@ void RayOutline::SetNormalized(bool normalized) noexcept {
 //                          TriangleOutline
 // ---------------------------------------------------------------- //
 
-TriangleOutline::TriangleOutline(
-        const std::string name,
-        DirectX::XMVECTOR pointA,
-        DirectX::XMVECTOR pointB,
-        DirectX::XMVECTOR pointC,
+TriangleOutline::TriangleOutline(std::string name,
+        DirectX::XMFLOAT3 pointA,
+        DirectX::XMFLOAT3 pointB,
+        DirectX::XMFLOAT3 pointC,
         DirectX::XMVECTOR color,
         bool visible)
-    noexcept : m_name(name),
-    m_visible(visible),
+    noexcept : Outline(Type::Triangle, name, color, visible),
     m_pointA(pointA),
     m_pointB(pointB),
     m_pointC(pointC)
-{
-    DirectX::XMStoreFloat4(&m_color, color);
-}
+{}
 
-std::string TriangleOutline::GetName() const noexcept {
-    return m_name;
-}
-
-DirectX::XMFLOAT4& TriangleOutline::GetColor() noexcept {
-    return m_color;
-}
-
-bool TriangleOutline::IsVisible() const noexcept {
-    return m_visible;
-}
-
-DirectX::XMVECTOR& TriangleOutline::GetPointA() noexcept {
+DirectX::XMFLOAT3& TriangleOutline::GetPointA() noexcept {
     return m_pointA;
 }
 
-DirectX::XMVECTOR& TriangleOutline::GetPointB() noexcept {
+DirectX::XMFLOAT3& TriangleOutline::GetPointB() noexcept {
     return m_pointB;
 }
 
-DirectX::XMVECTOR& TriangleOutline::GetPointC() noexcept {
+DirectX::XMFLOAT3& TriangleOutline::GetPointC() noexcept {
     return m_pointC;
-}
-
-void TriangleOutline::SetVisible(bool visible) noexcept {
-    m_visible = visible;
 }
 
 // ---------------------------------------------------------------- //
 //                          QuadOutline
 // ---------------------------------------------------------------- //
 
-QuadOutline::QuadOutline(
-        const std::string name,
-        DirectX::XMVECTOR pointA,
-        DirectX::XMVECTOR pointB,
-        DirectX::XMVECTOR pointC,
-        DirectX::XMVECTOR pointD,
+QuadOutline::QuadOutline(const std::string name,
+        DirectX::XMFLOAT3 pointA,
+        DirectX::XMFLOAT3 pointB,
+        DirectX::XMFLOAT3 pointC,
+        DirectX::XMFLOAT3 pointD,
         DirectX::XMVECTOR color,
-        bool visible) 
-    noexcept : m_name(name),
-    m_visible(visible),
+        bool visible)
+    noexcept : Outline(Type::Quad, name, color, visible),
     m_pointA(pointA),
     m_pointB(pointB),
     m_pointC(pointC),
     m_pointD(pointD)
-{
-    DirectX::XMStoreFloat4(&m_color, color);
-}
+{}
 
-std::string QuadOutline::GetName() const noexcept {
-    return m_name;
-}
-
-DirectX::XMFLOAT4& QuadOutline::GetColor() noexcept {
-    return m_color;
-}
-
-bool QuadOutline::IsVisible() const noexcept {
-    return m_visible;
-}
-
-DirectX::XMVECTOR& QuadOutline::GetPointA() noexcept {
+DirectX::XMFLOAT3& QuadOutline::GetPointA() noexcept {
     return m_pointA;
 }
 
-DirectX::XMVECTOR& QuadOutline::GetPointB() noexcept {
+DirectX::XMFLOAT3& QuadOutline::GetPointB() noexcept {
     return m_pointB;
 }
 
-DirectX::XMVECTOR& QuadOutline::GetPointC() noexcept {
+DirectX::XMFLOAT3& QuadOutline::GetPointC() noexcept {
     return m_pointC;
 }
 
-DirectX::XMVECTOR& QuadOutline::GetPointD() noexcept {
+DirectX::XMFLOAT3& QuadOutline::GetPointD() noexcept {
     return m_pointD;
 }
 
-void QuadOutline::SetVisible(bool visible) noexcept  {
-    m_visible = visible;
-}
-*/

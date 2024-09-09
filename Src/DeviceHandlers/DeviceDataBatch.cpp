@@ -1,6 +1,6 @@
 #include "DeviceDataBatch.h"
 
-DeviceDataBatch::DeviceDataBatch(DeviceResources& deviceResources, std::uint8_t descriptorHeapSize, bool& msaaEnabled) 
+DeviceDataBatch::DeviceDataBatch(DeviceResources& deviceResources, std::uint8_t descriptorHeapSize, const bool& msaaEnabled) 
     noexcept : m_deviceResources(deviceResources),
     m_msaaEnabled(msaaEnabled),
     m_descriptorHeapSize(descriptorHeapSize),
