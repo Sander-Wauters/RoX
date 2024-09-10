@@ -100,6 +100,7 @@ class IMesh {
 
     public:
         virtual std::string GetName() const noexcept = 0;
+        virtual std::uint64_t GetGUID() const noexcept = 0;
 
         virtual std::uint32_t GetBoneIndex() const noexcept = 0;
         virtual std::uint32_t GetNumSubmeshes() const noexcept = 0;
@@ -112,6 +113,7 @@ class IMesh {
 
         virtual bool IsVisible() const noexcept = 0;
 
+        virtual void SetName(std::string name) noexcept = 0;
         virtual void SetBoneIndex(std::uint32_t boneIndex) noexcept = 0;
         virtual void SetVisible(bool visible) noexcept = 0;
 };
@@ -121,10 +123,12 @@ class Mesh : public IMesh, public Asset {
     public:
         Mesh(std::string name = "", bool visible = true) noexcept; 
 
+    public:
         void Add(std::unique_ptr<Submesh> pSubmesh) noexcept override;
 
     public:
         std::string GetName() const noexcept override;
+        std::uint64_t GetGUID() const noexcept override;
 
         std::uint32_t GetBoneIndex() const noexcept override;
         std::uint32_t GetNumSubmeshes() const noexcept override;
@@ -138,6 +142,7 @@ class Mesh : public IMesh, public Asset {
 
         bool IsVisible() const noexcept override;
 
+        void SetName(std::string name) noexcept override;
         void SetBoneIndex(std::uint32_t boneIndex) noexcept override;
         void SetVisible(bool visible) noexcept override;
 
@@ -157,10 +162,12 @@ class SkinnedMesh : public IMesh, public Asset {
     public:
         SkinnedMesh(std::string name = "", bool visible = true) noexcept; 
 
+    public:
         void Add(std::unique_ptr<Submesh> pSubmesh) noexcept override;
 
     public:
         std::string GetName() const noexcept override;
+        std::uint64_t GetGUID() const noexcept override;
 
         std::uint32_t GetBoneIndex() const noexcept override;
         std::uint32_t GetNumSubmeshes() const noexcept override;
@@ -174,6 +181,7 @@ class SkinnedMesh : public IMesh, public Asset {
 
         bool IsVisible() const noexcept override;
 
+        void SetName(std::string name) noexcept override;
         void SetBoneIndex(std::uint32_t boneIndex) noexcept override;
         void SetVisible(bool visible) noexcept override;
 

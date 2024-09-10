@@ -131,6 +131,10 @@ std::string Mesh::GetName() const noexcept {
     return Asset::GetName();
 }
 
+std::uint64_t Mesh::GetGUID() const noexcept {
+    return Asset::GetGUID();
+}
+
 std::uint32_t Mesh::GetBoneIndex() const noexcept {
     return m_boneIndex;
 }
@@ -167,6 +171,10 @@ bool Mesh::IsVisible() const noexcept {
     return m_visible;
 }
 
+void Mesh::SetName(std::string name) noexcept {
+    Asset::SetName(name);
+}
+
 void Mesh::SetBoneIndex(std::uint32_t boneIndex) noexcept {
     m_boneIndex = boneIndex;
 }
@@ -191,6 +199,10 @@ void SkinnedMesh::Add(std::unique_ptr<Submesh> pSubmesh) noexcept {
 
 std::string SkinnedMesh::GetName() const noexcept {
     return Asset::GetName();
+}
+
+std::uint64_t SkinnedMesh::GetGUID() const noexcept {
+    return Asset::GetGUID();
 }
 
 std::uint32_t SkinnedMesh::GetBoneIndex() const noexcept {
@@ -227,6 +239,10 @@ std::vector<std::uint16_t>& SkinnedMesh::GetIndices() noexcept {
 
 bool SkinnedMesh::IsVisible() const noexcept {
     return m_visible;
+}
+
+void SkinnedMesh::SetName(std::string name) noexcept {
+    Asset::SetName(name);
 }
 
 void SkinnedMesh::SetBoneIndex(std::uint32_t boneIndex) noexcept {

@@ -15,8 +15,48 @@ bool AssetBatch::operator== (const AssetBatch& other) const noexcept {
     return m_name == other.m_name;
 }
 
+std::uint64_t AssetBatch::FindGUID(std::string name, Materials& materials) {
+    for (auto& pair : materials) {
+        if (pair.second->GetName() == name)
+            return pair.first;
+    }
+    return std::uint64_t(-1);
+}
+
+std::uint64_t AssetBatch::FindGUID(std::string name, Models& models) {
+    for (auto& pair : models) {
+        if (pair.second->GetName() == name)
+            return pair.first;
+    }
+    return std::uint64_t(-1);
+}
+
+std::uint64_t AssetBatch::FindGUID(std::string name, Sprites& sprites) {
+    for (auto& pair : sprites) {
+        if (pair.second->GetName() == name)
+            return pair.first;
+    }
+    return std::uint64_t(-1);
+}
+
+std::uint64_t AssetBatch::FindGUID(std::string name, Texts& texts) {
+    for (auto& pair : texts) {
+        if (pair.second->GetName() == name)
+            return pair.first;
+    }
+    return std::uint64_t(-1);
+}
+
+std::uint64_t AssetBatch::FindGUID(std::string name, Outlines& outlines) {
+    for (auto& pair : outlines) {
+        if (pair.second->GetName() == name)
+            return pair.first;
+    }
+    return std::uint64_t(-1);
+}
+
 void AssetBatch::Add(std::shared_ptr<Material> pMaterial) {
-    std::shared_ptr<Material>& pMappedMaterial = m_materials[pMaterial->GetName()];
+    std::shared_ptr<Material>& pMappedMaterial = m_materials[pMaterial->GetGUID()];
     if (!pMappedMaterial) {
         pMappedMaterial = pMaterial;
         for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
@@ -26,7 +66,7 @@ void AssetBatch::Add(std::shared_ptr<Material> pMaterial) {
 }
 
 void AssetBatch::Add(std::shared_ptr<Model> pModel) {
-    std::shared_ptr<Model>& entry = m_models[pModel->GetName()];
+    std::shared_ptr<Model>& entry = m_models[pModel->GetGUID()];
     if (!entry) {
         entry = pModel;
         for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
@@ -41,7 +81,7 @@ void AssetBatch::Add(std::shared_ptr<Model> pModel) {
 }
 
 void AssetBatch::Add(std::shared_ptr<Sprite> pSprite) {
-    std::shared_ptr<Sprite>& entry = m_sprites[pSprite->GetName()];
+    std::shared_ptr<Sprite>& entry = m_sprites[pSprite->GetGUID()];
     if (!entry) {
         entry = pSprite;
         for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
@@ -52,7 +92,7 @@ void AssetBatch::Add(std::shared_ptr<Sprite> pSprite) {
 }
 
 void AssetBatch::Add(std::shared_ptr<Text> pText) {
-    std::shared_ptr<Text>& entry = m_texts[pText->GetName()];
+    std::shared_ptr<Text>& entry = m_texts[pText->GetGUID()];
     if (!entry) {
         entry = pText;
         for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
@@ -63,7 +103,7 @@ void AssetBatch::Add(std::shared_ptr<Text> pText) {
 }
 
 void AssetBatch::Add(std::shared_ptr<Outline> pOutline) {
-    std::shared_ptr<Outline>& entry = m_outlines[pOutline->GetName()];
+    std::shared_ptr<Outline>& entry = m_outlines[pOutline->GetGUID()];
     if (!entry) {
         entry = pOutline;
         for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
@@ -73,39 +113,79 @@ void AssetBatch::Add(std::shared_ptr<Outline> pOutline) {
         throw std::invalid_argument("Scene already contains this outline.");
 }
 
-void AssetBatch::RemoveMaterial(std::string name) {
+void AssetBatch::RemoveMaterial(std::uint64_t GUID) {
     for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-        pAssetBatchObserver->OnRemove(m_materials.at(name));
+        pAssetBatchObserver->OnRemove(m_materials.at(GUID));
     }
-    m_materials.erase(name);
+    m_materials.erase(GUID);
+}
+
+void AssetBatch::RemoveModel(std::uint64_t GUID) {
+    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
+        pAssetBatchObserver->OnRemove(m_models.at(GUID));
+    }
+    m_models.erase(GUID);
+}
+
+void AssetBatch::RemoveSprite(std::uint64_t GUID) {
+    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
+        pAssetBatchObserver->OnRemove(m_sprites.at(GUID));
+    }
+    m_sprites.erase(GUID);
+}
+
+void AssetBatch::RemoveText(std::uint64_t GUID) {
+    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
+        pAssetBatchObserver->OnRemove(m_texts.at(GUID));
+    }
+    m_texts.erase(GUID);
+}
+
+void AssetBatch::RemoveOutline(std::uint64_t GUID) {
+    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
+        pAssetBatchObserver->OnRemove(m_outlines.at(GUID));
+    }
+    m_outlines.erase(GUID);
+}
+
+void AssetBatch::RemoveMaterial(std::string name) {
+    std::uint64_t GUID = FindGUID(name, m_materials);
+    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
+        pAssetBatchObserver->OnRemove(m_materials.at(GUID));
+    }
+    m_materials.erase(GUID);
 }
 
 void AssetBatch::RemoveModel(std::string name) {
+    std::uint64_t GUID = FindGUID(name, m_models);
     for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-        pAssetBatchObserver->OnRemove(m_models.at(name));
+        pAssetBatchObserver->OnRemove(m_models.at(GUID));
     }
-    m_models.erase(name);
+    m_models.erase(GUID);
 }
 
 void AssetBatch::RemoveSprite(std::string name) {
+    std::uint64_t GUID = FindGUID(name, m_sprites);
     for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-        pAssetBatchObserver->OnRemove(m_sprites.at(name));
+        pAssetBatchObserver->OnRemove(m_sprites.at(GUID));
     }
-    m_sprites.erase(name);
+    m_sprites.erase(GUID);
 }
 
 void AssetBatch::RemoveText(std::string name) {
+    std::uint64_t GUID = FindGUID(name, m_texts);
     for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-        pAssetBatchObserver->OnRemove(m_texts.at(name));
+        pAssetBatchObserver->OnRemove(m_texts.at(GUID));
     }
-    m_texts.erase(name);
+    m_texts.erase(GUID);
 }
 
 void AssetBatch::RemoveOutline(std::string name) {
+    std::uint64_t GUID = FindGUID(name, m_outlines);
     for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-        pAssetBatchObserver->OnRemove(m_outlines.at(name));
+        pAssetBatchObserver->OnRemove(m_outlines.at(GUID));
     }
-    m_outlines.erase(name);
+    m_outlines.erase(GUID);
 }
 
 void AssetBatch::RegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept {
@@ -128,43 +208,68 @@ std::uint8_t AssetBatch::GetMaxAssets() const noexcept {
     return m_maxAssets;
 }
 
+std::shared_ptr<Material>& AssetBatch::GetMaterial(std::uint64_t GUID) {
+    return m_materials.at(GUID);
+}
+
+std::shared_ptr<Model>& AssetBatch::GetModel(std::uint64_t GUID) {
+    return m_models.at(GUID);
+}
+
+std::shared_ptr<Sprite>& AssetBatch::GetSprite(std::uint64_t GUID) {
+    return m_sprites.at(GUID);
+}
+
+std::shared_ptr<Text>& AssetBatch::GetText(std::uint64_t GUID) {
+    return m_texts.at(GUID);
+}
+
+std::shared_ptr<Outline>& AssetBatch::GetOutline(std::uint64_t GUID) {
+    return m_outlines.at(GUID);
+}
+
 std::shared_ptr<Material>& AssetBatch::GetMaterial(std::string name) {
-    return m_materials.at(name);
+    std::uint64_t GUID = FindGUID(name, m_materials);
+    return m_materials.at(GUID);
 }
 
 std::shared_ptr<Model>& AssetBatch::GetModel(std::string name) {
-    return m_models.at(name);
+    std::uint64_t GUID = FindGUID(name, m_models);
+    return m_models.at(GUID);
 }
 
 std::shared_ptr<Sprite>& AssetBatch::GetSprite(std::string name) {
-    return m_sprites.at(name);
+    std::uint64_t GUID = FindGUID(name, m_sprites);
+    return m_sprites.at(GUID);
 }
 
 std::shared_ptr<Text>& AssetBatch::GetText(std::string name) {
-    return m_texts.at(name);
+    std::uint64_t GUID = FindGUID(name, m_texts);
+    return m_texts.at(GUID);
 }
 
 std::shared_ptr<Outline>& AssetBatch::GetOutline(std::string name) {
-    return m_outlines.at(name); 
+    std::uint64_t GUID = FindGUID(name, m_outlines);
+    return m_outlines.at(GUID); 
 }
 
-const std::unordered_map<std::string, std::shared_ptr<Material>> AssetBatch::GetMaterials() const noexcept {
+const Materials& AssetBatch::GetMaterials() const noexcept {
     return m_materials;
 }
 
-const std::unordered_map<std::string, std::shared_ptr<Model>>& AssetBatch::GetModels() const noexcept {
+const Models& AssetBatch::GetModels() const noexcept {
     return m_models;
 }
 
-const std::unordered_map<std::string, std::shared_ptr<Sprite>>& AssetBatch::GetSprites() const noexcept {
+const Sprites& AssetBatch::GetSprites() const noexcept {
     return m_sprites;
 }
 
-const std::unordered_map<std::string, std::shared_ptr<Text>>& AssetBatch::GetTexts() const noexcept {
+const Texts& AssetBatch::GetTexts() const noexcept {
     return m_texts;
 }
 
-const std::unordered_map<std::string, std::shared_ptr<Outline>>& AssetBatch::GetOutlines() const noexcept {
+const Outlines& AssetBatch::GetOutlines() const noexcept {
     return m_outlines;
 }
 

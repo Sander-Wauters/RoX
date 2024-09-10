@@ -503,7 +503,7 @@ void DebugUI::ModelHierarchy(AssetBatch& batch, Model** ppSelectedModel, IMesh**
 
         if (expandAll != -1)
             ImGui::SetNextItemOpen(expandAll != 0);
-        bool modelNodeOpen = ImGui::TreeNodeEx(modelPair.first.c_str(), hierarchyNodeFlags);
+        bool modelNodeOpen = ImGui::TreeNodeEx(modelPair.second->GetName().c_str(), hierarchyNodeFlags);
 
         if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
             *ppSelectedModel = modelPair.second.get();
@@ -1050,7 +1050,7 @@ void DebugUI::AssetBatchMenu(AssetBatch& batch) {
         ImGui::Separator();
         ImGui::Spacing();
         for (auto& spritePair : batch.GetSprites()) {
-            if (ImGui::TreeNode(spritePair.first.c_str())) {
+            if (ImGui::TreeNode(spritePair.second->GetName().c_str())) {
                 SpriteMenu(*spritePair.second);
                 ImGui::TreePop();
             }
@@ -1060,7 +1060,7 @@ void DebugUI::AssetBatchMenu(AssetBatch& batch) {
     }
     if (ImGui::CollapsingHeader("Text")) {
         for (auto& textPair : batch.GetTexts()) {
-            if (ImGui::TreeNode(textPair.first.c_str())) {
+            if (ImGui::TreeNode(textPair.second->GetName().c_str())) {
                 SpriteMenu(*textPair.second);
                 ImGui::TreePop();
             }
@@ -1073,7 +1073,7 @@ void DebugUI::AssetBatchMenu(AssetBatch& batch) {
         ImGui::Separator();
         ImGui::Spacing();
         for (auto& outlinePair : batch.GetOutlines()) {
-            if (ImGui::TreeNode(outlinePair.first.c_str())) {
+            if (ImGui::TreeNode(outlinePair.second->GetName().c_str())) {
                 OutlineMenu(*outlinePair.second);
                 ImGui::TreePop();
             }

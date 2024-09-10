@@ -20,11 +20,20 @@ class Scene {
 
     public:
         void Add(std::shared_ptr<AssetBatch> batch);
+        void Add(std::uint8_t batch, std::shared_ptr<Material> pMaterial);
         void Add(std::uint8_t batch, std::shared_ptr<Model> pModel);
         void Add(std::uint8_t batch, std::shared_ptr<Sprite> pSprite);
         void Add(std::uint8_t batch, std::shared_ptr<Text> pText);
         void Add(std::uint8_t batch, std::shared_ptr<Outline> pOutline);
 
+        void RemoveMaterial(std::uint8_t batch, std::uint64_t GUID);
+        void RemoveModel(std::uint8_t batch, std::uint64_t GUID);
+        void RemoveSprite(std::uint8_t batch, std::uint64_t GUID);
+        void RemoveText(std::uint8_t batch, std::uint64_t GUID);
+        void RemoveOutline(std::uint8_t batch, std::uint64_t GUID);
+
+        // Uses **FindGUID** internally.
+        void RemoveMaterial(std::uint8_t batch, std::string name);
         void RemoveModel(std::uint8_t batch, std::string name);
         void RemoveSprite(std::uint8_t batch, std::string name);
         void RemoveText(std::uint8_t batch, std::string name);
@@ -34,18 +43,27 @@ class Scene {
         std::string GetName() const noexcept;
         Camera& GetCamera() const noexcept;
 
-        std::shared_ptr<AssetBatch>& GetAssetBatch(std::uint8_t batch) noexcept;
+        std::shared_ptr<AssetBatch>& GetAssetBatch(std::uint8_t batch);
         std::vector<std::shared_ptr<AssetBatch>>& GetAssetBatches() noexcept;
 
+        std::shared_ptr<Material>& GetMaterial(std::uint8_t batch, std::uint64_t GUID);
+        std::shared_ptr<Model>& GetModel(std::uint8_t batch, std::uint64_t GUID);
+        std::shared_ptr<Sprite>& GetSprite(std::uint8_t batch, std::uint64_t GUID);
+        std::shared_ptr<Text>& GetText(std::uint8_t batch, std::uint64_t GUID);
+        std::shared_ptr<Outline>& GetOutline(std::uint8_t batch, std::uint64_t GUID);
+
+        // Uses **FindGUID** internally.
+        std::shared_ptr<Material>& GetMaterial(std::uint8_t batch, std::string name);
         std::shared_ptr<Model>& GetModel(std::uint8_t batch, std::string name);
         std::shared_ptr<Sprite>& GetSprite(std::uint8_t batch, std::string name);
         std::shared_ptr<Text>& GetText(std::uint8_t batch, std::string name);
         std::shared_ptr<Outline>& GetOutline(std::uint8_t batch, std::string name);
 
-        const std::unordered_map<std::string, std::shared_ptr<Model>>& GetModels(std::uint8_t batch) const noexcept;
-        const std::unordered_map<std::string, std::shared_ptr<Sprite>>& GetSprites(std::uint8_t batch) const noexcept;
-        const std::unordered_map<std::string, std::shared_ptr<Text>>& GetTexts(std::uint8_t batch) const noexcept;
-        const std::unordered_map<std::string, std::shared_ptr<Outline>>& GetOutlines(std::uint8_t batch) const noexcept;
+        const Materials& GetMaterials(std::uint8_t batch) const;
+        const Models& GetModels(std::uint8_t batch) const;
+        const Sprites& GetSprites(std::uint8_t batch) const;
+        const Texts& GetTexts(std::uint8_t batch) const;
+        const Outlines& GetOutlines(std::uint8_t batch) const;
 
         std::uint8_t GetNumAssetBatches() const noexcept;
 

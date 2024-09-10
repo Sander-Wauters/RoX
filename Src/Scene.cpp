@@ -12,6 +12,10 @@ void Scene::Add(std::shared_ptr<AssetBatch> batch) {
     m_assetBatches.push_back(batch);
 }
 
+void Scene::Add(std::uint8_t batch, std::shared_ptr<Material> pMaterial) {
+    m_assetBatches[batch]->Add(pMaterial);
+}
+
 void Scene::Add(std::uint8_t batch, std::shared_ptr<Model> pMesh) {
     m_assetBatches[batch]->Add(pMesh);
 }
@@ -26,6 +30,30 @@ void Scene::Add(std::uint8_t batch, std::shared_ptr<Text> pText) {
 
 void Scene::Add(std::uint8_t batch, std::shared_ptr<Outline> pOutline) {
     m_assetBatches[batch]->Add(pOutline);
+}
+
+void Scene::RemoveMaterial(std::uint8_t batch, std::uint64_t GUID) {
+    m_assetBatches[batch]->RemoveMaterial(GUID);
+}
+
+void Scene::RemoveModel(std::uint8_t batch, std::uint64_t GUID) {
+    m_assetBatches[batch]->RemoveModel(GUID);
+}
+
+void Scene::RemoveSprite(std::uint8_t batch, std::uint64_t GUID) {
+    m_assetBatches[batch]->RemoveSprite(GUID);
+}
+
+void Scene::RemoveText(std::uint8_t batch, std::uint64_t GUID) {
+    m_assetBatches[batch]->RemoveText(GUID);
+}
+
+void Scene::RemoveOutline(std::uint8_t batch, std::uint64_t GUID) {
+    m_assetBatches[batch]->RemoveOutline(GUID);
+}
+
+void Scene::RemoveMaterial(std::uint8_t batch, std::string name) {
+    m_assetBatches[batch]->RemoveOutline(name);
 }
 
 void Scene::RemoveModel(std::uint8_t batch, std::string name) {
@@ -52,12 +80,36 @@ Camera& Scene::GetCamera() const noexcept {
     return m_camera;
 }
 
-std::shared_ptr<AssetBatch>& Scene::GetAssetBatch(std::uint8_t batch) noexcept {
+std::shared_ptr<AssetBatch>& Scene::GetAssetBatch(std::uint8_t batch) {
     return m_assetBatches[batch];
 }
 
 std::vector<std::shared_ptr<AssetBatch>>& Scene::GetAssetBatches() noexcept {
     return m_assetBatches;
+}
+
+std::shared_ptr<Material>& Scene::GetMaterial(std::uint8_t batch, std::uint64_t GUID) {
+    return m_assetBatches[batch]->GetMaterial(GUID);
+}
+
+std::shared_ptr<Model>& Scene::GetModel(std::uint8_t batch, std::uint64_t GUID) {
+    return m_assetBatches[batch]->GetModel(GUID);
+}
+
+std::shared_ptr<Sprite>& Scene::GetSprite(std::uint8_t batch, std::uint64_t GUID) {
+    return m_assetBatches[batch]->GetSprite(GUID);
+}
+
+std::shared_ptr<Text>& Scene::GetText(std::uint8_t batch, std::uint64_t GUID) {
+    return m_assetBatches[batch]->GetText(GUID);
+}
+
+std::shared_ptr<Outline>& Scene::GetOutline(std::uint8_t batch, std::uint64_t GUID) {
+    return m_assetBatches[batch]->GetOutline(GUID);
+}
+
+std::shared_ptr<Material>& Scene::GetMaterial(std::uint8_t batch, std::string name) {
+    return m_assetBatches[batch]->GetMaterial(name);
 }
 
 std::shared_ptr<Model>& Scene::GetModel(std::uint8_t batch, std::string name) {
@@ -76,19 +128,23 @@ std::shared_ptr<Outline>& Scene::GetOutline(std::uint8_t batch, std::string name
     return m_assetBatches[batch]->GetOutline(name);
 }
 
-const std::unordered_map<std::string, std::shared_ptr<Model>>& Scene::GetModels(std::uint8_t batch) const noexcept {
+const Materials& Scene::GetMaterials(std::uint8_t batch) const {
+    return m_assetBatches[batch]->GetMaterials();
+}
+
+const Models& Scene::GetModels(std::uint8_t batch) const {
     return m_assetBatches[batch]->GetModels();
 }
 
-const std::unordered_map<std::string, std::shared_ptr<Sprite>>& Scene::GetSprites(std::uint8_t batch) const noexcept {
+const Sprites& Scene::GetSprites(std::uint8_t batch) const {
     return m_assetBatches[batch]->GetSprites();
 }
 
-const std::unordered_map<std::string, std::shared_ptr<Text>>& Scene::GetTexts(std::uint8_t batch) const noexcept {
+const Texts& Scene::GetTexts(std::uint8_t batch) const {
     return m_assetBatches[batch]->GetTexts();
 }
 
-const std::unordered_map<std::string, std::shared_ptr<Outline>>& Scene::GetOutlines(std::uint8_t batch) const noexcept {
+const Outlines& Scene::GetOutlines(std::uint8_t batch) const {
     return m_assetBatches[batch]->GetOutlines();
 }
 

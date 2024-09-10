@@ -9,6 +9,12 @@
 #include "Outline.h"
 #include "IAssetBatchObserver.h"
 
+using Materials = std::unordered_map<std::uint64_t, std::shared_ptr<Material>>;
+using Models    = std::unordered_map<std::uint64_t, std::shared_ptr<Model>>;
+using Sprites   = std::unordered_map<std::uint64_t, std::shared_ptr<Sprite>>;
+using Texts     = std::unordered_map<std::uint64_t, std::shared_ptr<Text>>;
+using Outlines  = std::unordered_map<std::uint64_t, std::shared_ptr<Outline>>;
+
 // Contains data that will be rendered to the display.
 class AssetBatch {
     public:
@@ -18,12 +24,25 @@ class AssetBatch {
         bool operator== (const AssetBatch& other) const noexcept;
 
     public:
+        std::uint64_t FindGUID(std::string name, Materials& materials);
+        std::uint64_t FindGUID(std::string name, Models& models);
+        std::uint64_t FindGUID(std::string name, Sprites& sprites);
+        std::uint64_t FindGUID(std::string name, Texts& texts);
+        std::uint64_t FindGUID(std::string name, Outlines& outlines);
+
         void Add(std::shared_ptr<Material> pMaterial);
         void Add(std::shared_ptr<Model> pModel);
         void Add(std::shared_ptr<Sprite> pSprite);
         void Add(std::shared_ptr<Text> pText);
         void Add(std::shared_ptr<Outline> pOutline);
 
+        void RemoveMaterial(std::uint64_t GUID);
+        void RemoveModel(std::uint64_t GUID);
+        void RemoveSprite(std::uint64_t GUID);
+        void RemoveText(std::uint64_t GUID);
+        void RemoveOutline(std::uint64_t GUID);
+
+        // Uses **FindGUID** internally.
         void RemoveMaterial(std::string name);
         void RemoveModel(std::string name);
         void RemoveSprite(std::string name);
@@ -39,17 +58,24 @@ class AssetBatch {
 
         std::uint8_t GetMaxAssets() const noexcept;
 
+        std::shared_ptr<Material>& GetMaterial(std::uint64_t GUID);
+        std::shared_ptr<Model>& GetModel(std::uint64_t GUID);
+        std::shared_ptr<Sprite>& GetSprite(std::uint64_t GUID);
+        std::shared_ptr<Text>& GetText(std::uint64_t GUID);
+        std::shared_ptr<Outline>& GetOutline(std::uint64_t GUID);
+
+        // Uses **FindGUID** internally.
         std::shared_ptr<Material>& GetMaterial(std::string name);
         std::shared_ptr<Model>& GetModel(std::string name);
         std::shared_ptr<Sprite>& GetSprite(std::string name);
         std::shared_ptr<Text>& GetText(std::string name);
         std::shared_ptr<Outline>& GetOutline(std::string name);
 
-        const std::unordered_map<std::string, std::shared_ptr<Material>> GetMaterials() const noexcept;
-        const std::unordered_map<std::string, std::shared_ptr<Model>>& GetModels() const noexcept;
-        const std::unordered_map<std::string, std::shared_ptr<Sprite>>& GetSprites() const noexcept;
-        const std::unordered_map<std::string, std::shared_ptr<Text>>& GetTexts() const noexcept;
-        const std::unordered_map<std::string, std::shared_ptr<Outline>>& GetOutlines() const noexcept;
+        const Materials& GetMaterials() const noexcept;
+        const Models& GetModels() const noexcept;
+        const Sprites& GetSprites() const noexcept;
+        const Texts& GetTexts() const noexcept;
+        const Outlines& GetOutlines() const noexcept;
 
         std::uint64_t GetNumMaterials() const noexcept;
         std::uint64_t GetNumModels() const noexcept;
@@ -72,11 +98,11 @@ class AssetBatch {
 
         const std::uint8_t m_maxAssets;
 
-        std::unordered_map<std::string, std::shared_ptr<Material>> m_materials;
-        std::unordered_map<std::string, std::shared_ptr<Model>>    m_models;
-        std::unordered_map<std::string, std::shared_ptr<Sprite>>   m_sprites;
-        std::unordered_map<std::string, std::shared_ptr<Text>>     m_texts;
-        std::unordered_map<std::string, std::shared_ptr<Outline>>  m_outlines;
+        Materials m_materials;
+        Models m_models;
+        Sprites m_sprites;
+        Texts m_texts;
+        Outlines m_outlines;
 
         std::unordered_set<IAssetBatchObserver*> m_assetBatchObservers;
 };

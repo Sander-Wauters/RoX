@@ -45,12 +45,12 @@ class Renderer::Impl : public IDeviceObserver {
     private:
         void Clear();
 
-        void RenderBatch(const DeviceDataBatch& batch);
-        void RenderMeshes(const DeviceDataBatch& batch);
-        void RenderOldMeshes(const DeviceDataBatch& batch);
-        void RenderOutlines(const DeviceDataBatch& batch);
-        void RenderSprites(const DeviceDataBatch& batch);
-        void RenderText(const DeviceDataBatch& batch);
+        void RenderBatch(const DeviceDataBatch& batch, std::uint8_t batchIndex);
+        void RenderMeshes(const DeviceDataBatch& batch, std::uint8_t batchIndex);
+        void RenderOldMeshes(const DeviceDataBatch& batch, std::uint8_t batchIndex);
+        void RenderOutlines(const DeviceDataBatch& batch, std::uint8_t batchIndex);
+        void RenderSprites(const DeviceDataBatch& batch, std::uint8_t batchIndex);
+        void RenderText(const DeviceDataBatch& batch, std::uint8_t batchIndex);
 
         void CreateDeviceDependentResources();
         void CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
@@ -139,7 +139,7 @@ void Renderer::Impl::Render(const std::function<void()>& renderImGui) {
     Clear();
     for (std::uint8_t i = 0; i < m_pDeviceResourceData->GetNumDataBatches(); ++i) {
         if (m_pDeviceResourceData->GetScene().GetAssetBatches()[i]->IsVisible())
-            RenderBatch(*m_pDeviceResourceData->GetDataBatches()[i]);
+            RenderBatch(*m_pDeviceResourceData->GetDataBatches()[i], i);
     }
 
     // Show the new frame.
@@ -258,7 +258,7 @@ void Renderer::Impl::Clear() {
     pCommandList->RSSetScissorRects(1, &scissorRect);
 }
 
-void Renderer::Impl::RenderBatch(const DeviceDataBatch& batch) {
+void Renderer::Impl::RenderBatch(const DeviceDataBatch& batch, std::uint8_t batchIndex) {
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
 
     if (batch.HasTextures()) {
@@ -270,21 +270,21 @@ void Renderer::Impl::RenderBatch(const DeviceDataBatch& batch) {
     }
 
     if (batch.HasMaterials() && batch.HasTextures())
-        RenderMeshes(batch);
+        RenderMeshes(batch, batchIndex);
 
-    RenderOutlines(batch);
+    RenderOutlines(batch, batchIndex);
 
     if (batch.HasTextures()) {
         DirectX::SpriteBatch* pSpriteBatch = batch.GetSpriteBatch();
         pSpriteBatch->Begin(pCommandList, DirectX::SpriteSortMode_FrontToBack);
-        RenderSprites(batch);
-        RenderText(batch);
+        RenderSprites(batch, batchIndex);
+        RenderText(batch, batchIndex);
         pSpriteBatch->End();
     }
 
 }
 
-void Renderer::Impl::RenderMeshes(const DeviceDataBatch& batch) {
+void Renderer::Impl::RenderMeshes(const DeviceDataBatch& batch, std::uint8_t batchIndex) {
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
 
     for (const ModelPair& modelPair : batch.GetModelData()) {
@@ -345,7 +345,7 @@ void Renderer::Impl::RenderMeshes(const DeviceDataBatch& batch) {
     }
 }
 
-void Renderer::Impl::RenderOutlines(const DeviceDataBatch& batch) {
+void Renderer::Impl::RenderOutlines(const DeviceDataBatch& batch, std::uint8_t batchIndex) {
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
 
     DirectX::PrimitiveBatch<DirectX::VertexPositionColor>* pOutlineBatch = batch.GetOutlineBatch();
@@ -355,7 +355,7 @@ void Renderer::Impl::RenderOutlines(const DeviceDataBatch& batch) {
     pOutlineEffect->SetWorld(DirectX::XMMatrixIdentity());
     pOutlineEffect->Apply(pCommandList);
 
-    for (const std::pair<std::string const, std::shared_ptr<Outline>>& outlinePair : m_pDeviceResourceData->GetScene().GetOutlines(0)) {
+    for (auto& outlinePair : m_pDeviceResourceData->GetScene().GetOutlines(batchIndex)) {
         Outline* pOutline = outlinePair.second.get();
         if (!pOutline->IsVisible())
             continue;
@@ -443,7 +443,7 @@ void Renderer::Impl::RenderOutlines(const DeviceDataBatch& batch) {
     pOutlineBatch->End();
 }
 
-void Renderer::Impl::RenderSprites(const DeviceDataBatch& batch) {
+void Renderer::Impl::RenderSprites(const DeviceDataBatch& batch, std::uint8_t batchIndex) {
     DirectX::SpriteBatch* pSpriteBatch = batch.GetSpriteBatch();
 
     for (const SpritePair& spritePair : batch.GetSpriteData()) {
@@ -478,7 +478,7 @@ void Renderer::Impl::RenderSprites(const DeviceDataBatch& batch) {
     }
 }
 
-void Renderer::Impl::RenderText(const DeviceDataBatch& batch) {
+void Renderer::Impl::RenderText(const DeviceDataBatch& batch, std::uint8_t batchIndex) {
     DirectX::SpriteBatch* pSpriteBatch = batch.GetSpriteBatch();
 
     for (const TextPair& textPair : batch.GetTextData()) {
