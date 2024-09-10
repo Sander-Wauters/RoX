@@ -25,7 +25,7 @@ void ModelDeviceData::DrawSkinned(ID3D12GraphicsCommandList* pCommandList, Model
 
         for (std::uint64_t submeshIndex = 0; submeshIndex < pMesh->GetNumSubmeshes(); ++submeshIndex) {
             Submesh* pSubmesh = pMesh->GetSubmeshes()[submeshIndex].get();
-            DirectX::IEffect* pEffect = m_effects[pSubmesh->GetMaterialIndex()]->get();
+            DirectX::IEffect* pEffect = m_effects[pSubmesh->GetMaterialIndex()];
 
             auto iMatrices = dynamic_cast<DirectX::IEffectMatrices*>(pEffect);
             if (iMatrices)
@@ -149,7 +149,7 @@ void ModelDeviceData::LoadStaticBuffers(ID3D12Device* pDevice, DirectX::Resource
     }
 }
 
-std::vector<std::unique_ptr<DirectX::IEffect>*>& ModelDeviceData::GetEffects() noexcept {
+std::vector<DirectX::IEffect*>& ModelDeviceData::GetEffects() noexcept {
     return m_effects;
 }
 

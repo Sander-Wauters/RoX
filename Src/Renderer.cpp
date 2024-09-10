@@ -184,8 +184,6 @@ void Renderer::Impl::OnDeviceLost() {
 
 void Renderer::Impl::OnDeviceRestored() {
     ImGui_ImplDX12_CreateDeviceObjects();
-    CreateDeviceDependentResources();
-    CreateWindowSizeDependentResources();
 }
 
 void Renderer::Impl::OnActivated() {
@@ -311,7 +309,7 @@ void Renderer::Impl::RenderMeshes(const DeviceDataBatch& batch, std::uint8_t bat
                 if (!pSubmesh->IsVisible())
                     continue;
 
-                DirectX::IEffect* pEffect = modelPair.second->GetEffects()[pSubmesh->GetMaterialIndex()]->get();
+                DirectX::IEffect* pEffect = modelPair.second->GetEffects()[pSubmesh->GetMaterialIndex()];
 
                 std::uint32_t flags = pSubmesh->GetMaterial(*modelPair.first)->GetFlags();
 

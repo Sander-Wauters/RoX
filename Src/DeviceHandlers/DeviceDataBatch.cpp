@@ -44,6 +44,7 @@ void DeviceDataBatch::OnDeviceLost() {
 }
 
 void DeviceDataBatch::OnDeviceRestored() {
+
 }
 
 void DeviceDataBatch::Add(const AssetBatch& batch) {
@@ -58,15 +59,17 @@ void DeviceDataBatch::Add(const AssetBatch& batch) {
     }
 }
 
-void DeviceDataBatch::Add(std::shared_ptr<Material> pMaterial, bool addToMaterialData) {
-    std::unique_ptr<TextureDeviceData>& pDiffData = m_textureData[pMaterial->GetDiffuseMapFilePath()];
-    if (!pDiffData)
-        pDiffData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
-    std::unique_ptr<TextureDeviceData>& pNormData = m_textureData[pMaterial->GetNormalMapFilePath()];
-    if (!pNormData) 
-        pNormData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
-    if (addToMaterialData)
-        m_materialData[pMaterial];
+void DeviceDataBatch::Add(std::shared_ptr<Material> pMaterial) {
+    std::unique_ptr<DirectX::IEffect>& pIEffect = m_materialData[pMaterial];
+    if (!pIEffect) {
+        std::unique_ptr<TextureDeviceData>& pDiffData = m_textureData[pMaterial->GetDiffuseMapFilePath()];
+        if (!pDiffData)
+            pDiffData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
+        std::unique_ptr<TextureDeviceData>& pNormData = m_textureData[pMaterial->GetNormalMapFilePath()];
+        if (!pNormData) 
+            pNormData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
+        pIEffect = BuildEffect(*pMaterial);
+    }
 }
 
 void DeviceDataBatch::Add(std::shared_ptr<Model> pModel) {
@@ -76,21 +79,11 @@ void DeviceDataBatch::Add(std::shared_ptr<Model> pModel) {
     if (!pModelData) {
         pModelData = std::make_unique<ModelDeviceData>(pDevice, pModel.get(), m_meshData);
 
-        // Materials can be shared so check if the materials aren't already loaded in.
         pModelData->GetEffects().reserve(pModel->GetNumMaterials());
         for (std::uint8_t i = 0; i < pModel->GetNumMaterials(); ++i) {
             std::shared_ptr<Material> pMaterial = pModel->GetMaterials()[i];
-            Add(pMaterial, false);
-
-            std::unique_ptr<DirectX::IEffect>& pEffect = m_materialData[pMaterial];
-            if (!pEffect) {
-                pModelData->GetEffects().push_back(&pEffect);
-            } else {
-                // Effect may already be loaded in but not used by this model.
-                std::vector<std::unique_ptr<DirectX::IEffect>*>& pEffects = pModelData->GetEffects();
-                if (std::find(pEffects.begin(), pEffects.end(), &pEffect) == pEffects.end())
-                    pEffects.push_back(&pEffect);
-            }
+            Add(pMaterial); // Material should already be added by now but the redundancy doesn't effect performance much.
+            pModelData->GetEffects().push_back(m_materialData.at(pMaterial).get());
         }
         pModelData->GetEffects().shrink_to_fit();
     }
@@ -107,14 +100,7 @@ void DeviceDataBatch::Add(std::shared_ptr<Text> pText) {
 void DeviceDataBatch::OnAdd(std::shared_ptr<Material>& pMaterial) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
-    DirectX::RenderTargetState rtState(
-            m_deviceResources.GetBackBufferFormat(), 
-            m_deviceResources.GetDepthBufferFormat());
-    if (m_msaaEnabled) {
-        rtState.sampleDesc.Count = DeviceResources::MSAA_COUNT;
-        rtState.sampleDesc.Quality = DeviceResources::MSAA_QUALITY;
-    }
-
+    DirectX::RenderTargetState rtState = RenderTargetState();
     DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
     resourceUploadBatch.Begin();
 
@@ -129,8 +115,10 @@ void DeviceDataBatch::OnAdd(std::shared_ptr<Material>& pMaterial) {
         CreateTextureResource(pDevice, pMaterial->GetNormalMapFilePath(), pNormData, resourceUploadBatch);
     }
     std::unique_ptr<DirectX::IEffect>& pEffect = m_materialData[pMaterial];
-    if (!pEffect)
+    if (!pEffect) {
+        pEffect = BuildEffect(*pMaterial);
         CreateMaterialResource(pDevice, pMaterial, pEffect, rtState);
+    }
 
     std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
     uploadResourceFinished.wait();
@@ -148,41 +136,11 @@ void DeviceDataBatch::OnAdd(std::shared_ptr<Model>& pModel) {
         pModelData = std::make_unique<ModelDeviceData>(pDevice, pModel.get(), m_meshData);
         CreateModelResource(pDevice, pModelData, resourceUploadBatch);
 
-        // Materials can be shared so check if the materials aren't already loaded in.
         pModelData->GetEffects().reserve(pModel->GetNumMaterials());
         for (std::uint8_t i = 0; i < pModel->GetNumMaterials(); ++i) {
             std::shared_ptr<Material> pMaterial = pModel->GetMaterials()[i];
-
-            DirectX::RenderTargetState rtState(
-                    m_deviceResources.GetBackBufferFormat(), 
-                    m_deviceResources.GetDepthBufferFormat());
-            if (m_msaaEnabled) {
-                rtState.sampleDesc.Count = DeviceResources::MSAA_COUNT;
-                rtState.sampleDesc.Quality = DeviceResources::MSAA_QUALITY;
-            }
-
-            std::unique_ptr<TextureDeviceData>& pDiffData = m_textureData[pMaterial->GetDiffuseMapFilePath()];
-            if (!pDiffData) {
-                pDiffData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
-                CreateTextureResource(pDevice, pMaterial->GetDiffuseMapFilePath(), pDiffData, resourceUploadBatch);
-            }
-
-            std::unique_ptr<TextureDeviceData>& pNormData = m_textureData[pMaterial->GetNormalMapFilePath()];
-            if (!pNormData) {
-                pNormData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
-                CreateTextureResource(pDevice, pMaterial->GetNormalMapFilePath(), pNormData, resourceUploadBatch);
-            }
-
-            std::unique_ptr<DirectX::IEffect>& pEffect = m_materialData[pMaterial];
-            if (!pEffect) {
-                pModelData->GetEffects().push_back(&pEffect);
-                CreateMaterialResource(pDevice, pMaterial, pEffect, rtState);
-            } else {
-                // Effect may already be loaded in but not used by this model.
-                std::vector<std::unique_ptr<DirectX::IEffect>*>& pEffects = pModelData->GetEffects();
-                if (std::find(pEffects.begin(), pEffects.end(), &pEffect) == pEffects.end())
-                    pEffects.push_back(&pEffect);
-            }
+            OnAdd(pMaterial); // Material should already be added by now but the redundancy doesn't effect performance much.
+            pModelData->GetEffects().push_back(m_materialData.at(pMaterial).get());
         }
         pModelData->GetEffects().shrink_to_fit();
 
@@ -301,18 +259,11 @@ void DeviceDataBatch::CreateDeviceDependentResources() {
 void DeviceDataBatch::CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
-    DirectX::RenderTargetState rtState(
-            m_deviceResources.GetBackBufferFormat(), 
-            m_deviceResources.GetDepthBufferFormat());
-    if (m_msaaEnabled) {
-        rtState.sampleDesc.Count = DeviceResources::MSAA_COUNT;
-        rtState.sampleDesc.Quality = DeviceResources::MSAA_QUALITY;
-    }
-
+    DirectX::RenderTargetState rtState = RenderTargetState();
     for (MaterialPair& materialPair : m_materialData) {
         CreateMaterialResource(pDevice, materialPair.first, materialPair.second, rtState);
     }
-    CreateOutlineBatchResource(pDevice, rtState);
+    CreateOutlineBatchResources(pDevice, rtState);
 
     DirectX::SpriteBatchPipelineStateDescription pd(rtState);
     m_pSpriteBatch = std::make_unique<DirectX::SpriteBatch>(pDevice, resourceUploadBatch, pd);
@@ -358,40 +309,15 @@ void DeviceDataBatch::CreateModelResource(ID3D12Device* pDevice, std::unique_ptr
 }
 
 void DeviceDataBatch::CreateMaterialResource(ID3D12Device* pDevice, const std::shared_ptr<Material>& pMaterial, std::unique_ptr<DirectX::IEffect>& pIEffect, DirectX::RenderTargetState& renderTargetState) {
-    std::uint32_t flags = pMaterial->GetFlags();
-    std::unique_ptr<DirectX::NormalMapEffect> pEffect;
-
-    D3D12_INPUT_LAYOUT_DESC inputLayout = InputLayoutDesc(pMaterial->GetFlags());
-    DirectX::EffectPipelineStateDescription pd(
-            &inputLayout,
-            BlendDesc(flags),
-            DepthStencilDesc(flags),
-            RasterizerDesc(flags),
-            renderTargetState);
-
-    if (flags & RenderFlags::Effect::Instanced)
-        pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Instancing, pd);
-    else if (flags & RenderFlags::Effect::Skinned) 
-        pEffect = std::make_unique<DirectX::SkinnedNormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting, pd);
-    else
-        pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting | DirectX::EffectFlags::Texture, pd);
-
-    pEffect->SetColorAndAlpha(DirectX::XMLoadFloat4(&pMaterial->GetDiffuseColor()));
-    pEffect->SetEmissiveColor(DirectX::XMLoadFloat4(&pMaterial->GetEmissiveColor()));
-    pEffect->SetSpecularColor(DirectX::XMLoadFloat4(&pMaterial->GetSpecularColor()));
-
-    pEffect->EnableDefaultLighting();
-
+    auto pEffect = static_cast<DirectX::NormalMapEffect*>(pIEffect.get());
     pEffect->SetTexture(
             m_pDescriptorHeap->GetGpuHandle(m_textureData.at(pMaterial->GetDiffuseMapFilePath())->GetHeapIndex()),
             m_pStates->AnisotropicWrap());
     pEffect->SetNormalTexture(
             m_pDescriptorHeap->GetGpuHandle(m_textureData.at(pMaterial->GetNormalMapFilePath())->GetHeapIndex()));
-
-    pIEffect = std::move(pEffect);
 }
 
-void DeviceDataBatch::CreateOutlineBatchResource(ID3D12Device* pDevice, DirectX::RenderTargetState& renderTargetState) {
+void DeviceDataBatch::CreateOutlineBatchResources(ID3D12Device* pDevice, DirectX::RenderTargetState& renderTargetState) {
     m_pOutlinePrimitiveBatch = std::make_unique<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>>(pDevice);
 
     CD3DX12_RASTERIZER_DESC rastDesc(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE, FALSE,
@@ -408,6 +334,47 @@ void DeviceDataBatch::CreateOutlineBatchResource(ID3D12Device* pDevice, DirectX:
             D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
 
     m_pOutlineEffect = std::make_unique<DirectX::BasicEffect>(pDevice, DirectX::EffectFlags::VertexColor, pd);
+}
+
+std::unique_ptr<DirectX::IEffect> DeviceDataBatch::BuildEffect(Material& material) const {
+    ID3D12Device* pDevice = m_deviceResources.GetDevice();
+
+    std::uint32_t flags = material.GetFlags();
+    std::unique_ptr<DirectX::NormalMapEffect> pEffect;
+
+    D3D12_INPUT_LAYOUT_DESC inputLayout = InputLayoutDesc(flags);
+    DirectX::EffectPipelineStateDescription pd(
+            &inputLayout,
+            BlendDesc(flags),
+            DepthStencilDesc(flags),
+            RasterizerDesc(flags),
+            RenderTargetState());
+
+    if (flags & RenderFlags::Effect::Instanced)
+        pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Instancing, pd);
+    else if (flags & RenderFlags::Effect::Skinned) 
+        pEffect = std::make_unique<DirectX::SkinnedNormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting, pd);
+    else
+        pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting | DirectX::EffectFlags::Texture, pd);
+
+    pEffect->SetColorAndAlpha(DirectX::XMLoadFloat4(&material.GetDiffuseColor()));
+    pEffect->SetEmissiveColor(DirectX::XMLoadFloat4(&material.GetEmissiveColor()));
+    pEffect->SetSpecularColor(DirectX::XMLoadFloat4(&material.GetSpecularColor()));
+
+    pEffect->EnableDefaultLighting();
+
+    return std::move(pEffect);
+}
+
+DirectX::RenderTargetState DeviceDataBatch::RenderTargetState() const noexcept {
+    DirectX::RenderTargetState rtState(
+            m_deviceResources.GetBackBufferFormat(), 
+            m_deviceResources.GetDepthBufferFormat());
+    if (m_msaaEnabled) {
+        rtState.sampleDesc.Count = DeviceResources::MSAA_COUNT;
+        rtState.sampleDesc.Quality = DeviceResources::MSAA_QUALITY;
+    }
+    return rtState;
 }
 
 D3D12_INPUT_LAYOUT_DESC DeviceDataBatch::InputLayoutDesc(std::uint32_t flags) const {

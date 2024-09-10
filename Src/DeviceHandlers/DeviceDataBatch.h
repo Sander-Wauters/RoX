@@ -36,18 +36,19 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
 
         // Used when loading in a new Scene.
         void Add(const AssetBatch& batch);
-        void Add(std::shared_ptr<Material> pMaterial, bool addToMaterialData = true);
+        void Add(std::shared_ptr<Material> pMaterial);
         void Add(std::shared_ptr<Model> pModel);
         void Add(std::shared_ptr<Sprite> pSprite);
         void Add(std::shared_ptr<Text> pText);
 
-        // Used while a Scene is already loaded in.
+        // Used when a Scene is already loaded in.
         void OnAdd(std::shared_ptr<Material>& pMaterial) override;
         void OnAdd(std::shared_ptr<Model>& pModel) override;
         void OnAdd(std::shared_ptr<Sprite>& pSprite) override;
         void OnAdd(std::shared_ptr<Text>& pText) override;
         void OnAdd(std::shared_ptr<Outline>& pOutline) override;
 
+        // Used when a Scene is already loaded in.
         void OnRemove(std::shared_ptr<Material>& pMaterial) override;
         void OnRemove(std::shared_ptr<Model>& pModel) override;
         void OnRemove(std::shared_ptr<Sprite>& pSprite) override;
@@ -67,7 +68,11 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
         void CreateModelResource(ID3D12Device* pDevice, std::unique_ptr<ModelDeviceData>& pModelData, DirectX::ResourceUploadBatch& resourceUploadBatch);
 
         void CreateMaterialResource(ID3D12Device* pDevice, const std::shared_ptr<Material>& pMaterial, std::unique_ptr<DirectX::IEffect>& pIEffect, DirectX::RenderTargetState& renderTargetState);
-        void CreateOutlineBatchResource(ID3D12Device* pDevice, DirectX::RenderTargetState& renderTargetState);
+        void CreateOutlineBatchResources(ID3D12Device* pDevice, DirectX::RenderTargetState& renderTargetState);
+
+        std::unique_ptr<DirectX::IEffect> BuildEffect(Material& material) const;
+
+        DirectX::RenderTargetState RenderTargetState() const noexcept;
 
         D3D12_INPUT_LAYOUT_DESC InputLayoutDesc(std::uint32_t flags) const;
         D3D12_BLEND_DESC BlendDesc(std::uint32_t flags) const noexcept;

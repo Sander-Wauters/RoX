@@ -15,10 +15,10 @@ class ModelDeviceData {
         void LoadStaticBuffers(ID3D12Device* pDevice, DirectX::ResourceUploadBatch& resourceUploadBatch, bool keepMemory = false);
 
     public:
-        std::vector<std::unique_ptr<DirectX::IEffect>*>& GetEffects() noexcept;
+        std::vector<DirectX::IEffect*>& GetEffects() noexcept;
         std::vector<MeshDeviceData*>& GetMeshes() noexcept;
 
     private:
-        std::vector<std::unique_ptr<DirectX::IEffect>*> m_effects; 
+        std::vector<DirectX::IEffect*> m_effects; 
         std::vector<MeshDeviceData*> m_meshes;
 };
