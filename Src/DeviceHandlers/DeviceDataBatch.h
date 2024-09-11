@@ -36,24 +36,18 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
 
         // Used when loading in a new Scene.
         void Add(const AssetBatch& batch);
-        void Add(std::shared_ptr<Material> pMaterial);
-        void Add(std::shared_ptr<Model> pModel);
-        void Add(std::shared_ptr<Sprite> pSprite);
-        void Add(std::shared_ptr<Text> pText);
 
-        // Used when a Scene is already loaded in.
-        void OnAdd(std::shared_ptr<Material>& pMaterial) override;
-        void OnAdd(std::shared_ptr<Model>& pModel) override;
-        void OnAdd(std::shared_ptr<Sprite>& pSprite) override;
-        void OnAdd(std::shared_ptr<Text>& pText) override;
-        void OnAdd(std::shared_ptr<Outline>& pOutline) override;
+        void OnAdd(const std::shared_ptr<Material>& pMaterial) override;
+        void OnAdd(const std::shared_ptr<Model>& pModel) override;
+        void OnAdd(const std::shared_ptr<Sprite>& pSprite) override;
+        void OnAdd(const std::shared_ptr<Text>& pText) override;
+        void OnAdd(const std::shared_ptr<Outline>& pOutline) override;
 
-        // Used when a Scene is already loaded in.
-        void OnRemove(std::shared_ptr<Material>& pMaterial) override;
-        void OnRemove(std::shared_ptr<Model>& pModel) override;
-        void OnRemove(std::shared_ptr<Sprite>& pSprite) override;
-        void OnRemove(std::shared_ptr<Text>& pText) override;
-        void OnRemove(std::shared_ptr<Outline>& pOutline) override;
+        void OnRemove(const std::shared_ptr<Material>& pMaterial) override;
+        void OnRemove(const std::shared_ptr<Model>& pModel) override;
+        void OnRemove(const std::shared_ptr<Sprite>& pSprite) override;
+        void OnRemove(const std::shared_ptr<Text>& pText) override;
+        void OnRemove(const std::shared_ptr<Outline>& pOutline) override;
 
         void UpdateEffects(DirectX::XMMATRIX view, DirectX::XMMATRIX projection);
 

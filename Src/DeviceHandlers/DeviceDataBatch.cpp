@@ -7,6 +7,8 @@ DeviceDataBatch::DeviceDataBatch(DeviceResources& deviceResources, std::uint8_t 
     m_nextDescriptorHeapIndex(0)
 {
     m_deviceResources.RegisterDeviceObserver(this);
+    CreateDeviceDependentResources();
+    CreateWindowSizeDependentResources();
 }
 
 DeviceDataBatch::~DeviceDataBatch() noexcept {
@@ -44,60 +46,26 @@ void DeviceDataBatch::OnDeviceLost() {
 }
 
 void DeviceDataBatch::OnDeviceRestored() {
-
+    CreateDeviceDependentResources();
+    CreateWindowSizeDependentResources();
 }
 
 void DeviceDataBatch::Add(const AssetBatch& batch) {
+    for (auto& materialPair : batch.GetMaterials()) {
+        OnAdd(materialPair.second);
+    }
     for (auto& modelPair : batch.GetModels()) {
-        Add(modelPair.second);
+        OnAdd(modelPair.second);
     }
     for (auto& spritePair : batch.GetSprites()) {
-        Add(spritePair.second);
+        OnAdd(spritePair.second);
     }
     for (auto& textPair : batch.GetTexts()) {
-        Add(textPair.second);
+        OnAdd(textPair.second);
     }
 }
 
-void DeviceDataBatch::Add(std::shared_ptr<Material> pMaterial) {
-    std::unique_ptr<DirectX::IEffect>& pIEffect = m_materialData[pMaterial];
-    if (!pIEffect) {
-        std::unique_ptr<TextureDeviceData>& pDiffData = m_textureData[pMaterial->GetDiffuseMapFilePath()];
-        if (!pDiffData)
-            pDiffData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
-        std::unique_ptr<TextureDeviceData>& pNormData = m_textureData[pMaterial->GetNormalMapFilePath()];
-        if (!pNormData) 
-            pNormData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
-        pIEffect = BuildIEffect(*pMaterial);
-    }
-}
-
-void DeviceDataBatch::Add(std::shared_ptr<Model> pModel) {
-    ID3D12Device* pDevice = m_deviceResources.GetDevice();
-    std::unique_ptr<ModelDeviceData>& pModelData = m_modelData[pModel];
-
-    if (!pModelData) {
-        pModelData = std::make_unique<ModelDeviceData>(pDevice, pModel.get(), m_meshData);
-
-        pModelData->GetEffects().reserve(pModel->GetNumMaterials());
-        for (std::uint8_t i = 0; i < pModel->GetNumMaterials(); ++i) {
-            std::shared_ptr<Material> pMaterial = pModel->GetMaterials()[i];
-            Add(pMaterial); // Material should already be added by now but the redundancy doesn't effect performance much.
-            pModelData->GetEffects().push_back(m_materialData.at(pMaterial).get());
-        }
-        pModelData->GetEffects().shrink_to_fit();
-    }
-}
-
-void DeviceDataBatch::Add(std::shared_ptr<Sprite> pSprite) {
-    m_spriteData[pSprite] = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
-}
-
-void DeviceDataBatch::Add(std::shared_ptr<Text> pText) {
-    m_textData[pText] = std::make_unique<TextDeviceData>(m_nextDescriptorHeapIndex++);
-}
-
-void DeviceDataBatch::OnAdd(std::shared_ptr<Material>& pMaterial) {
+void DeviceDataBatch::OnAdd(const std::shared_ptr<Material>& pMaterial) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
     DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
@@ -123,7 +91,7 @@ void DeviceDataBatch::OnAdd(std::shared_ptr<Material>& pMaterial) {
     uploadResourceFinished.wait();
 }
 
-void DeviceDataBatch::OnAdd(std::shared_ptr<Model>& pModel) {
+void DeviceDataBatch::OnAdd(const std::shared_ptr<Model>& pModel) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
     std::unique_ptr<ModelDeviceData>& pModelData = m_modelData[pModel];
 
@@ -148,7 +116,7 @@ void DeviceDataBatch::OnAdd(std::shared_ptr<Model>& pModel) {
     }
 }
 
-void DeviceDataBatch::OnAdd(std::shared_ptr<Sprite>& pSprite) {
+void DeviceDataBatch::OnAdd(const std::shared_ptr<Sprite>& pSprite) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
     std::unique_ptr<TextureDeviceData>& pSpriteData = m_spriteData[pSprite]; 
@@ -165,7 +133,7 @@ void DeviceDataBatch::OnAdd(std::shared_ptr<Sprite>& pSprite) {
     }
 }
 
-void DeviceDataBatch::OnAdd(std::shared_ptr<Text>& pText) {
+void DeviceDataBatch::OnAdd(const std::shared_ptr<Text>& pText) {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
     std::unique_ptr<TextDeviceData>& pTextData = m_textData[pText];
@@ -182,27 +150,27 @@ void DeviceDataBatch::OnAdd(std::shared_ptr<Text>& pText) {
     }
 }
 
-void DeviceDataBatch::OnAdd(std::shared_ptr<Outline>& pOutline) {
+void DeviceDataBatch::OnAdd(const std::shared_ptr<Outline>& pOutline) {
 
 }
 
-void DeviceDataBatch::OnRemove(std::shared_ptr<Material>& pMaterial) {
+void DeviceDataBatch::OnRemove(const std::shared_ptr<Material>& pMaterial) {
 
 }
 
-void DeviceDataBatch::OnRemove(std::shared_ptr<Model>& pModel) {
+void DeviceDataBatch::OnRemove(const std::shared_ptr<Model>& pModel) {
 
 }
 
-void DeviceDataBatch::OnRemove(std::shared_ptr<Sprite>& pSprite) {
+void DeviceDataBatch::OnRemove(const std::shared_ptr<Sprite>& pSprite) {
 
 }
 
-void DeviceDataBatch::OnRemove(std::shared_ptr<Text>& pText) {
+void DeviceDataBatch::OnRemove(const std::shared_ptr<Text>& pText) {
 
 }
 
-void DeviceDataBatch::OnRemove(std::shared_ptr<Outline>& pOutline) {
+void DeviceDataBatch::OnRemove(const std::shared_ptr<Outline>& pOutline) {
 
 }
 
