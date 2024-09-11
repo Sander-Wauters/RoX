@@ -62,15 +62,18 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
         void CreateWindowSizeDependentResources();
 
     private:
-        void CreateSpriteResource(ID3D12Device* pDevice, const std::shared_ptr<Sprite>& pSprite, std::unique_ptr<TextureDeviceData>& pSpriteData, DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void CreateTextResource(ID3D12Device* pDevice, const std::shared_ptr<Text>& pText, std::unique_ptr<TextDeviceData>& pTextData, DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void CreateTextureResource(ID3D12Device* pDevice, const std::wstring& fileName, std::unique_ptr<TextureDeviceData>& pTextureData, DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void CreateModelResource(ID3D12Device* pDevice, std::unique_ptr<ModelDeviceData>& pModelData, DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void CreateDescriptorHeapResources();
+        void CreateSpriteBatchResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
 
-        void CreateMaterialResource(ID3D12Device* pDevice, const std::shared_ptr<Material>& pMaterial, std::unique_ptr<DirectX::IEffect>& pIEffect, DirectX::RenderTargetState& renderTargetState);
-        void CreateOutlineBatchResources(ID3D12Device* pDevice, DirectX::RenderTargetState& renderTargetState);
+        void CreateSpriteResource(const std::shared_ptr<Sprite>& pSprite, std::unique_ptr<TextureDeviceData>& pSpriteData, DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void CreateTextResource(const std::shared_ptr<Text>& pText, std::unique_ptr<TextDeviceData>& pTextData, DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void CreateTextureResource(const std::wstring& fileName, std::unique_ptr<TextureDeviceData>& pTextureData, DirectX::ResourceUploadBatch& resourceUploadBatch);
 
-        std::unique_ptr<DirectX::IEffect> BuildEffect(Material& material) const;
+        void BindTexturesToEffect(Material& material, DirectX::IEffect& iEffect);
+
+        void CreateOutlineBatchResources();
+
+        std::unique_ptr<DirectX::IEffect> BuildIEffect(Material& material) const;
 
         DirectX::RenderTargetState RenderTargetState() const noexcept;
 
@@ -78,7 +81,7 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
         D3D12_BLEND_DESC BlendDesc(std::uint32_t flags) const noexcept;
         D3D12_DEPTH_STENCIL_DESC DepthStencilDesc(std::uint32_t flags) const noexcept;
         D3D12_RASTERIZER_DESC RasterizerDesc(std::uint32_t flags) const noexcept;
-        D3D12_GPU_DESCRIPTOR_HANDLE SemplerDesc(std::uint32_t flags) const noexcept;
+        D3D12_GPU_DESCRIPTOR_HANDLE SamplerDesc(std::uint32_t flags) const noexcept;
 
         bool CompareFileExtension(std::wstring filePath, std::wstring valid);
         void CreateTextureFromFile(std::wstring filePath, ID3D12Resource** ppTexture, DirectX::ResourceUploadBatch& resourceUploadBatch);

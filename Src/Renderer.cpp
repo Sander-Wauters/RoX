@@ -184,6 +184,8 @@ void Renderer::Impl::OnDeviceLost() {
 
 void Renderer::Impl::OnDeviceRestored() {
     ImGui_ImplDX12_CreateDeviceObjects();
+    CreateDeviceDependentResources();
+    CreateWindowSizeDependentResources();
 }
 
 void Renderer::Impl::OnActivated() {
