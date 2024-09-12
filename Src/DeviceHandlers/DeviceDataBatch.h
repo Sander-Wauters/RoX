@@ -56,6 +56,8 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
         void CreateWindowSizeDependentResources();
 
     private:
+        std::uint8_t NextHeapIndex() noexcept;
+
         void CreateDescriptorHeapResources();
         void CreateSpriteBatchResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
 
@@ -103,6 +105,8 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
 
         const std::uint8_t m_descriptorHeapSize;
         std::uint8_t m_nextDescriptorHeapIndex;
+        std::vector<std::uint8_t> m_openDescriptorHeapIndices;
+
         std::unique_ptr<DirectX::DescriptorHeap> m_pDescriptorHeap;
         std::unique_ptr<DirectX::CommonStates> m_pStates;
 

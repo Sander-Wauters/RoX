@@ -2,10 +2,10 @@
 
 #include "Util/pch.h"
 
-AssetBatch::AssetBatch(const std::string name, bool visible, std::uint8_t maxAssets) 
+AssetBatch::AssetBatch(const std::string name, bool visible, std::uint8_t maxNumTextures) 
     noexcept : m_name(name),
     m_visible(visible),
-    m_maxAssets(maxAssets)
+    m_maxNumTextures(maxNumTextures)
 {}
 
 AssetBatch::~AssetBatch() noexcept 
@@ -114,6 +114,14 @@ void AssetBatch::Add(std::shared_ptr<Outline> pOutline) {
 }
 
 void AssetBatch::RemoveMaterial(std::uint64_t GUID) {
+    for (auto& modelPair : m_models) {
+        std::vector<std::shared_ptr<Material>>& materials = modelPair.second->GetMaterials();
+        for (std::shared_ptr<Material>& pMaterial : materials) {
+            if (pMaterial->GetGUID() == GUID)
+                throw std::runtime_error("Failed to remove material '" + pMaterial->GetName() + "' GUID:" + std::to_string(GUID) + " because it is still in use.");
+        }
+    }
+
     for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
         pAssetBatchObserver->OnRemove(m_materials.at(GUID));
     }
@@ -204,8 +212,8 @@ bool AssetBatch::IsVisible() const noexcept {
     return m_visible;
 }
 
-std::uint8_t AssetBatch::GetMaxAssets() const noexcept {
-    return m_maxAssets;
+std::uint8_t AssetBatch::GetMaxNumTextures() const noexcept {
+    return m_maxNumTextures;
 }
 
 std::shared_ptr<Material>& AssetBatch::GetMaterial(std::uint64_t GUID) {

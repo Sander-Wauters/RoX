@@ -18,7 +18,7 @@ using Outlines  = std::unordered_map<std::uint64_t, std::shared_ptr<Outline>>;
 // Contains data that will be rendered to the display.
 class AssetBatch {
     public:
-        AssetBatch(const std::string name, bool visible = true, std::uint8_t maxAssets = 128) noexcept;
+        AssetBatch(const std::string name, bool visible = true, std::uint8_t maxNumTextures = 128) noexcept;
         ~AssetBatch() noexcept;
 
         bool operator== (const AssetBatch& other) const noexcept;
@@ -56,7 +56,7 @@ class AssetBatch {
         std::string GetName() const noexcept;
         bool IsVisible() const noexcept;
 
-        std::uint8_t GetMaxAssets() const noexcept;
+        std::uint8_t GetMaxNumTextures() const noexcept;
 
         std::shared_ptr<Material>& GetMaterial(std::uint64_t GUID);
         std::shared_ptr<Model>& GetModel(std::uint64_t GUID);
@@ -96,7 +96,7 @@ class AssetBatch {
         const std::string m_name;
         bool m_visible;
 
-        const std::uint8_t m_maxAssets;
+        const std::uint8_t m_maxNumTextures;
 
         Materials m_materials;
         Models m_models;

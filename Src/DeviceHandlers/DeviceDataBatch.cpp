@@ -73,14 +73,18 @@ void DeviceDataBatch::OnAdd(const std::shared_ptr<Material>& pMaterial) {
 
     std::unique_ptr<TextureDeviceData>& pDiffData = m_textureData[pMaterial->GetDiffuseMapFilePath()];
     if (!pDiffData) {
-        pDiffData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
+        pDiffData = std::make_unique<TextureDeviceData>(NextHeapIndex());
         CreateTextureResource(pMaterial->GetDiffuseMapFilePath(), pDiffData, resourceUploadBatch);
-    }
+    } else
+        pDiffData->IncreaseRefCount();
+
     std::unique_ptr<TextureDeviceData>& pNormData = m_textureData[pMaterial->GetNormalMapFilePath()];
     if (!pNormData) {
-        pNormData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
+        pNormData = std::make_unique<TextureDeviceData>(NextHeapIndex());
         CreateTextureResource(pMaterial->GetNormalMapFilePath(), pNormData, resourceUploadBatch);
-    }
+    } else
+        pNormData->IncreaseRefCount();
+
     std::unique_ptr<DirectX::IEffect>& pIEffect = m_materialData[pMaterial];
     if (!pIEffect) {
         pIEffect = BuildIEffect(*pMaterial);
@@ -125,7 +129,7 @@ void DeviceDataBatch::OnAdd(const std::shared_ptr<Sprite>& pSprite) {
         DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
         resourceUploadBatch.Begin();
 
-        pSpriteData = std::make_unique<TextureDeviceData>(m_nextDescriptorHeapIndex++);
+        pSpriteData = std::make_unique<TextureDeviceData>(NextHeapIndex());
         CreateSpriteResource(pSprite, pSpriteData, resourceUploadBatch);
 
         std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
@@ -142,7 +146,7 @@ void DeviceDataBatch::OnAdd(const std::shared_ptr<Text>& pText) {
         DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
         resourceUploadBatch.Begin();
 
-        pTextData = std::make_unique<TextDeviceData>(m_nextDescriptorHeapIndex++);
+        pTextData = std::make_unique<TextDeviceData>(NextHeapIndex());
         CreateTextResource(pText, pTextData, resourceUploadBatch);
 
         std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
@@ -155,19 +159,40 @@ void DeviceDataBatch::OnAdd(const std::shared_ptr<Outline>& pOutline) {
 }
 
 void DeviceDataBatch::OnRemove(const std::shared_ptr<Material>& pMaterial) {
+    m_deviceResources.WaitForGpu();
 
+    auto& pDiffData = m_textureData.at(pMaterial->GetDiffuseMapFilePath());
+    pDiffData->DecreaseRefCount();
+    if (!pDiffData->HasReferences()) {
+        m_openDescriptorHeapIndices.push_back(pDiffData->GetHeapIndex());
+        m_textureData.erase(pMaterial->GetDiffuseMapFilePath());
+    }
+
+    auto& pNormData = m_textureData.at(pMaterial->GetNormalMapFilePath());
+    pNormData->DecreaseRefCount();
+    if (!pNormData->HasReferences()) {
+        m_openDescriptorHeapIndices.push_back(pNormData->GetHeapIndex());
+        m_textureData.erase(pMaterial->GetNormalMapFilePath());
+    }
+
+    m_materialData.erase(pMaterial);
 }
 
 void DeviceDataBatch::OnRemove(const std::shared_ptr<Model>& pModel) {
-
+    m_deviceResources.WaitForGpu();
+    m_modelData.erase(pModel);
 }
 
 void DeviceDataBatch::OnRemove(const std::shared_ptr<Sprite>& pSprite) {
-
+    m_deviceResources.WaitForGpu();
+    m_openDescriptorHeapIndices.push_back(m_spriteData.at(pSprite)->GetHeapIndex());
+    m_spriteData.erase(pSprite); 
 }
 
 void DeviceDataBatch::OnRemove(const std::shared_ptr<Text>& pText) {
-
+    m_deviceResources.WaitForGpu();
+    m_openDescriptorHeapIndices.push_back(m_textData.at(pText)->GetHeapIndex());
+    m_textData.erase(pText);
 }
 
 void DeviceDataBatch::OnRemove(const std::shared_ptr<Outline>& pOutline) {
@@ -229,6 +254,20 @@ void DeviceDataBatch::CreateRenderTargetDependentResources(DirectX::ResourceUplo
 void DeviceDataBatch::CreateWindowSizeDependentResources() {
     D3D12_VIEWPORT viewport = m_deviceResources.GetScreenViewport();
     m_pSpriteBatch->SetViewport(viewport);
+}
+
+std::uint8_t DeviceDataBatch::NextHeapIndex() noexcept {
+    std::uint8_t nextIndex;
+    if (m_openDescriptorHeapIndices.size() > 0) {
+        nextIndex = m_openDescriptorHeapIndices.back();
+        m_openDescriptorHeapIndices.pop_back();
+    } else 
+        nextIndex = m_nextDescriptorHeapIndex++;
+
+    std::string out = std::to_string(nextIndex) + "\n";
+    OutputDebugStringA(out.c_str());
+    
+    return nextIndex;
 }
 
 void DeviceDataBatch::CreateDescriptorHeapResources() {

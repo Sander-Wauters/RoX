@@ -70,7 +70,7 @@ void DeviceResourceData::FreshLoad(Scene& scene, bool& msaaEnabled) {
     for (std::uint8_t i = 0; i < m_pScene->GetNumAssetBatches(); ++i) {
         auto pAssetBatch = m_pScene->GetAssetBatches()[i];
 
-        auto pDataBatch = std::make_unique<DeviceDataBatch>(m_deviceResources, pAssetBatch->GetMaxAssets(), msaaEnabled);
+        auto pDataBatch = std::make_unique<DeviceDataBatch>(m_deviceResources, pAssetBatch->GetMaxNumTextures(), msaaEnabled);
         pDataBatch->Add(*m_pScene->GetAssetBatches()[i]);
 
         pAssetBatch->RegisterAssetBatchObserver(pDataBatch.get());
@@ -108,7 +108,7 @@ void DeviceResourceData::DirtyLoad(Scene& scene, bool& msaaEnabled) {
             pAssetBatch->RegisterAssetBatchObserver(currentlyLoadedDataBatches[pos].get());
             m_dataBatches.push_back(std::move(currentlyLoadedDataBatches[pos]));
         } else {
-            auto pDataBatch = std::make_unique<DeviceDataBatch>(m_deviceResources, scene.GetAssetBatches()[i]->GetMaxAssets(), msaaEnabled);
+            auto pDataBatch = std::make_unique<DeviceDataBatch>(m_deviceResources, scene.GetAssetBatches()[i]->GetMaxNumTextures(), msaaEnabled);
             pDataBatch->Add(*scene.GetAssetBatches()[i]);
 
             pAssetBatch->RegisterAssetBatchObserver(pDataBatch.get());

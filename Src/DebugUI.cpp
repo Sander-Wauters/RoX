@@ -1684,7 +1684,7 @@ void DebugUI::AssetBatchStats(AssetBatch& batch) {
     ImGui::Text("Meshes:                     %llu", batch.GetNumMeshes());
     ImGui::Text("Submeshes:                  %llu", batch.GetNumSubmeshes());
     ImGui::Separator();
-    ImGui::Text("Max assets:                 %d",   batch.GetMaxAssets());
+    ImGui::Text("Max assets:                 %d",   batch.GetMaxNumTextures());
     ImGui::Text("Materials:                  %llu", batch.GetNumMaterials());
     ImGui::Text("Sprites:                    %llu", batch.GetNumSprites());
     ImGui::Text("Texts:                      %llu", batch.GetNumTexts());
