@@ -3,7 +3,9 @@
 #include "Model.h"
 
 // Contains helper functions for generating geometric primitives.
+// Adds new geometry to a existing mesh and adds a new submesh.
 namespace MeshFactory {
+    // TODO: change **Create** to **Add**
     void CreateCube(IMesh& mesh, float size = 1);
     void CreateBox(IMesh& mesh, const DirectX::XMFLOAT3& size, bool invertn = false);
     void CreateSphere(IMesh& mesh, float diameter = 1, size_t tessellation = 16, bool invertn = false);

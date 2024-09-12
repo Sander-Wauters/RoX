@@ -4,15 +4,19 @@ Material::Material(
         const std::wstring diffuseMapFilePath,
         const std::wstring normalMapFilePath,
         std::string name,
-        std::uint32_t flags)
+        std::uint32_t flags,
+        DirectX::XMVECTOR diffuseColor,
+        DirectX::XMVECTOR emissiveColor,
+        DirectX::XMVECTOR specularColor)
     noexcept : Asset("material", name),
     m_diffuseMapFilePath(diffuseMapFilePath),
     m_normalMapFilePath(normalMapFilePath),
-    m_flags(flags),
-    m_diffuseColor({ 1.f, 1.f, 1.f, 1.f }),
-    m_emissiveColor({ 0.f, 0.f, 0.f, 1.f }),
-    m_specularColor({ 1.f, 1.f, 1.f, 1.f })
-{}
+    m_flags(flags)
+{
+    DirectX::XMStoreFloat4(&m_diffuseColor, diffuseColor);
+    DirectX::XMStoreFloat4(&m_emissiveColor, emissiveColor);
+    DirectX::XMStoreFloat4(&m_specularColor, specularColor);
+}
 
 Material::~Material() noexcept {
 }

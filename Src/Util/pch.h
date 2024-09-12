@@ -73,6 +73,7 @@
 #include <vector>
 #include <set>
 #include <stdexcept>
+#include <fstream>
 
 #ifdef _DEBUG
 #include <dxgidebug.h>

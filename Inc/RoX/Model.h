@@ -37,6 +37,7 @@ class Bone : public Asset {
         void SetParentIndex(std::uint32_t index) noexcept;
 
     private:
+        // TODO: change this to std::uint8_t
         std::uint32_t m_parentIndex;
 };
 
@@ -47,7 +48,7 @@ class Bone : public Asset {
 // If multiple instances need to be rendered then the **RenderFlags::Effect::Instances** should be set in the used material.
 class Submesh : public Asset {
     public:
-        Submesh(std::string name, std::uint32_t materialIndex, bool visible = true) noexcept;
+        Submesh(std::string name, std::uint32_t materialIndex = 0, bool visible = true) noexcept;
 
     public:
         std::uint32_t GetNumCulled() const noexcept;

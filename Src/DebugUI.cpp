@@ -1,62 +1,20 @@
 #include "RoX/DebugUI.h"
 
 #include "RoX/AssetIO.h"
+#include "RoX/MeshFactory.h"
 
 #include "Util/pch.h"
 #include "Util/dxtk12pch.h"
 
 #undef min
 #undef max
-#include "ImGui/imgui.h"
+#include <ImGui/imgui.h>
 
-struct InputTextCallback_UserData {
-    std::string*            Str;
-    ImGuiInputTextCallback  ChainCallback;
-    void*                   ChainCallbackUserData;
-};
+constexpr ImVec4 COLOR_ERROR = { 255.f, 0.f, 0.f, 1.f };
 
-int InputTextCallback(ImGuiInputTextCallbackData* data) {
-    InputTextCallback_UserData* user_data = (InputTextCallback_UserData*)data->UserData;
-    if (data->EventFlag == ImGuiInputTextFlags_CallbackResize) {
-        // Resize string callback
-        // If for some reason we refuse the new length (BufTextLen) and/or capacity (BufSize) we need to set them back to what we want.
-        std::string* str = user_data->Str;
-        IM_ASSERT(data->Buf == str->c_str());
-        str->resize(data->BufTextLen);
-        data->Buf = (char*)str->c_str();
-    }
-    else if (user_data->ChainCallback) {
-        // Forward to user callback, if any
-        data->UserData = user_data->ChainCallbackUserData;
-        return user_data->ChainCallback(data);
-    }
-    return 0;
-}
-
-bool InputTextMultilineImpl(const char* label, std::string* str, const ImVec2& size = ImVec2(0, 0), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr) {
-    IM_ASSERT((flags & ImGuiInputTextFlags_CallbackResize) == 0);
-    flags |= ImGuiInputTextFlags_CallbackResize;
-
-    InputTextCallback_UserData cb_user_data;
-    cb_user_data.Str = str;
-    cb_user_data.ChainCallback = callback;
-    cb_user_data.ChainCallbackUserData = user_data;
-    return ImGui::InputTextMultiline(label, (char*)str->c_str(), str->capacity() + 1, size, flags, InputTextCallback, &cb_user_data);
-}
-
-bool DebugUI::InputTextMultiline(const char* label, std::string* str) {
-    return InputTextMultilineImpl(label, str);
-}
-
-void DebugUI::HelpMarker(const char* desc) {
-    ImGui::TextDisabled("(?)");
-    if (ImGui::BeginItemTooltip()) {
-        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-        ImGui::TextUnformatted(desc);
-        ImGui::PopTextWrapPos();
-        ImGui::EndTooltip();
-    }
-}
+// ---------------------------------------------------------------- //
+//                          XMFLOAT util.
+// ---------------------------------------------------------------- //
 
 void DebugUI::StoreFloat2(DirectX::XMFLOAT2& in, float* out) {
     out[0] = in.x;
@@ -94,6 +52,74 @@ void DebugUI::LoadFloat4(float* in, DirectX::XMFLOAT4& out) {
     out.w = in[3];
 }
 
+// ---------------------------------------------------------------- //
+//                          General helpers.
+// ---------------------------------------------------------------- //
+
+struct InputTextCallback_UserData {
+    std::string*            Str;
+    ImGuiInputTextCallback  ChainCallback;
+    void*                   ChainCallbackUserData;
+};
+
+int InputTextCallback(ImGuiInputTextCallbackData* data) {
+    InputTextCallback_UserData* user_data = (InputTextCallback_UserData*)data->UserData;
+    if (data->EventFlag == ImGuiInputTextFlags_CallbackResize) {
+        // Resize string callback
+        // If for some reason we refuse the new length (BufTextLen) and/or capacity (BufSize) we need to set them back to what we want.
+        std::string* str = user_data->Str;
+        IM_ASSERT(data->Buf == str->c_str());
+        str->resize(data->BufTextLen);
+        data->Buf = (char*)str->c_str();
+    }
+    else if (user_data->ChainCallback) {
+        // Forward to user callback, if any
+        data->UserData = user_data->ChainCallbackUserData;
+        return user_data->ChainCallback(data);
+    }
+    return 0;
+}
+
+bool InputTextMultilineImpl(const char* label, std::string* input, const ImVec2& size = ImVec2(0, 0), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr) {
+    IM_ASSERT((flags & ImGuiInputTextFlags_CallbackResize) == 0);
+    flags |= ImGuiInputTextFlags_CallbackResize;
+
+    InputTextCallback_UserData cb_user_data;
+    cb_user_data.Str = input;
+    cb_user_data.ChainCallback = callback;
+    cb_user_data.ChainCallbackUserData = user_data;
+    return ImGui::InputTextMultiline(label, (char*)input->c_str(), input->capacity() + 1, size, flags, InputTextCallback, &cb_user_data);
+}
+
+bool DebugUI::InputTextMultiline(const char* label, std::string* input) {
+    return InputTextMultilineImpl(label, input);
+}
+
+bool DebugUI::InputFilePath(const char* label, char* input, std::uint16_t inputSize) {
+    std::ifstream fin(input);
+    if (ImGui::InputText(label, input, inputSize))
+        fin = std::ifstream(input);
+    return fin.good();
+}
+
+void DebugUI::HelpMarker(const char* desc) {
+    ImGui::TextDisabled("(?)");
+    if (ImGui::BeginItemTooltip()) {
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
+
+std::string DebugUI::GUIDLabel(std::string label, std::uint64_t GUID) {
+    return label + "##" + std::to_string(GUID);
+}
+
+std::string DebugUI::GUIDLabel(std::string label, std::string GUID) {
+    return label + "##" + GUID;
+}
+
 void DebugUI::ArrayControls(const char* label, std::uint32_t* pIndex, const std::function<void()>& onAdd, const std::function<void()>& onRemove) {
     static ImU32 steps = 1;
 
@@ -107,6 +133,17 @@ void DebugUI::ArrayControls(const char* label, std::uint32_t* pIndex, const std:
     if (ImGui::Button("Remove"))
         onRemove();
 }
+
+void DebugUI::SameLineError(bool show, const char* label) {
+    if (show) {
+        ImGui::SameLine();
+        ImGui::TextColored(COLOR_ERROR, "%s", label);
+    }
+}
+
+// ---------------------------------------------------------------- //
+//                          Vertices and indices.
+// ---------------------------------------------------------------- //
 
 void DebugUI::Vertex(VertexPositionNormalTexture& vertex) {
     float position[3];
@@ -233,6 +270,10 @@ void DebugUI::Indices(std::vector<std::uint16_t>& indices, std::uint16_t numVert
     }
 }
 
+// ---------------------------------------------------------------- //
+//                          Matrices.
+// ---------------------------------------------------------------- //
+
 void DebugUI::Matrix(DirectX::XMMATRIX& matrix) {
     DirectX::XMFLOAT4X4 M;
     DirectX::XMStoreFloat4x4(&M, matrix);
@@ -329,57 +370,235 @@ bool DebugUI::AffineTransformation(DirectX::XMFLOAT3X4& matrix) {
     return transformatonApplied;
 }
 
-void DebugUI::RenderFlags(std::uint32_t renderFlags) {
-    if (ImGui::BeginTabBar("RenderFlags", ImGuiTabBarFlags_None)) {
-        if (ImGui::BeginTabItem("BlendState")) {
-            ImGui::Selectable("Opaque",           renderFlags & RenderFlags::BlendState::Opaque);
-            ImGui::Selectable("AlphaBlend",       renderFlags & RenderFlags::BlendState::AlphaBlend);
-            ImGui::Selectable("Additive",         renderFlags & RenderFlags::BlendState::Additive);
-            ImGui::Selectable("NonPremultiplied", renderFlags & RenderFlags::BlendState::NonPremultiplied);
+// ---------------------------------------------------------------- //
+//                          Materials.
+// ---------------------------------------------------------------- //
 
+void DebugUI::RenderFlagsPresets(std::uint32_t& renderFlags) {
+    if (ImGui::Selectable("None", renderFlags == RenderFlags::None, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags = RenderFlags::None;
+    if (ImGui::Selectable("Default", renderFlags == RenderFlags::Default, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags = RenderFlags::Default;
+    if (ImGui::Selectable("Skinned", renderFlags == RenderFlags::Skinned, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags = RenderFlags::Skinned;
+    if (ImGui::Selectable("Wireframe", renderFlags == RenderFlags::Wireframe, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags = RenderFlags::Wireframe;
+    if (ImGui::Selectable("Instanced", renderFlags == RenderFlags::Instanced, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags = RenderFlags::Instanced;
+    if (ImGui::Selectable("WireframeInstanced", renderFlags == RenderFlags::WireframeInstanced, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags = RenderFlags::WireframeInstanced;
+    if (ImGui::Selectable("WireframeSkinned", renderFlags == RenderFlags::WireframeSkinned, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags = RenderFlags::WireframeSkinned;
+}
+
+void DebugUI::RenderFlagsBlendState(std::uint32_t& renderFlags) {
+    if (ImGui::Selectable("Opaque", renderFlags & RenderFlags::BlendState::Opaque, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::BlendState::Reset;
+        renderFlags |= RenderFlags::BlendState::Opaque;
+    }
+    if (ImGui::Selectable("AlphaBlend", renderFlags & RenderFlags::BlendState::AlphaBlend, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::BlendState::Reset;
+        renderFlags |= RenderFlags::BlendState::AlphaBlend;
+    }
+    if (ImGui::Selectable("Additive", renderFlags & RenderFlags::BlendState::Additive, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::BlendState::Reset;
+        renderFlags |= RenderFlags::BlendState::Additive;
+    }
+    if (ImGui::Selectable("NonPremultiplied", renderFlags & RenderFlags::BlendState::NonPremultiplied, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::BlendState::Reset;
+        renderFlags |= RenderFlags::BlendState::NonPremultiplied;
+    }
+    if (ImGui::Selectable("Reset", false, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags &= RenderFlags::BlendState::Reset;
+}
+
+void DebugUI::RenderFlagsDepthStencilState(std::uint32_t& renderFlags) {
+    if (ImGui::Selectable("None", renderFlags & RenderFlags::DepthStencilState::None, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::DepthStencilState::Reset;
+        renderFlags |= RenderFlags::DepthStencilState::None;
+    }
+    if (ImGui::Selectable("Default", renderFlags & RenderFlags::DepthStencilState::Default, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::DepthStencilState::Reset;
+        renderFlags |= RenderFlags::DepthStencilState::Default;
+    }
+    if (ImGui::Selectable("Read", renderFlags & RenderFlags::DepthStencilState::Read, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::DepthStencilState::Reset;
+        renderFlags |= RenderFlags::DepthStencilState::Read;
+    }
+    if (ImGui::Selectable("ReverseZ", renderFlags & RenderFlags::DepthStencilState::ReverseZ, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::DepthStencilState::Reset;
+        renderFlags |= RenderFlags::DepthStencilState::ReverseZ;
+    }
+    if (ImGui::Selectable("ReadReverseZ", renderFlags & RenderFlags::DepthStencilState::ReadReverseZ, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::DepthStencilState::Reset;
+        renderFlags |= RenderFlags::DepthStencilState::ReadReverseZ;
+    }
+    if (ImGui::Selectable("Reset", false, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags &= RenderFlags::DepthStencilState::Reset;
+}
+
+void DebugUI::RenderFlagsRasterizerState(std::uint32_t& renderFlags) {
+    if (ImGui::Selectable("CullNone", renderFlags & RenderFlags::RasterizerState::CullNone, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::RasterizerState::Reset; 
+        renderFlags |= RenderFlags::RasterizerState::CullNone;
+    }
+    if (ImGui::Selectable("CullClockwise", renderFlags & RenderFlags::RasterizerState::CullClockwise, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::RasterizerState::Reset; 
+        renderFlags |= RenderFlags::RasterizerState::CullClockwise;
+    }
+    if (ImGui::Selectable("CullCounterClockwise", renderFlags & RenderFlags::RasterizerState::CullCounterClockwise, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::RasterizerState::Reset; 
+        renderFlags |= RenderFlags::RasterizerState::CullCounterClockwise;
+    }
+    if (ImGui::Selectable("Wireframe", renderFlags & RenderFlags::RasterizerState::Wireframe, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::RasterizerState::Reset; 
+        renderFlags |= RenderFlags::RasterizerState::Wireframe;
+    }
+    if (ImGui::Selectable("Reset", false, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags &= RenderFlags::RasterizerState::Reset; 
+}
+
+void DebugUI::RenderFlagsSamplerState(std::uint32_t& renderFlags) {
+    if (ImGui::Selectable("PointWrap", renderFlags & RenderFlags::SamplerState::PointWrap, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::SamplerState::Reset;
+        renderFlags |= RenderFlags::SamplerState::PointWrap;
+    }
+    if (ImGui::Selectable("PointClamp", renderFlags & RenderFlags::SamplerState::PointClamp, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::SamplerState::Reset;
+        renderFlags |= RenderFlags::SamplerState::PointClamp;
+    }
+    if (ImGui::Selectable("LinearWrap", renderFlags & RenderFlags::SamplerState::LinearWrap, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::SamplerState::Reset;
+        renderFlags |= RenderFlags::SamplerState::LinearWrap;
+    }
+    if (ImGui::Selectable("LinearClamp", renderFlags & RenderFlags::SamplerState::LinearClamp, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::SamplerState::Reset;
+        renderFlags |= RenderFlags::SamplerState::LinearClamp;
+    }
+    if (ImGui::Selectable("AnisotropicWrap", renderFlags & RenderFlags::SamplerState::AnisotropicWrap, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::SamplerState::Reset;
+        renderFlags |= RenderFlags::SamplerState::AnisotropicWrap;
+    }
+    if (ImGui::Selectable("AnisotropicClamp", renderFlags & RenderFlags::SamplerState::AnisotropicClamp, ImGuiSelectableFlags_DontClosePopups)) {
+        renderFlags &= RenderFlags::SamplerState::Reset;
+        renderFlags |= RenderFlags::SamplerState::AnisotropicClamp;
+    }
+    if (ImGui::Selectable("Reset", false, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags &= RenderFlags::SamplerState::Reset;
+}
+
+void DebugUI::RenderFlagsEffects(std::uint32_t& renderFlags) {
+    if (ImGui::Selectable("None", renderFlags & RenderFlags::Effect::None, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags ^= RenderFlags::Effect::None;
+    if (ImGui::Selectable("Fog", renderFlags & RenderFlags::Effect::Fog, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags ^= RenderFlags::Effect::Fog;
+    if (ImGui::Selectable("Lighting", renderFlags & RenderFlags::Effect::Lighting, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags ^= RenderFlags::Effect::Lighting;
+    if (ImGui::Selectable("PerPixelLighting", renderFlags & RenderFlags::Effect::PerPixelLighting, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags ^= RenderFlags::Effect::PerPixelLighting;
+    if (ImGui::Selectable("Texture",  renderFlags & RenderFlags::Effect::Texture, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags ^= RenderFlags::Effect::Texture;
+    if (ImGui::Selectable("Instanced", renderFlags & RenderFlags::Effect::Instanced, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags ^= RenderFlags::Effect::Instanced;
+    if (ImGui::Selectable("Specular", renderFlags & RenderFlags::Effect::Specular, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags ^= RenderFlags::Effect::Specular;
+    if (ImGui::Selectable("Skinned", renderFlags & RenderFlags::Effect::Skinned, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags ^= RenderFlags::Effect::Skinned;
+    if (ImGui::Selectable("Reset", false, ImGuiSelectableFlags_DontClosePopups))
+        renderFlags &= RenderFlags::Effect::Reset;
+}
+
+void DebugUI::RenderFlags(std::uint32_t& renderFlags) {
+    if (ImGui::BeginTabBar("RenderFlags")) {
+        if (ImGui::BeginTabItem("Presets")) {
+            RenderFlagsPresets(renderFlags);
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("BlendState")) {
+            RenderFlagsBlendState(renderFlags);
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("DepthStencilState")) {
-            ImGui::Selectable("None",         renderFlags & RenderFlags::DepthStencilState::None);
-            ImGui::Selectable("Default",      renderFlags & RenderFlags::DepthStencilState::Default);
-            ImGui::Selectable("Read",         renderFlags & RenderFlags::DepthStencilState::Read);
-            ImGui::Selectable("ReverseZ",     renderFlags & RenderFlags::DepthStencilState::ReverseZ);
-            ImGui::Selectable("ReadReverseZ", renderFlags & RenderFlags::DepthStencilState::ReadReverseZ);
-
+            RenderFlagsDepthStencilState(renderFlags);
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("RasterizerState")) {
-            ImGui::Selectable("CullNone",             renderFlags & RenderFlags::RasterizerState::CullNone);
-            ImGui::Selectable("CullClockwise",        renderFlags & RenderFlags::RasterizerState::CullClockwise);
-            ImGui::Selectable("CullCounterClockwise", renderFlags & RenderFlags::RasterizerState::CullCounterClockwise);
-            ImGui::Selectable("Wireframe",            renderFlags & RenderFlags::RasterizerState::Wireframe);
-
+            RenderFlagsRasterizerState(renderFlags);
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("SamplerState")) {
-            ImGui::Selectable("PointWrap",        renderFlags & RenderFlags::SamplerState::PointWrap);
-            ImGui::Selectable("PointClamp",       renderFlags & RenderFlags::SamplerState::PointClamp);
-            ImGui::Selectable("LinearWrap",       renderFlags & RenderFlags::SamplerState::LinearWrap);
-            ImGui::Selectable("LinearClamp",      renderFlags & RenderFlags::SamplerState::LinearClamp);
-            ImGui::Selectable("AnisotropicWrap",  renderFlags & RenderFlags::SamplerState::AnisotropicWrap);
-            ImGui::Selectable("AnisotropicClamp", renderFlags & RenderFlags::SamplerState::AnisotropicClamp);
-
+            RenderFlagsSamplerState(renderFlags);
             ImGui::EndTabItem();
         }
-        if (ImGui::BeginTabItem("Effect")) {
-            ImGui::Selectable("None",             renderFlags & RenderFlags::Effect::None);
-            ImGui::Selectable("Fog",              renderFlags & RenderFlags::Effect::Fog);
-            ImGui::Selectable("Lighting",         renderFlags & RenderFlags::Effect::Lighting);
-            ImGui::Selectable("PerPixelLighting", renderFlags & RenderFlags::Effect::PerPixelLighting);
-            ImGui::Selectable("Texture",          renderFlags & RenderFlags::Effect::Texture);
-            ImGui::Selectable("Instanced",        renderFlags & RenderFlags::Effect::Instanced);
-            ImGui::Selectable("Specular",         renderFlags & RenderFlags::Effect::Specular);
-            ImGui::Selectable("Skinned",          renderFlags & RenderFlags::Effect::Skinned);
-
+        if (ImGui::BeginTabItem("Effects")) {
+            RenderFlagsEffects(renderFlags);
             ImGui::EndTabItem();
         }
 
         ImGui::EndTabBar();
+    }
+}
+
+void DebugUI::MaterialHeader(Material& material) {
+    ImVec2 buttonSize(ImGui::GetFontSize(), ImGui::GetFontSize());
+    ImVec4 diffuse  = { material.GetDiffuseColor().x,  material.GetDiffuseColor().y,  material.GetDiffuseColor().z,  material.GetDiffuseColor().w  };
+    ImVec4 emissive = { material.GetEmissiveColor().x, material.GetEmissiveColor().y, material.GetEmissiveColor().z, material.GetEmissiveColor().w }; 
+    ImVec4 specular = { material.GetSpecularColor().x, material.GetSpecularColor().y, material.GetSpecularColor().z, material.GetSpecularColor().w };
+    
+    ImGui::Text("%s", material.GetName().c_str());
+    ImGui::SameLine();
+    ImGui::ColorButton("diffuse", diffuse, ImGuiColorEditFlags_None, buttonSize);
+    ImGui::SameLine();
+    ImGui::ColorButton("emissive", emissive, ImGuiColorEditFlags_None, buttonSize);
+    ImGui::SameLine();
+    ImGui::ColorButton("specular", specular, ImGuiColorEditFlags_None, buttonSize);
+}
+
+bool DebugUI::SelectableMaterialHeader(bool state, Material& material) {
+    bool selected = state;
+    ImVec2 buttonSize(ImGui::GetFontSize(), ImGui::GetFontSize());
+    ImVec4 diffuse  = { material.GetDiffuseColor().x,  material.GetDiffuseColor().y,  material.GetDiffuseColor().z,  material.GetDiffuseColor().w  };
+    ImVec4 emissive = { material.GetEmissiveColor().x, material.GetEmissiveColor().y, material.GetEmissiveColor().z, material.GetEmissiveColor().w }; 
+    ImVec4 specular = { material.GetSpecularColor().x, material.GetSpecularColor().y, material.GetSpecularColor().z, material.GetSpecularColor().w };
+
+    ImGui::SetNextItemAllowOverlap();
+    if (ImGui::Selectable(material.GetName().c_str(), state))
+        selected = true;
+    ImGui::SameLine();
+    ImGui::ColorButton("diffuse", diffuse, ImGuiColorEditFlags_None, buttonSize);
+    ImGui::SameLine();
+    ImGui::ColorButton("emissive", emissive, ImGuiColorEditFlags_None, buttonSize);
+    ImGui::SameLine();
+    ImGui::ColorButton("specular", specular, ImGuiColorEditFlags_None, buttonSize);
+    return selected;
+}
+
+bool DebugUI::TreeNodeMaterialHeader(Material& material) {
+    ImVec2 buttonSize(ImGui::GetFontSize(), ImGui::GetFontSize());
+    ImVec4 diffuse  = { material.GetDiffuseColor().x,  material.GetDiffuseColor().y,  material.GetDiffuseColor().z,  material.GetDiffuseColor().w  };
+    ImVec4 emissive = { material.GetEmissiveColor().x, material.GetEmissiveColor().y, material.GetEmissiveColor().z, material.GetEmissiveColor().w }; 
+    ImVec4 specular = { material.GetSpecularColor().x, material.GetSpecularColor().y, material.GetSpecularColor().z, material.GetSpecularColor().w };
+    bool open = ImGui::TreeNodeEx(material.GetName().c_str(), ImGuiTreeNodeFlags_AllowItemOverlap);
+    ImGui::SameLine();
+    ImGui::ColorButton("diffuse", diffuse, ImGuiColorEditFlags_None, buttonSize);
+    ImGui::SameLine();
+    ImGui::ColorButton("emissive", emissive, ImGuiColorEditFlags_None, buttonSize);
+    ImGui::SameLine();
+    ImGui::ColorButton("specular", specular, ImGuiColorEditFlags_None, buttonSize);
+    return open;
+}
+
+void DebugUI::MaterialSelector(std::uint32_t& index, const std::vector<std::shared_ptr<Material>>& materials) {
+    for (std::uint32_t i = 0; i < materials.size(); ++i) {
+        if (SelectableMaterialHeader(index == i, *materials[i]))
+            index = i;
+    }
+}
+
+void DebugUI::MaterialSelector(std::uint64_t& GUID, const Materials& materials) {
+    for (auto& materialPair : materials) {
+        if (SelectableMaterialHeader(materialPair.first == GUID, *materialPair.second))
+            GUID = materialPair.first;
     }
 }
 
@@ -396,33 +615,289 @@ void DebugUI::MaterialColors(Material& material) {
     float specular[4];
     StoreFloat4(material.GetSpecularColor(), specular);
 
-    if (ImGui::ColorEdit4(std::string("diffuse##" + material.GetName()).c_str(), diffuse))
+    if (ImGui::ColorEdit4(GUIDLabel("Diffuse", material.GetGUID()).c_str(), diffuse))
         LoadFloat4(diffuse, material.GetDiffuseColor());
-    if (ImGui::ColorEdit4(std::string("emissive##" + material.GetName()).c_str(), emissive))
+    if (ImGui::ColorEdit4(GUIDLabel("Emissive", material.GetGUID()).c_str(), emissive))
         LoadFloat4(emissive, material.GetEmissiveColor());
-    if (ImGui::ColorEdit4(std::string("specular##" + material.GetName()).c_str(), specular))
+    if (ImGui::ColorEdit4(GUIDLabel("Specular", material.GetGUID()).c_str(), specular))
         LoadFloat4(specular, material.GetSpecularColor());
 }
 
-void DebugUI::MaterialSelector(std::uint32_t& index, std::vector<std::shared_ptr<Material>>& materials) {
-    ImVec2 buttonSize(ImGui::GetFontSize(), ImGui::GetFontSize());
+void DebugUI::MaterialCreator(AssetBatch& batch) {
+    static char diffuseMapFilePath[128] = "";
+    static char normalMapFilePath[128] = "";
+    static char name[128] = "";
+    static std::uint32_t renderFlags = RenderFlags::None;
+    static float diffuse[4] = { 1.f, 1.f, 1.f, 1.f };
+    static float emissive[4] = { 0.f, 0.f, 0.f, 1.f };
+    static float specular[4] = { 1.f, 1.f, 1.f, 1.f };
 
-    for (std::uint32_t i = 0; i < materials.size(); ++i) {
-        ImVec4 diffuse  = { materials[i]->GetDiffuseColor().x, materials[i]->GetDiffuseColor().y, materials[i]->GetDiffuseColor().z, materials[i]->GetDiffuseColor().w };
-        ImVec4 emissive = { materials[i]->GetEmissiveColor().x, materials[i]->GetEmissiveColor().y, materials[i]->GetEmissiveColor().z, materials[i]->GetEmissiveColor().w };
-        ImVec4 specular = { materials[i]->GetSpecularColor().x, materials[i]->GetSpecularColor().y, materials[i]->GetSpecularColor().z, materials[i]->GetSpecularColor().w };
+    ImGui::InputText("Name##MaterialCreator", name, std::size(name));
+    ImGui::SeparatorText("Textures");
+    bool validDiffuse = InputFilePath("Diffuse map##MaterialCreator", diffuseMapFilePath, std::size(diffuseMapFilePath));
+    SameLineError(!validDiffuse, "file not found");
+    bool validNormal = InputFilePath("Normal map##MaterialCreator", normalMapFilePath, std::size(normalMapFilePath));
+    SameLineError(!validDiffuse, "file not found");
+    ImGui::SeparatorText("Render flags");
+    RenderFlags(renderFlags);
+    ImGui::SeparatorText("Colors");
+    ImGui::ColorEdit4("Diffuse##MaterialCreator", diffuse);
+    ImGui::ColorEdit4("Emissive##MaterialCreator", emissive);
+    ImGui::ColorEdit4("Specular##MaterialCreator", specular);
+    if (ImGui::Button("Create new material##MaterialCreator") && validDiffuse && validNormal) {
+        DirectX::XMFLOAT4 D;
+        LoadFloat4(diffuse, D);
+        DirectX::XMFLOAT4 E;
+        LoadFloat4(emissive, E);
+        DirectX::XMFLOAT4 S;
+        LoadFloat4(specular, S);
 
-        ImGui::SetNextItemAllowOverlap();
-        if (ImGui::Selectable(materials[i]->GetName().c_str(), i == index))
-            index = i;
-        ImGui::SameLine();
-        ImGui::ColorButton("diffuse", diffuse, ImGuiColorEditFlags_None, buttonSize);
-        ImGui::SameLine();
-        ImGui::ColorButton("emissive", emissive, ImGuiColorEditFlags_None, buttonSize);
-        ImGui::SameLine();
-        ImGui::ColorButton("specular", specular, ImGuiColorEditFlags_None, buttonSize);
+        batch.Add(std::make_shared<Material>(
+                    AnsiToWString(diffuseMapFilePath),
+                    AnsiToWString(normalMapFilePath),
+                    std::string(name),
+                    renderFlags,
+                    DirectX::XMLoadFloat4(&D), 
+                    DirectX::XMLoadFloat4(&E),
+                    DirectX::XMLoadFloat4(&S)));
     }
 }
+
+void DebugUI::MaterialMenu(Material& material) {
+    std::uint32_t renderFlags = material.GetFlags();
+
+    ImGui::SeparatorText("Textures");
+    MaterialTextures(material);
+    ImGui::SeparatorText("Render flags");
+    RenderFlags(renderFlags);
+    ImGui::SeparatorText("Colors");
+    MaterialColors(material);
+}
+
+void DebugUI::MaterialMenu(std::vector<std::shared_ptr<Material>>& materials) {
+    for (std::shared_ptr<Material>& pMaterial : materials) {
+        if (TreeNodeMaterialHeader(*pMaterial)) {
+            MaterialMenu(*pMaterial);
+            ImGui::TreePop();
+            ImGui::Spacing();
+        }
+    }
+}
+
+void DebugUI::MaterialMenu(const std::unordered_map<std::uint64_t, std::shared_ptr<Material>>& materials) {
+    for (auto& materialPair : materials) {
+        if (TreeNodeMaterialHeader(*materialPair.second)) {
+            MaterialMenu(*materialPair.second);
+            ImGui::TreePop();
+            ImGui::Spacing();
+        }
+    }
+}
+
+void DebugUI::MaterialCreatorPopupMenu(AssetBatch& batch) {
+    if (ImGui::Button(GUIDLabel("+", "MaterialCreatorPopupMenu").c_str())) 
+        ImGui::OpenPopup("MaterialCreatorPopupMenu");
+    if (ImGui::BeginPopup("MaterialCreatorPopupMenu")) {
+        MaterialCreator(batch);
+        ImGui::EndPopup();
+    }
+}
+
+// ---------------------------------------------------------------- //
+//                          Sprites.
+// ---------------------------------------------------------------- //
+
+void DebugUI::SpritePosition(Sprite& sprite) {
+    float origin[2] = { sprite.GetOrigin().x, sprite.GetOrigin().y };
+    float offset[2] = { sprite.GetOffset().x, sprite.GetOffset().y };
+    float scale[2] = { sprite.GetScale().x, sprite.GetScale().y };
+    float layer = sprite.GetLayer();
+    float angle = DirectX::XMConvertToDegrees(sprite.GetAngle());
+
+    if (ImGui::DragFloat2(GUIDLabel("Origin", sprite.GetGUID()).c_str(), origin))
+        sprite.GetOrigin() = { origin[0], origin[1] };
+    if (ImGui::DragFloat2(GUIDLabel("Offset", sprite.GetGUID()).c_str(), offset))
+        sprite.GetOffset() = { offset[0], offset[1] };
+    if (ImGui::DragFloat2(GUIDLabel("Scale", sprite.GetGUID()).c_str(), scale))
+        sprite.GetScale() = { scale[0], scale[1] };
+    if (ImGui::DragFloat(GUIDLabel("Layer", sprite.GetGUID()).c_str(), &layer))
+        sprite.SetLayer(layer);
+    if (ImGui::DragFloat(GUIDLabel("Angle", sprite.GetGUID()).c_str(), &angle))
+        sprite.SetAngle(DirectX::XMConvertToRadians(angle));
+}
+
+void DebugUI::SpriteCreator(AssetBatch& batch) {
+    static char filePath[128] = "";
+    static char name[128] = "";
+    static float origin[2] = { 0.f, 0.f };
+    static float offset[2] = { 0.f, 0.f };
+    static float scale[2] = { 1.f, 1.f };
+    static float layer = 0.f;
+    static float angle = 0.f;
+    static float color[4] = { 0.f, 0.f, 0.f, 1.f };
+    static bool visible = true;
+
+    ImGui::InputText("Name##SpriteCreator", name, std::size(name));
+    ImGui::Checkbox("Visible##SpriteCreator", &visible);
+    bool validFilePath = InputFilePath("File path##SpriteCreator", filePath, std::size(filePath));
+    SameLineError(!validFilePath, "file not found");
+    ImGui::SeparatorText("Position");
+    ImGui::DragFloat2("Origin##SpriteCreator", origin);
+    ImGui::DragFloat2("Offset##SpriteCreator", offset);
+    ImGui::DragFloat2("Scale##SpriteCreator", scale);
+    ImGui::DragFloat("Layer##SpriteCreator", &layer);
+    ImGui::DragFloat("Angle##SpriteCreator", &angle);
+    ImGui::SeparatorText("Color");
+    ImGui::DragFloat4("Color##SpriteCreator", color);
+    if (ImGui::Button("Create new sprite##SpriteCreator") && validFilePath) {
+        DirectX::XMFLOAT4 C = { color[0], color[1], color[2], color[3] };
+        DirectX::XMFLOAT2 Or = { origin[0], origin[1] };
+        DirectX::XMFLOAT2 Of = { offset[0], offset[1] };
+        DirectX::XMFLOAT2 S = { scale[0], scale[1] };
+        batch.Add(std::make_shared<Sprite>(
+                    AnsiToWString(filePath),
+                    std::string(name),
+                    Or, Of, S,
+                    layer,
+                    angle,
+                    DirectX::XMLoadFloat4(&C),
+                    visible));
+    }
+}
+
+void DebugUI::TextCreator(AssetBatch& batch) {
+    static char filePath[128] = "";
+    static std::string content = "";
+    static char name[128] = "";
+    static float origin[2] = { 0.f, 0.f };
+    static float offset[2] = { 0.f, 0.f };
+    static float scale[2] = { 1.f, 1.f };
+    static float layer = 0.f;
+    static float angle = 0.f;
+    static float color[4] = { 0.f, 0.f, 0.f, 1.f };
+    static bool visible = true;
+
+    ImGui::InputText("Name##TextCreator", name, std::size(name));
+    ImGui::Checkbox("Visible##TextCreator", &visible);
+    InputTextMultiline("Contents##TextCreator", &content);
+    bool validFilePath = InputFilePath("File path##TextCreator", filePath, std::size(filePath));
+    SameLineError(!validFilePath, "file not found");
+    ImGui::SeparatorText("Position");
+    ImGui::DragFloat2("Origin##TextCreator", origin);
+    ImGui::DragFloat2("Offset##TextCreator", offset);
+    ImGui::DragFloat2("Scale##TextCreator", scale);
+    ImGui::DragFloat("Layer##TextCreator", &layer);
+    ImGui::DragFloat("Angle##TextCreator", &angle);
+    ImGui::SeparatorText("Color");
+    ImGui::DragFloat4("Color##TextCreator", color);
+    if (ImGui::Button("Create new sprite##TextCreator") && validFilePath) {
+        DirectX::XMFLOAT4 C = { color[0], color[1], color[2], color[3] };
+        DirectX::XMFLOAT2 Or = { origin[0], origin[1] };
+        DirectX::XMFLOAT2 Of = { offset[0], offset[1] };
+        DirectX::XMFLOAT2 S = { scale[0], scale[1] };
+        batch.Add(std::make_shared<Text>(
+                    AnsiToWString(filePath),
+                    AnsiToWString(content),
+                    std::string(name),
+                    Or, Of, S,
+                    layer,
+                    angle,
+                    DirectX::XMLoadFloat4(&C),
+                    visible));
+    }
+}
+
+void DebugUI::SpriteMenu(Sprite& sprite) {
+    bool visible = sprite.IsVisible();
+    if (ImGui::Checkbox("Visible", &visible))
+        sprite.SetVisible(visible);
+    ImGui::Text("File: %ws", sprite.GetFilePath().c_str());
+    ImGui::SeparatorText("Position");
+    SpritePosition(sprite);
+    float color[4];
+    StoreFloat4(sprite.GetColor(), color);
+    ImGui::SeparatorText("Color");
+    if (ImGui::ColorEdit4(GUIDLabel("Color", sprite.GetGUID()).c_str(), color))
+        LoadFloat4(color, sprite.GetColor());
+}
+
+void DebugUI::SpriteMenu(const Sprites& sprites) {
+    for (auto& spritePair : sprites) {
+        if (ImGui::TreeNode(spritePair.second->GetName().c_str())) {
+            SpriteMenu(*spritePair.second);
+            ImGui::TreePop();
+        }
+    }
+}
+
+void DebugUI::TextMenu(Text& text) {
+    static std::string content;
+    SpriteMenu(text);
+    InputTextMultiline("Content", &content);
+    if (ImGui::Button(GUIDLabel("Save content", text.GetGUID()).c_str()))
+        text.SetContent(AnsiToWString(content));
+}
+
+void DebugUI::TextMenu(const Texts& texts) {
+    for (auto& textPair : texts) {
+        if (ImGui::TreeNode(textPair.second->GetName().c_str())) {
+            TextMenu(*textPair.second);
+            ImGui::TreePop();
+        }
+    }
+}
+
+void DebugUI::SpriteCreatorPopupMenu(AssetBatch& batch) {
+    if (ImGui::Button(GUIDLabel("+", "SpriteCreatorPopupMenu").c_str())) 
+        ImGui::OpenPopup("SpriteCreatorPopupMenu");
+    if (ImGui::BeginPopup("SpriteCreatorPopupMenu")) {
+        SpriteCreator(batch);
+        ImGui::EndPopup();
+    }
+}
+
+void DebugUI::TextCreatorPopupMenu(AssetBatch& batch) {
+    if (ImGui::Button(GUIDLabel("+", "TextCreatorPopupMenu").c_str())) 
+        ImGui::OpenPopup("TextCreatorPopupMenu");
+    if (ImGui::BeginPopup("TextCreatorPopupMenu")) {
+        TextCreator(batch);
+        ImGui::EndPopup();
+    }
+}
+
+// ---------------------------------------------------------------- //
+//                          Bones.
+// ---------------------------------------------------------------- //
+
+void DebugUI::BoneSelector(std::uint32_t& index, std::vector<Bone>& bones) {
+    ImGui::BeginChild("bone_hierarchy", ImVec2(ImGui::GetWindowWidth() - 15.f, 200.f), ImGuiChildFlags_None);
+    for (std::uint32_t i = 0; i < bones.size(); ++i) {
+        std::string text = std::to_string(i) + ": " + bones[i].GetName() + "; " + std::to_string(bones[i].GetParentIndex());
+        if (ImGui::Selectable(text.c_str(), index == i))
+            index = i;
+    }
+    ImGui::EndChild();
+}
+
+void DebugUI::BoneMenu(Model& model, std::uint32_t boneIndex) {
+    std::vector<Bone>& bones = model.GetBones();
+    ImGui::Text("Parent: %s", bones[boneIndex].IsRoot() ? "NONE" : bones[bones[boneIndex].GetParentIndex()].GetName().c_str());
+    ImGui::Text("Parent index: %d", bones[boneIndex].GetParentIndex());
+    if (ImGui::CollapsingHeader("Transform")) {
+        AffineTransformation(model.GetBoneMatrices()[boneIndex]);
+        ImGui::Separator();
+        Matrix(model.GetBoneMatrices()[boneIndex]);
+    }
+    if (ImGui::CollapsingHeader("Inverse bind pose")) {
+        AffineTransformation(model.GetBoneMatrices()[boneIndex]);
+        ImGui::Separator();
+        Matrix(model.GetInverseBindPoseMatrices()[boneIndex]);
+    }
+}
+
+// ---------------------------------------------------------------- //
+//                          Submeshes.
+// ---------------------------------------------------------------- //
 
 void DebugUI::SubmeshInstances(Submesh& submesh) {
     static std::uint32_t index = 0;
@@ -441,7 +916,7 @@ void DebugUI::SubmeshInstances(Submesh& submesh) {
     ImGui::Text("Visible instances: %d", submesh.GetNumVisibleInstances());
     ImGui::Text("Culled instances:  %d", submesh.GetNumCulled());
     ImGui::PushItemWidth(ImGui::GetFontSize() * 7);
-    if (ImGui::InputScalar("cull", ImGuiDataType_U32, &numCulled, &steps)) {
+    if (ImGui::InputScalar("Cull", ImGuiDataType_U32, &numCulled, &steps)) {
         if (numCulled <= submesh.GetNumInstances())
             submesh.SetNumberCulled(numCulled);
     }
@@ -480,16 +955,279 @@ void DebugUI::SubmeshVertexIndexing(Submesh& submesh) {
     std::uint32_t vertexOffset = submesh.GetVertexOffset();
 
     ImGui::PushItemWidth(ImGui::GetFontSize() * 7);
-    if (ImGui::InputScalar("index count", ImGuiDataType_U32, &indexCount, &steps))
+    if (ImGui::InputScalar("Index count", ImGuiDataType_U32, &indexCount, &steps))
         submesh.SetIndexCount(indexCount);
-    if (ImGui::InputScalar("start index", ImGuiDataType_U32, &startIndex, &steps))
+    if (ImGui::InputScalar("Start index", ImGuiDataType_U32, &startIndex, &steps))
         submesh.SetStartIndex(startIndex);
-    if (ImGui::InputScalar("vertex offset", ImGuiDataType_U32, &vertexOffset, &steps))
+    if (ImGui::InputScalar("Vertex offset", ImGuiDataType_U32, &vertexOffset, &steps))
         submesh.SetVertexOffset(vertexOffset);
     ImGui::PopItemWidth();
 }
 
-void DebugUI::ModelHierarchy(AssetBatch& batch, Model** ppSelectedModel, IMesh** ppSelectedIMesh, Submesh** ppSelectedSubmesh) {
+void DebugUI::SubmeshCreator(IMesh& iMesh, std::vector<std::shared_ptr<Material>>& availableMaterials) {
+    static char name[128] = "";
+    static std::uint32_t materialIndex = 0;
+    static bool visible = true;
+    
+    ImGui::InputText("Name##SubmeshCreator", name, std::size(name));
+    ImGui::Checkbox("Visible##SubmeshCreator", &visible);
+    ImGui::SeparatorText("Available materials");
+    MaterialSelector(materialIndex, availableMaterials);
+    if (ImGui::Button("Create new submesh##SubmeshCreator"))
+        iMesh.Add(std::make_unique<Submesh>(name, materialIndex, visible));
+}
+
+void DebugUI::SubmeshMenu(Submesh& submesh, std::vector<std::shared_ptr<Material>>& availableMaterials) {
+    bool visible = submesh.IsVisible();
+    if (ImGui::Checkbox(GUIDLabel("Visible", submesh.GetGUID()).c_str(), &visible))
+        submesh.SetVisible(visible);
+    if (ImGui::CollapsingHeader("Available materials")) {
+        std::uint32_t materialIndex = submesh.GetMaterialIndex();
+        MaterialSelector(materialIndex, availableMaterials);
+        submesh.SetMaterialIndex(materialIndex);
+    }
+    if (ImGui::CollapsingHeader("Instancing"))
+        SubmeshInstances(submesh);
+    if (ImGui::CollapsingHeader("Vertex indexing"))
+        SubmeshVertexIndexing(submesh);
+}
+
+// ---------------------------------------------------------------- //
+//                          Meshes.
+// ---------------------------------------------------------------- //
+
+void DebugUI::IMeshCreator(Model& model) {
+    static char name[128] = "";
+    static bool visible = true;
+    static bool skinned = false;
+
+    ImGui::InputText("Name##MeshCreator", name, std::size(name));
+    ImGui::Checkbox("Visible##MeshCreator", &visible);
+    ImGui::Checkbox("Skinned##MeshCreator", &skinned);
+    if (ImGui::Button("Create new mesh##MeshCreator")) {
+        std::shared_ptr<IMesh> pIMesh;
+        if (skinned)
+            pIMesh = std::make_shared<SkinnedMesh>(name, visible);
+        else
+            pIMesh = std::make_shared<Mesh>(name, visible);
+        pIMesh->Add(std::make_unique<Submesh>(std::string(name) + "_submesh"));
+        model.Add(std::move(pIMesh));
+    }
+}
+
+void DebugUI::IMeshMenu(IMesh& iMesh) {
+    bool visible = iMesh.IsVisible();
+    if (ImGui::Checkbox(GUIDLabel("Visible", iMesh.GetGUID()).c_str(), &visible))
+        iMesh.SetVisible(visible);
+    if (auto pMesh = dynamic_cast<Mesh*>(&iMesh)) {
+        if (ImGui::CollapsingHeader("Vertices")) 
+            Vertices(pMesh->GetVertices());
+    }
+    if (auto pSkinnedMesh = dynamic_cast<SkinnedMesh*>(&iMesh)) {
+        if (ImGui::CollapsingHeader("Vertices")) 
+            Vertices(pSkinnedMesh->GetVertices());
+    }
+    if (ImGui::CollapsingHeader("Indices"))
+        Indices(iMesh.GetIndices(), iMesh.GetNumVertices());
+}
+
+void DebugUI::IMeshCreatorPopupMenu(Model& model) {
+    if (ImGui::Button(GUIDLabel("+", "IMeshCreatorPopupMenu").c_str()))
+        ImGui::OpenPopup("IMeshCreatorPopupMenu");
+    if (ImGui::BeginPopup("IMeshCreatorPopupMenu")) {
+        IMeshCreator(model);
+        ImGui::EndPopup();
+    }
+}
+
+void DebugUI::IMeshAddGeoOrSubmeshPopupMenu(IMesh& iMesh, std::vector<std::shared_ptr<Material>>& availableMaterials) {
+    if (ImGui::Button(GUIDLabel("+", "IMeshAddGeoOrSubmeshPopupMenu").c_str()))
+        ImGui::OpenPopup("IMeshAddGeoOrSubmeshPopupMenu");
+    if (ImGui::BeginPopup("IMeshAddGeoOrSubmeshPopupMenu", ImGuiWindowFlags_MenuBar)) {
+        if (ImGui::BeginMenuBar()) {
+            if (ImGui::BeginMenu(GUIDLabel("Add submesh", "IMeshAddGeoOrSubmeshPopupMenu").c_str())) {
+                SubmeshCreator(iMesh, availableMaterials);
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu(GUIDLabel("Add geometry", "IMeshAddGeoOrSubmeshPopupMenu").c_str())) {
+                AddGeoToIMeshCreator(iMesh);
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenuBar();
+        }
+        ImGui::EndPopup();
+    }
+}
+
+// ---------------------------------------------------------------- //
+//                          Mesh factory.
+// ---------------------------------------------------------------- //
+
+void DebugUI::AddCubeToIMeshCreator(IMesh& iMesh) {
+    static float size = 1; 
+
+    ImGui::InputFloat("Size##AddCubeToMesh", &size);
+    if (ImGui::Button("Add to mesh##AddCubeToMesh"))
+        MeshFactory::CreateCube(iMesh, size);
+}
+
+void DebugUI::AddBoxToIMeshCreator(IMesh& iMesh) {
+    static float size[3] = { 1.f, 1.f, 1.f };
+    static bool invertNormal = false;
+
+    ImGui::InputFloat3("Size##AddBoxToMesh", size);
+    ImGui::Checkbox("Invert normals##AddBoxToMesh", &invertNormal);
+    if (ImGui::Button("Add to mesh##AddBoxToMesh"))
+        MeshFactory::CreateBox(iMesh, { size[0], size[1], size[2] }, invertNormal);
+}
+
+void DebugUI::AddSphereToIMeshCreator(IMesh& iMesh) {
+    static float diameter = 1.f;
+    static std::uint64_t tessellation = 16;
+    static bool invertNormal = false;
+
+    ImGui::InputFloat("Diameter##AddSphereToMesh", &diameter);
+    ImGui::InputScalar("Tessellation##AddSphereToMesh", ImGuiDataType_U64, &tessellation);
+    ImGui::Checkbox("Invert normals##AddSphereToMesh", &invertNormal);
+    if (ImGui::Button("Add to mesh##AddSphereToMesh"))
+        MeshFactory::CreateSphere(iMesh, diameter, tessellation, invertNormal);
+}
+
+void DebugUI::AddGeoSphereToIMeshCreator(IMesh& iMesh) {
+    static float diameter = 1.f;
+    static std::uint64_t tessellation = 3;
+
+    ImGui::InputFloat("Diameter##AddGeoSphereToMesh", &diameter);
+    ImGui::InputScalar("Tessellation##AddGeoSphereToMesh", ImGuiDataType_U64, &tessellation);
+    if (ImGui::Button("Add to mesh##AddGeoSphereToMesh"))
+        MeshFactory::CreateGeoSphere(iMesh, diameter, tessellation);
+}
+
+void DebugUI::AddCylinderToIMeshCreator(IMesh& iMesh) {
+    static float height = 1.f;
+    static float diameter = 1.f;
+    static std::uint64_t tessellation = 32;
+
+    ImGui::InputFloat("Height##AddCylinderToMesh", &height);
+    ImGui::InputFloat("Diameter##AddCylinderToMesh", &diameter);
+    ImGui::InputScalar("Tessellation##AddCylinderToMesh", ImGuiDataType_U64, &tessellation);
+    if (ImGui::Button("Add to mesh##AddCylinderToMesh"))
+        MeshFactory::CreateCylinder(iMesh, height, diameter, tessellation);
+}
+
+void DebugUI::AddConeToIMeshCreator(IMesh& iMesh) {
+    static float diameter = 1.f;
+    static float height = 1.f;
+    static std::uint64_t tessellation = 32;
+
+    ImGui::InputFloat("Diameter##AddConeToMesh", &diameter);
+    ImGui::InputFloat("Height##AddConeToMesh", &height);
+    ImGui::InputScalar("Tessellation##AddConeToMesh", ImGuiDataType_U64, &tessellation);
+    if (ImGui::Button("Add to mesh##AddConeToMesh"))
+        MeshFactory::CreateCone(iMesh, diameter, height, tessellation);
+}
+
+void DebugUI::AddTorusToIMeshCreator(IMesh& iMesh) {
+    static float diameter = 1.f;
+    static float thickness = .333f;
+    static std::uint64_t tessellation = 32;
+
+    ImGui::InputFloat("Diameter##AddTorusToMesh", &diameter);
+    ImGui::InputFloat("Thickness##AddTorusToMesh", &thickness);
+    ImGui::InputScalar("Tessellation##AddTorusToMesh", ImGuiDataType_U64, &tessellation);
+    if (ImGui::Button("Add to mesh##AddTorusToMesh"))
+        MeshFactory::CreateCone(iMesh, diameter, thickness, tessellation);
+}
+
+void DebugUI::AddTetrahedronToIMeshCreator(IMesh& iMesh) {
+    static float size = 1; 
+
+    ImGui::InputFloat("Size##AddTetrahedronToMesh", &size);
+    if (ImGui::Button("Add to mesh##AddTetrahedronToMesh"))
+        MeshFactory::CreateTetrahedron(iMesh, size);
+}
+
+void DebugUI::AddOctahedronToIMeshCreator(IMesh& iMesh) {
+    static float size = 1; 
+
+    ImGui::InputFloat("Size##AddOctahedronToMesh", &size);
+    if (ImGui::Button("Add to mesh##AddOctahedronToMesh"))
+        MeshFactory::CreateOctahedron(iMesh, size);
+}
+
+void DebugUI::AddDodecahedronToIMeshCreator(IMesh& iMesh) {
+    static float size = 1; 
+
+    ImGui::InputFloat("Size##AddDodecahedronToMesh", &size);
+    if (ImGui::Button("Add to mesh##AddDodecahedronToMesh"))
+        MeshFactory::CreateDodecahedron(iMesh, size);
+}
+
+void DebugUI::AddIcosahedronToIMeshCreator(IMesh& iMesh) {
+    static float size = 1; 
+
+    ImGui::InputFloat("Size##AddIcosahedronToMesh", &size);
+    if (ImGui::Button("Add to mesh##AddIcosahedronToMesh"))
+        MeshFactory::CreateIcosahedron(iMesh, size);
+}
+
+void DebugUI::AddTeapotToIMeshCreator(IMesh& iMesh) {
+    static float size = 1; 
+    static std::uint64_t tessellation = 8;
+
+    ImGui::InputFloat("Size##AddTeapotToMesh", &size);
+    ImGui::InputScalar("Tessellation##AddTeapotToMesh", ImGuiDataType_U64, &tessellation);
+    if (ImGui::Button("Add to mesh##AddTeapotToMesh"))
+        MeshFactory::CreateTeapot(iMesh, size, tessellation);
+}
+
+void DebugUI::AddGeoToIMeshCreator(IMesh& iMesh) {
+    static std::uint8_t selected = 0;
+    static const std::string options[12] = { "Cube", "Box", "Sphere", "GeoSphere", "Cylinder", "Cone", "Torus", "Tetrahedron", "Octahedron", "Dodecahedron", "Icosahedron", "Teapot" };
+
+    if (ImGui::Button(GUIDLabel(options[selected], "AddGeoToIMeshCreator").c_str()))
+        ImGui::OpenPopup("OutlineTypeSelector");
+    if (ImGui::BeginPopup("OutlineTypeSelector")) {
+        for (std::uint8_t i = 0; i < std::size(options); ++i) {
+            if (ImGui::Selectable(GUIDLabel(options[i], "AddGeoToIMeshCreator").c_str(), selected == i))
+                selected = i;
+        }
+        ImGui::EndPopup();
+    }
+
+    switch (selected) {
+        case 0:
+            AddCubeToIMeshCreator(iMesh); break;
+        case 1:
+            AddBoxToIMeshCreator(iMesh); break;
+        case 2:
+            AddSphereToIMeshCreator(iMesh); break;
+        case 3:
+            AddGeoSphereToIMeshCreator(iMesh); break;
+        case 4:
+            AddCylinderToIMeshCreator(iMesh); break;
+        case 5:
+            AddConeToIMeshCreator(iMesh); break;
+        case 6:
+            AddTorusToIMeshCreator(iMesh); break;
+        case 7:
+            AddTetrahedronToIMeshCreator(iMesh); break;
+        case 8:
+            AddOctahedronToIMeshCreator(iMesh); break;
+        case 9:
+            AddDodecahedronToIMeshCreator(iMesh); break;
+        case 10:
+            AddIcosahedronToIMeshCreator(iMesh); break;
+        default:
+            AddTeapotToIMeshCreator(iMesh); break;
+    }
+}
+
+// ---------------------------------------------------------------- //
+//                          Models.
+// ---------------------------------------------------------------- //
+
+void DebugUI::ModelSelector(AssetBatch& batch, Model** ppSelectedModel, IMesh** ppSelectedIMesh, Submesh** ppSelectedSubmesh) {
     int expandAll = -1;
     if (ImGui::Button("Expand all"))
         expandAll = 1;
@@ -544,255 +1282,136 @@ void DebugUI::ModelHierarchy(AssetBatch& batch, Model** ppSelectedModel, IMesh**
     }
 }
 
-void DebugUI::BoneHierarchy(Model& model, std::uint32_t& selectedBone) {
-    ImGui::BeginChild("bone_hierarchy", ImVec2(ImGui::GetWindowWidth() - 15.f, 200.f), ImGuiChildFlags_None);
-    for (std::uint32_t i = 0; i < model.GetNumBones(); ++i) {
-        std::string text = std::to_string(i) + ": " + model.GetBones()[i].GetName() + "; " + std::to_string(model.GetBones()[i].GetParentIndex());
-        if (ImGui::Selectable(text.c_str(), selectedBone == i))
-            selectedBone = i;
-    }
-    ImGui::EndChild();
-}
+void DebugUI::ModelCreator(AssetBatch& batch) {
+    static char name[128] = "";
+    static std::uint64_t baseMaterialGUID = 0;
+    static bool visible = true;
 
-void DebugUI::AddSubmesh(IMesh& iMesh) {
-
-}
-
-void DebugUI::AddIMesh(Model& model) {
-
-}
-
-void DebugUI::AddModel(AssetBatch& batch) {
-    static char file[128];
-    static bool skinned = false;
-    static bool packed = false;
-
-    if (ImGui::Button("Add##openPopupAddModel"))
-        ImGui::OpenPopup("addModelToBatch");
-    if (ImGui::BeginPopup("addModelToBatch")) {
-        ImGui::InputText("File##addModel", file, 128);
-        ImGui::Checkbox("Skinned", &skinned);
-        ImGui::SameLine();
-        ImGui::Checkbox("Packed", &packed);
-        if (ImGui::Button("Add##addModelToBatch"))
-            batch.Add(AssetIO::ImportModel(file, std::make_shared<Material>(L"assets/default_diffuse.png", L"assets/flat_map.png"), skinned, packed));
-        ImGui::EndPopup();
-    }
-}
-
-void DebugUI::AddMaterial(AssetBatch& batch) {
-
-}
-
-void DebugUI::AddSprite(AssetBatch& batch) {
-    static char name[128];
-    static char file[128];
-
-    if (ImGui::Button("Add##openPopupAddSprite"))
-        ImGui::OpenPopup("addSpriteToBatch");
-    if (ImGui::BeginPopup("addSpriteToBatch")) {
-        ImGui::InputText("Name##addSprite", name, 128);
-        ImGui::InputText("File##addSprite", file, 128);
-        if (ImGui::Button("Add##addSpriteToBatch"))
-            batch.Add(std::make_shared<Sprite>(AnsiToWString(file), name));
-        ImGui::EndPopup();
-    }
-}
-
-void DebugUI::AddOutline(AssetBatch& batch) {
-    static char name[128];
-    static const char* options[] = { "grid", "ring", "ray", "triangle", "quad" };
-    static int selectedOption = 0;
-
-    if (ImGui::Button("Add##openPopupAddOutline"))
-        ImGui::OpenPopup("addOutlineToBatch");
-    if (ImGui::BeginPopup("addOutlineToBatch")) {
-        ImGui::InputText("Name##addOutline", name, 128);
-        ImGui::Combo("Type##addOutline", &selectedOption, options, std::size(options));
-        if (ImGui::Button("Add##addOutlineToBatch")) {
-            switch (selectedOption) {
-                case 0:
-                    batch.Add(std::make_shared<GridOutline>(name));
-                    break;
-                case 1:
-                    batch.Add(std::make_shared<RingOutline>(name));
-                    break;
-                case 2:
-                    batch.Add(std::make_shared<RayOutline>(name));
-                    break;
-                case 3:
-                    batch.Add(std::make_shared<TriangleOutline>(name));
-                    break;
-                case 4:
-                    batch.Add(std::make_shared<QuadOutline>(name));
-                    break;
-            }
-        }
-        ImGui::EndPopup();
-    }
-}
-
-void DebugUI::CameraMenu(Camera& camera) {
-    ImGuiViewport* pViewport = ImGui::GetMainViewport();
-    static float z[2] = { camera.GetNearZ(), camera.GetFarZ() };
-    static float windowSize[2] = { pViewport->WorkSize.x, pViewport->WorkSize.y };
-    static float fovY = camera.GetFovY();
-
-    bool isOrthographic = camera.IsOrthographic();
-    ImGui::Checkbox("orthographic", &isOrthographic);
-
-    if (ImGui::Button("Reset")) {
-        z[0] = .1f; z[1] = 2000.f;
-        windowSize[0] = pViewport->WorkSize.x; windowSize[1] = pViewport->WorkSize.y;
-        fovY = DirectX::XM_PIDIV4;
-    }
-
-    ImGui::SeparatorText("Projection");
-    ImGui::DragFloat2("z planes", z, 1.f, .01f, std::numeric_limits<float>::max(), "%.3f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::Text("Fov x: %f", camera.GetFovX());
-    ImGui::DragFloat("fov y", &fovY, DirectX::XMConvertToRadians(.5f), .01f, std::numeric_limits<float>::max());
-
-    ImGui::SeparatorText("Window size");
-    ImGui::Text("Aspect: %f", camera.GetAspect());
-    ImGui::DragFloat2("window size", windowSize, 1.f, .1f, std::numeric_limits<float>::max(), "%.3f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::Text("Near plane width:  %f", camera.GetNearWindowWidth());
-    ImGui::Text("Near plane height: %f", camera.GetNearWindowHeight());
-    ImGui::Spacing();
-    ImGui::Text("Far plane width:   %f", camera.GetFarWindowWidth());
-    ImGui::Text("Far plane height:  %f", camera.GetFarWindowHeight());
-
-    if (isOrthographic)
-        camera.SetOrthographicView(windowSize[0], windowSize[1], z[0], std::max(z[1], 1.f));
-    else
-        camera.SetPerspectiveView(fovY, windowSize[0] / windowSize[1], z[0], std::max(z[1], 1.f));
-    camera.Update();
-}
-
-void DebugUI::MaterialMenu(Material& material) {
-    if (ImGui::TreeNode("Textures")) {
-        MaterialTextures(material);
-        ImGui::TreePop();
-        ImGui::Spacing();
-    }
-    if (ImGui::TreeNode("RenderFlags")) {
-        RenderFlags(material.GetFlags());
-        ImGui::TreePop();
-        ImGui::Spacing();
-    }
-    if (ImGui::TreeNode("Colors")) {
-        MaterialColors(material);
-        ImGui::TreePop();
-        ImGui::Spacing();
-    }
-}
-
-
-void DebugUI::BoneMenu(Model& model, std::uint32_t boneIndex) {
-    std::vector<Bone>& bones = model.GetBones();
-    ImGui::Text("Parent: %s", bones[boneIndex].IsRoot() ? "NONE" : bones[bones[boneIndex].GetParentIndex()].GetName().c_str());
-    ImGui::Text("Parent index: %d", bones[boneIndex].GetParentIndex());
-    if (ImGui::CollapsingHeader("Transform")) {
-        AffineTransformation(model.GetBoneMatrices()[boneIndex]);
-        ImGui::Separator();
-        Matrix(model.GetBoneMatrices()[boneIndex]);
-    }
-    if (ImGui::CollapsingHeader("Inverse bind pose")) {
-        AffineTransformation(model.GetBoneMatrices()[boneIndex]);
-        ImGui::Separator();
-        Matrix(model.GetInverseBindPoseMatrices()[boneIndex]);
-    }
-}
-
-void DebugUI::SubmeshMenu(Submesh& submesh, Model& grandParent) {
-    bool visible = submesh.IsVisible();
-    if (ImGui::Checkbox("Visible", &visible))
-        submesh.SetVisible(visible);
-    if (ImGui::CollapsingHeader("Available materials")) {
-        std::uint32_t materialIndex = submesh.GetMaterialIndex();
-        MaterialSelector(materialIndex, grandParent.GetMaterials());
-        submesh.SetMaterialIndex(materialIndex);
-    }
-    if (ImGui::CollapsingHeader("Instancing"))
-        SubmeshInstances(submesh);
-    if (ImGui::CollapsingHeader("Vertex indexing"))
-        SubmeshVertexIndexing(submesh);
-}
-
-void DebugUI::IMeshMenu(IMesh& iMesh) {
-    bool visible = iMesh.IsVisible();
-    if (ImGui::Checkbox("Visible", &visible))
-        iMesh.SetVisible(visible);
-    if (auto pMesh = dynamic_cast<Mesh*>(&iMesh)) {
-        if (ImGui::CollapsingHeader("Vertices")) 
-            Vertices(pMesh->GetVertices());
-    }
-    if (auto pSkinnedMesh = dynamic_cast<SkinnedMesh*>(&iMesh)) {
-        if (ImGui::CollapsingHeader("Vertices")) 
-            Vertices(pSkinnedMesh->GetVertices());
-    }
-    if (ImGui::CollapsingHeader("Indices"))
-        Indices(iMesh.GetIndices(), iMesh.GetNumVertices());
+    ImGui::InputText("Name##ModelCreator", name, std::size(name));
+    ImGui::Checkbox("Visible##ModelCreator", &visible);
+    MaterialSelector(baseMaterialGUID, batch.GetMaterials());
+    if (ImGui::Button("Create new model##ModelCreator"))
+        batch.Add(std::make_unique<Model>(
+                    batch.GetMaterial(baseMaterialGUID),
+                    std::string(name),
+                    visible));
 }
 
 void DebugUI::ModelMenu(Model& model) {
     bool visible = model.IsVisible();
-    if (ImGui::Checkbox("Visible", &visible))
+    if (ImGui::Checkbox(GUIDLabel("Visible", model.GetGUID()).c_str(), &visible))
         model.SetVisible(visible);
     if (ImGui::CollapsingHeader("World transform")) {
-        HelpMarker("Will apply transformation to all instances of all submeshes of all meshes in this model.\n!CAUTION! meshes could be shared beteen models.");
+        HelpMarker("Transformation will be applied to all instances of all submeshes of all meshes in this model.\n!CAUTION! meshes could be shared beteen models.");
         DirectX::XMFLOAT3X4 W;
         if (AffineTransformation(W))
             model.SetWorldTransform(W);
     }
     if (ImGui::CollapsingHeader("Armature")) {
         static std::uint32_t selectedBone = std::uint32_t(-1);
-        BoneHierarchy(model, selectedBone);
+        BoneSelector(selectedBone, model.GetBones());
         if (selectedBone != std::uint32_t(-1) && selectedBone < model.GetNumBones()) {
             ImGui::SeparatorText(model.GetBones()[selectedBone].GetName().c_str());
             BoneMenu(model, selectedBone);
             ImGui::Separator();
         }
     }
-    if (ImGui::CollapsingHeader("Materials")) {
-        for (std::shared_ptr<Material>& pMaterial : model.GetMaterials()) {
-            if (ImGui::TreeNode(pMaterial->GetName().c_str())) {
-                MaterialMenu(*pMaterial);
-                
-                ImGui::TreePop();
-                ImGui::Spacing();
-            } 
-        }
+    if (ImGui::CollapsingHeader(GUIDLabel("Materials", "ModelMenu").c_str())) {
+        MaterialMenu(model.GetMaterials());
     }
 }
 
-void DebugUI::SpriteMenu(Sprite& sprite) {
-    bool visible = sprite.IsVisible();
-    if (ImGui::Checkbox("Visible", &visible))
-        sprite.SetVisible(visible);
-    ImGui::Text("File: %ws", sprite.GetFilePath().c_str());
-    if (ImGui::CollapsingHeader("Position")) {
-        float origin[2] = { sprite.GetOrigin().x, sprite.GetOrigin().y };
-        float offset[2] = { sprite.GetOffset().x, sprite.GetOffset().y };
-        float scale[2] = { sprite.GetScale().x, sprite.GetScale().y };
-        float layer = sprite.GetLayer();
-        float angle = DirectX::XMConvertToDegrees(sprite.GetAngle());
-
-        if (ImGui::DragFloat2(std::string("origin##" + sprite.GetName()).c_str(), origin))
-            sprite.GetOrigin() = { origin[0], origin[1] };
-        if (ImGui::DragFloat2(std::string("offset##" + sprite.GetName()).c_str(), offset))
-            sprite.GetOffset() = { offset[0], offset[1] };
-        if (ImGui::DragFloat2(std::string("scale##" + sprite.GetName()).c_str(), scale))
-            sprite.GetScale() = { scale[0], scale[1] };
-        if (ImGui::DragFloat(std::string("layer##" + sprite.GetName()).c_str(), &layer))
-            sprite.SetLayer(layer);
-        if (ImGui::DragFloat(std::string("angle##" + sprite.GetName()).c_str(), &angle))
-            sprite.SetAngle(DirectX::XMConvertToRadians(angle));
+void DebugUI::ModelCreatorPopupMenu(AssetBatch& batch) {
+    if (ImGui::Button(GUIDLabel("+", "ModelCreatorPopupMenu").c_str()))
+        ImGui::OpenPopup("ModelCreatorPopupMenu");
+    if (ImGui::BeginPopup("ModelCreatorPopupMenu")) {
+        ModelCreator(batch);
+        ImGui::EndPopup();
     }
-    float color[4];
-    StoreFloat4(sprite.GetColor(), color);
-    if (ImGui::CollapsingHeader("Color"))
-        if (ImGui::ColorEdit4(std::string("color##" + sprite.GetName()).c_str(), color))
-            LoadFloat4(color, sprite.GetColor());
+}
+
+// ---------------------------------------------------------------- //
+//                          Outlines.
+// ---------------------------------------------------------------- //
+
+Outline::Type DebugUI::OutlineTypeSelector() {
+    static Outline::Type options[5] = { Outline::Type::Grid, Outline::Type::Ring, Outline::Type::Ray, Outline::Type::Triangle, Outline::Type::Quad };
+    static std::string optionsStr[5] = { "Grid", "Ring", "Ray", "Triangle", "Quad" };
+
+    static Outline::Type selected = options[0];
+    static std::string selectedStr = optionsStr[0];
+
+    if (ImGui::Button(GUIDLabel(selectedStr, "OutlineTypeSelector").c_str()))
+        ImGui::OpenPopup("OutlineTypeSelector");
+    if (ImGui::BeginPopup("OutlineTypeSelector")) {
+        for (std::uint8_t i = 0; i < std::size(options); ++i) {
+            if (ImGui::Selectable(GUIDLabel(optionsStr[i], "OutlineTypeSelector").c_str(), selected == options[i])) {
+                selected = options[i];
+                selectedStr = optionsStr[i];
+            }
+        }
+        ImGui::EndPopup();
+    }
+    return selected;
+}
+
+void DebugUI::OutlineCreator(AssetBatch& batch) {
+    static char name[128] = "";
+    static Outline::Type type = Outline::Type::Grid;
+    static float color[4] = { 0.f, 0.f, 0.f, 1.f };
+    static bool visible = true;
+
+    ImGui::InputText("Name##OutlineCreator", name, std::size(name));
+    type = OutlineTypeSelector();
+    ImGui::ColorEdit4("Color##OutlineCreator", color);
+    ImGui::Checkbox("Visible##OutlineCreator", &visible);
+    if (ImGui::Button("Create new outline")) {
+        std::shared_ptr<Outline> pOutline;
+        DirectX::XMFLOAT4 C = { color[0], color[1], color[2], color[3] };
+        switch (type) {
+            case Outline::Type::Grid:
+                {
+                    DirectX::XMFLOAT3 xAxis = { 1.f, 0.f, 0.f };
+                    DirectX::XMFLOAT3 yAxis = { 0.f, 0.f, 1.f };
+                    DirectX::XMFLOAT3 origin = { 0.f, 0.f, 0.f };
+                    pOutline = std::make_shared<GridOutline>(name, 2, 2, xAxis, yAxis, origin, DirectX::XMLoadFloat4(&C), visible);
+                }
+                break; 
+            case Outline::Type::Ring:
+                {
+                    DirectX::XMFLOAT3 majorAxis = { .5f, 0.f, 0.f };
+                    DirectX::XMFLOAT3 minorAxis = { 0.f, 0.f, .5f };
+                    DirectX::XMFLOAT3 origin = { 0.f, 0.f, 0.f };
+                    pOutline = std::make_shared<RingOutline>(name, majorAxis, minorAxis, origin, DirectX::XMLoadFloat4(&C), visible);
+                }
+                break; 
+            case Outline::Type::Ray:
+                {
+                    DirectX::XMFLOAT3 direction = { 1.f, 0.f, 0.f };
+                    DirectX::XMFLOAT3 origin = { 0.f, 0.f, 0.f };
+                    pOutline = std::make_shared<RayOutline>(name, direction, origin, DirectX::XMLoadFloat4(&C), false, visible);
+                }
+                break; 
+            case Outline::Type::Triangle:
+                {
+                    DirectX::XMFLOAT3 pointA = { 0.f, 0.f, 0.f };
+                    DirectX::XMFLOAT3 pointB = { 1.f, 0.f, 0.f };
+                    DirectX::XMFLOAT3 pointC = { .5f, 1.f, 0.f };
+                    pOutline = std::make_shared<TriangleOutline>(name, pointA, pointB, pointC, DirectX::XMLoadFloat4(&C), visible);
+                }
+                break; 
+            default:
+                {
+                    DirectX::XMFLOAT3 pointA = { 0.f, 0.f, 0.f };
+                    DirectX::XMFLOAT3 pointB = { 0.f, 1.f, 0.f };
+                    DirectX::XMFLOAT3 pointC = { 1.f, 0.f, 0.f };
+                    DirectX::XMFLOAT3 pointD = { 1.f, 1.f, 0.f };
+                    pOutline = std::make_shared<QuadOutline>(name, pointA, pointB, pointC, pointD, DirectX::XMLoadFloat4(&C), visible);
+                }
+                break; 
+        }
+        batch.Add(std::move(pOutline));
+    }
 }
 
 void DebugUI::BoundingBoxOutlineMenu(BoundingBodyOutline<DirectX::BoundingBox>& outline) {
@@ -801,9 +1420,9 @@ void DebugUI::BoundingBoxOutlineMenu(BoundingBodyOutline<DirectX::BoundingBox>& 
     float center[3] = { b.Center.x, b.Center.y, b.Center.z };
     float extents[3] = { b.Extents.x, b.Extents.y, b.Extents.z };
 
-    if (ImGui::DragFloat3(std::string("center##" + outline.GetName()).c_str(), center))
+    if (ImGui::DragFloat3(GUIDLabel("Center", outline.GetGUID()).c_str(), center))
         b.Center = { center[0], center[1], center[2] };
-    if (ImGui::DragFloat3(std::string("extents##" + outline.GetName()).c_str(), extents))
+    if (ImGui::DragFloat3(GUIDLabel("Extents", outline.GetGUID()).c_str(), extents))
         b.Extents = { extents[0], extents[1], extents[2] };
 }
 
@@ -816,19 +1435,19 @@ void DebugUI::BoundingFrustumOutlineMenu(BoundingBodyOutline<DirectX::BoundingFr
     DirectX::XMFLOAT3 r = q.ToEuler();
     float rotation[3] = { r.x, r.y, r.z };
 
-    if (ImGui::DragFloat3(std::string("origin##" + outline.GetName()).c_str(), origin))
+    if (ImGui::DragFloat3(GUIDLabel("Origin", outline.GetGUID()).c_str(), origin))
         b.Origin = { origin[0], origin[1], origin[2] };
-    if (ImGui::DragFloat3(std::string("rotation##" + outline.GetName()).c_str(), rotation))
+    if (ImGui::DragFloat3(GUIDLabel("Rotation", outline.GetGUID()).c_str(), rotation))
         DirectX::XMStoreFloat4(&b.Orientation, DirectX::XMQuaternionRotationRollPitchYaw(
                     DirectX::XMConvertToRadians(rotation[0]), 
                     DirectX::XMConvertToRadians(rotation[1]), 
                     DirectX::XMConvertToRadians(rotation[2])));
-    ImGui::DragFloat(std::string("right slope##" + outline.GetName()).c_str(), &b.RightSlope);
-    ImGui::DragFloat(std::string("left slope##" + outline.GetName()).c_str(), &b.LeftSlope);
-    ImGui::DragFloat(std::string("top slope##" + outline.GetName()).c_str(), &b.TopSlope);
-    ImGui::DragFloat(std::string("bottom slope##" + outline.GetName()).c_str(), &b.BottomSlope);
-    ImGui::DragFloat(std::string("near##" + outline.GetName()).c_str(), &b.Near);
-    ImGui::DragFloat(std::string("far##" + outline.GetName()).c_str(), &b.Far);
+    ImGui::DragFloat(GUIDLabel("Right slope", outline.GetGUID()).c_str(), &b.RightSlope);
+    ImGui::DragFloat(GUIDLabel("Left slope", outline.GetGUID()).c_str(), &b.LeftSlope);
+    ImGui::DragFloat(GUIDLabel("Top slope", outline.GetGUID()).c_str(), &b.TopSlope);
+    ImGui::DragFloat(GUIDLabel("Bottom slope", outline.GetGUID()).c_str(), &b.BottomSlope);
+    ImGui::DragFloat(GUIDLabel("Near", outline.GetGUID()).c_str(), &b.Near);
+    ImGui::DragFloat(GUIDLabel("Far", outline.GetGUID()).c_str(), &b.Far);
 }
 
 void DebugUI::BoundingOrientedBoxOutlineMenu(BoundingBodyOutline<DirectX::BoundingOrientedBox>& outline) {
@@ -840,11 +1459,11 @@ void DebugUI::BoundingOrientedBoxOutlineMenu(BoundingBodyOutline<DirectX::Boundi
     DirectX::XMFLOAT3 r = q.ToEuler();
     float rotation[3] = { r.x, r.y, r.z };
 
-    if (ImGui::DragFloat3(std::string("center##" + outline.GetName()).c_str(), center))
+    if (ImGui::DragFloat3(GUIDLabel("Center", outline.GetGUID()).c_str(), center))
         b.Center = { center[0], center[1], center[2] };
-    if (ImGui::DragFloat3(std::string("extents##" + outline.GetName()).c_str(), extents))
+    if (ImGui::DragFloat3(GUIDLabel("Extents", outline.GetGUID()).c_str(), extents))
         b.Extents = { extents[0], extents[1], extents[2] };
-    if (ImGui::DragFloat3(std::string("rotation##" + outline.GetName()).c_str(), rotation))
+    if (ImGui::DragFloat3(GUIDLabel("Rotation", outline.GetGUID()).c_str(), rotation))
         DirectX::XMStoreFloat4(&b.Orientation, DirectX::XMQuaternionRotationRollPitchYaw(
                     DirectX::XMConvertToRadians(rotation[0]), 
                     DirectX::XMConvertToRadians(rotation[1]), 
@@ -856,17 +1475,17 @@ void DebugUI::BoundingSphereOutlineMenu(BoundingBodyOutline<DirectX::BoundingSph
 
     float center[3] = { b.Center.x, b.Center.y, b.Center.z };
 
-    if (ImGui::DragFloat3(std::string("center##" + outline.GetName()).c_str(), center))
+    if (ImGui::DragFloat3(GUIDLabel("Center", outline.GetGUID()).c_str(), center))
         b.Center = { center[0], center[1], center[2] };
-    ImGui::DragFloat(std::string("radius##" + outline.GetName()).c_str(), &b.Radius);
+    ImGui::DragFloat(GUIDLabel("Radius", outline.GetGUID()).c_str(), &b.Radius);
 }
 
 void DebugUI::GridOutlineMenu(GridOutline& outline) {
     float xDivisions = outline.GetXDivisions();
     float yDivisions = outline.GetYDivisions();
-    if (ImGui::DragScalar(std::string("x divisions##" + outline.GetName()).c_str(), ImGuiDataType_U16, &xDivisions))
+    if (ImGui::DragScalar(GUIDLabel("X divisions", outline.GetGUID()).c_str(), ImGuiDataType_U16, &xDivisions))
         outline.SetXDivisions(xDivisions);
-    if (ImGui::DragScalar(std::string("y divisions##" + outline.GetName()).c_str(), ImGuiDataType_U16, &yDivisions))
+    if (ImGui::DragScalar(GUIDLabel("Y divisions", outline.GetGUID()).c_str(), ImGuiDataType_U16, &yDivisions))
         outline.SetYDivisions(yDivisions);
 
     float xAxis[3];
@@ -876,11 +1495,11 @@ void DebugUI::GridOutlineMenu(GridOutline& outline) {
     float origin[3];
     StoreFloat3(outline.GetOrigin(), origin);
 
-    if (ImGui::DragFloat3(std::string("x axis##" + outline.GetName()).c_str(), xAxis))
+    if (ImGui::DragFloat3(GUIDLabel("X axis", outline.GetGUID()).c_str(), xAxis))
         LoadFloat3(xAxis, outline.GetXAxis());
-    if (ImGui::DragFloat3(std::string("y axis##" + outline.GetName()).c_str(), yAxis))
+    if (ImGui::DragFloat3(GUIDLabel("Y axis", outline.GetGUID()).c_str(), yAxis))
         LoadFloat3(yAxis, outline.GetYAxis());
-    if (ImGui::DragFloat3(std::string("origin##" + outline.GetName()).c_str(), origin))
+    if (ImGui::DragFloat3(GUIDLabel("Origin", outline.GetGUID()).c_str(), origin))
         LoadFloat3(origin, outline.GetOrigin());
 }
 
@@ -892,17 +1511,17 @@ void DebugUI::RingOutlineMenu(RingOutline& outline) {
     float origin[3];
     StoreFloat3(outline.GetOrigin(), origin);
 
-    if (ImGui::DragFloat3(std::string("minor axis##" + outline.GetName()).c_str(), minorAxis))
+    if (ImGui::DragFloat3(GUIDLabel("Minor axis", outline.GetGUID()).c_str(), minorAxis))
         LoadFloat3(minorAxis, outline.GetMinorAxis());
-    if (ImGui::DragFloat3(std::string("major axis##" + outline.GetName()).c_str(), majorAxis))
+    if (ImGui::DragFloat3(GUIDLabel("Major axis", outline.GetGUID()).c_str(), majorAxis))
         LoadFloat3(majorAxis, outline.GetMajorAxis());
-    if (ImGui::DragFloat3(std::string("origin##" + outline.GetName()).c_str(), origin))
+    if (ImGui::DragFloat3(GUIDLabel("Origin", outline.GetGUID()).c_str(), origin))
         LoadFloat3(origin, outline.GetOrigin());
 }
 
 void DebugUI::RayOutlineMenu(RayOutline& outline) {
     bool normalized = outline.IsNormalized();
-    if (ImGui::Checkbox("Normalized", &normalized))
+    if (ImGui::Checkbox(GUIDLabel("Normalized", outline.GetGUID()).c_str(), &normalized))
         outline.SetNormalized(normalized);
 
     float direction[3];
@@ -910,9 +1529,9 @@ void DebugUI::RayOutlineMenu(RayOutline& outline) {
     float origin[3];
     StoreFloat3(outline.GetOrigin(), origin);
 
-    if (ImGui::DragFloat3(std::string("direction##" + outline.GetName()).c_str(), direction))
+    if (ImGui::DragFloat3(GUIDLabel("Direction", outline.GetGUID()).c_str(), direction))
         LoadFloat3(direction, outline.GetDirection());
-    if (ImGui::DragFloat3(std::string("origin##" + outline.GetName()).c_str(), origin))
+    if (ImGui::DragFloat3(GUIDLabel("Origin##", outline.GetGUID()).c_str(), origin))
         LoadFloat3(origin, outline.GetOrigin());
 }
 
@@ -924,11 +1543,11 @@ void DebugUI::TriangleOutlineMenu(TriangleOutline& outline) {
     float pointC[3];
     StoreFloat3(outline.GetPointC(), pointC);
 
-    if (ImGui::DragFloat3(std::string("point A##" + outline.GetName()).c_str(), pointA))
+    if (ImGui::DragFloat3(GUIDLabel("Point A", outline.GetGUID()).c_str(), pointA))
         LoadFloat3(pointA, outline.GetPointA());
-    if (ImGui::DragFloat3(std::string("point B##" + outline.GetName()).c_str(), pointB))
+    if (ImGui::DragFloat3(GUIDLabel("Point B", outline.GetGUID()).c_str(), pointB))
         LoadFloat3(pointB, outline.GetPointB());
-    if (ImGui::DragFloat3(std::string("point C##" + outline.GetName()).c_str(), pointC))
+    if (ImGui::DragFloat3(GUIDLabel("Point C", outline.GetGUID()).c_str(), pointC))
         LoadFloat3(pointC, outline.GetPointC());
 }
 
@@ -942,19 +1561,19 @@ void DebugUI::QuadOutlineMenu(QuadOutline& outline) {
     float pointD[3];
     StoreFloat3(outline.GetPointD(), pointD);
 
-    if (ImGui::DragFloat3(std::string("point A##" + outline.GetName()).c_str(), pointA))
+    if (ImGui::DragFloat3(GUIDLabel("Point A", outline.GetGUID()).c_str(), pointA))
         LoadFloat3(pointA, outline.GetPointA());
-    if (ImGui::DragFloat3(std::string("point B##" + outline.GetName()).c_str(), pointB))
+    if (ImGui::DragFloat3(GUIDLabel("Point B", outline.GetGUID()).c_str(), pointB))
         LoadFloat3(pointB, outline.GetPointB());
-    if (ImGui::DragFloat3(std::string("point C##" + outline.GetName()).c_str(), pointC))
+    if (ImGui::DragFloat3(GUIDLabel("Point C", outline.GetGUID()).c_str(), pointC))
         LoadFloat3(pointC, outline.GetPointC());
-    if (ImGui::DragFloat3(std::string("point D##" + outline.GetName()).c_str(), pointD))
+    if (ImGui::DragFloat3(GUIDLabel("Point D", outline.GetGUID()).c_str(), pointD))
         LoadFloat3(pointD, outline.GetPointD());
 }
 
 void DebugUI::OutlineMenu(Outline& outline) {
     bool visible = outline.IsVisible();
-    if (ImGui::Checkbox("Visible", &visible))
+    if (ImGui::Checkbox(GUIDLabel("Visible", outline.GetGUID()).c_str(), &visible))
         outline.SetVisible(visible);
 
     if (ImGui::CollapsingHeader("Position")) {
@@ -991,8 +1610,90 @@ void DebugUI::OutlineMenu(Outline& outline) {
     float color[4];
     StoreFloat4(outline.GetColor(), color);
     if (ImGui::CollapsingHeader("Color"))
-        if (ImGui::ColorEdit4(std::string("color##" + outline.GetName()).c_str(), color))
+        if (ImGui::ColorEdit4(GUIDLabel("Color", outline.GetGUID()).c_str(), color))
             LoadFloat4(color, outline.GetColor());
+}
+
+void DebugUI::OutlineMenu(const Outlines& outlines) {
+    for (auto& outlinePair : outlines) {
+        if (ImGui::TreeNode(outlinePair.second->GetName().c_str())) {
+            OutlineMenu(*outlinePair.second);
+            ImGui::TreePop();
+        }
+    }
+}
+
+// ---------------------------------------------------------------- //
+//                          Camera.
+// ---------------------------------------------------------------- //
+
+void DebugUI::CameraMenu(Camera& camera) {
+    ImGuiViewport* pViewport = ImGui::GetMainViewport();
+    static float z[2] = { camera.GetNearZ(), camera.GetFarZ() };
+    static float windowSize[2] = { pViewport->WorkSize.x, pViewport->WorkSize.y };
+    static float fovY = camera.GetFovY();
+
+    bool isOrthographic = camera.IsOrthographic();
+    ImGui::Checkbox("Orthographic", &isOrthographic);
+
+    if (ImGui::Button("Reset")) {
+        z[0] = .1f; z[1] = 2000.f;
+        windowSize[0] = pViewport->WorkSize.x; windowSize[1] = pViewport->WorkSize.y;
+        fovY = DirectX::XM_PIDIV4;
+    }
+
+    ImGui::SeparatorText("Projection");
+    ImGui::DragFloat2("Z planes", z, 1.f, .01f, std::numeric_limits<float>::max(), "%.3f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::Text("Fov x: %f", camera.GetFovX());
+    ImGui::DragFloat("Fov y", &fovY, DirectX::XMConvertToRadians(.5f), .01f, std::numeric_limits<float>::max());
+
+    ImGui::SeparatorText("Window size");
+    ImGui::Text("Aspect: %f", camera.GetAspect());
+    ImGui::DragFloat2("Window size", windowSize, 1.f, .1f, std::numeric_limits<float>::max(), "%.3f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::Text("Near plane width:  %f", camera.GetNearWindowWidth());
+    ImGui::Text("Near plane height: %f", camera.GetNearWindowHeight());
+    ImGui::Spacing();
+    ImGui::Text("Far plane width:   %f", camera.GetFarWindowWidth());
+    ImGui::Text("Far plane height:  %f", camera.GetFarWindowHeight());
+
+    if (isOrthographic)
+        camera.SetOrthographicView(windowSize[0], windowSize[1], z[0], std::max(z[1], 1.f));
+    else
+        camera.SetPerspectiveView(fovY, windowSize[0] / windowSize[1], z[0], std::max(z[1], 1.f));
+    camera.Update();
+}
+
+// ---------------------------------------------------------------- //
+//                          Asset batch.
+// ---------------------------------------------------------------- //
+
+void DebugUI::AssetBatchSelector(std::uint8_t& index, std::vector<std::shared_ptr<AssetBatch>>& batches) {
+    if (ImGui::BeginListBox("##Batches")) {
+        for (std::uint8_t i = 0; i < batches.size(); ++i) {
+            if (ImGui::Selectable(batches[i]->GetName().c_str(), index == i))
+                index = i;
+            if (index == i)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndListBox();
+    }
+}
+
+void DebugUI::AssetBatchStats(AssetBatch& batch) {
+    ImGui::Text("Models:                     %llu", batch.GetNumModels());
+    ImGui::Text("Meshes:                     %llu", batch.GetNumMeshes());
+    ImGui::Text("Submeshes:                  %llu", batch.GetNumSubmeshes());
+    ImGui::Separator();
+    ImGui::Text("Max assets:                 %d",   batch.GetMaxAssets());
+    ImGui::Text("Materials:                  %llu", batch.GetNumMaterials());
+    ImGui::Text("Sprites:                    %llu", batch.GetNumSprites());
+    ImGui::Text("Texts:                      %llu", batch.GetNumTexts());
+    ImGui::Text("Outlines:                   %llu", batch.GetNumOutlines());
+    ImGui::Separator();
+    ImGui::Text("Submesh instances:          %llu", batch.GetNumSubmeshInstances());
+    ImGui::Text("Rendered submesh instances: %llu", batch.GetNumRenderedSubmeshInstances());
+    ImGui::Text("Loaded vertices:            %llu", batch.GetNumLoadedVertices());
+    ImGui::Text("Rendered vertices:          %llu", batch.GetNumRenderedVertices());
 }
 
 void DebugUI::AssetBatchMenu(AssetBatch& batch) {
@@ -1002,28 +1703,14 @@ void DebugUI::AssetBatchMenu(AssetBatch& batch) {
     static IMesh* pSelectedIMesh = nullptr;
     static Submesh* pSelectedSubmesh = nullptr;
 
-    if (ImGui::CollapsingHeader(std::string("Stats##" + batch.GetName()).c_str())) {
-        ImGui::Text("Models:                     %llu", batch.GetNumModels());
-        ImGui::Text("Meshes:                     %llu", batch.GetNumMeshes());
-        ImGui::Text("Submeshes:                  %llu", batch.GetNumSubmeshes());
-        ImGui::Separator();
-        ImGui::Text("Materials:                  %llu", batch.GetNumMaterials());
-        ImGui::Text("Sprites:                    %llu", batch.GetNumSprites());
-        ImGui::Text("Texts:                      %llu", batch.GetNumTexts());
-        ImGui::Text("Outlines:                   %llu", batch.GetNumOutlines());
-        ImGui::Separator();
-        ImGui::Text("Submesh instances:          %llu", batch.GetNumSubmeshInstances());
-        ImGui::Text("Rendered submesh instances: %llu", batch.GetNumRenderedSubmeshInstances());
-        ImGui::Text("Loaded vertices:            %llu", batch.GetNumLoadedVertices());
-        ImGui::Text("Rendered vertices:          %llu", batch.GetNumRenderedVertices());
-
-        ImGui::Separator();
-        ImGui::Spacing();
-    }
+    bool visible = batch.IsVisible();
+    if (ImGui::Checkbox(GUIDLabel("Visible", batch.GetName()).c_str(), &visible))
+        batch.SetVisible(visible);
     if (ImGui::CollapsingHeader("Models")) {
-        AddModel(batch);
         ImGui::BeginChild(ImGui::GetID((void*)(intptr_t)ID++), ImVec2(ImGui::GetWindowWidth() - 15.f, 200.f), ImGuiChildFlags_None);
-        ModelHierarchy(batch, &pSelectedModel, &pSelectedIMesh, &pSelectedSubmesh);
+        ModelCreatorPopupMenu(batch);
+        ImGui::SameLine();
+        ModelSelector(batch, &pSelectedModel, &pSelectedIMesh, &pSelectedSubmesh);
         ImGui::EndChild();
 
         ImGui::Separator();
@@ -1036,52 +1723,95 @@ void DebugUI::AssetBatchMenu(AssetBatch& batch) {
         HelpMarker("Model > Mesh > Submesh");
 
         if (pSelectedSubmesh)
-            SubmeshMenu(*pSelectedSubmesh, *pSelectedModel);
-        else if (pSelectedIMesh)
+            SubmeshMenu(*pSelectedSubmesh, pSelectedModel->GetMaterials());
+        else if (pSelectedIMesh) {
+            IMeshAddGeoOrSubmeshPopupMenu(*pSelectedIMesh, pSelectedModel->GetMaterials());
+            ImGui::SameLine();
             IMeshMenu(*pSelectedIMesh);
-        else if (pSelectedModel)
+        }
+        else if (pSelectedModel) {
+            IMeshCreatorPopupMenu(*pSelectedModel);
+            ImGui::SameLine();
             ModelMenu(*pSelectedModel);
+        }
 
+        ImGui::Separator();
+        ImGui::Spacing();
+    }
+    if (ImGui::CollapsingHeader("Materials")) {
+        MaterialCreatorPopupMenu(batch);
+        MaterialMenu(batch.GetMaterials());
         ImGui::Separator();
         ImGui::Spacing();
     }
     if (ImGui::CollapsingHeader("Sprites")) {
-        AddSprite(batch);
-        ImGui::Separator();
-        ImGui::Spacing();
-        for (auto& spritePair : batch.GetSprites()) {
-            if (ImGui::TreeNode(spritePair.second->GetName().c_str())) {
-                SpriteMenu(*spritePair.second);
-                ImGui::TreePop();
-            }
-        }
+        SpriteCreatorPopupMenu(batch);
+        SpriteMenu(batch.GetSprites());
         ImGui::Separator();
         ImGui::Spacing();
     }
     if (ImGui::CollapsingHeader("Text")) {
-        for (auto& textPair : batch.GetTexts()) {
-            if (ImGui::TreeNode(textPair.second->GetName().c_str())) {
-                SpriteMenu(*textPair.second);
-                ImGui::TreePop();
-            }
-        }
+        TextCreatorPopupMenu(batch);
+        TextMenu(batch.GetTexts());
         ImGui::Separator();
         ImGui::Spacing();
     }
     if (ImGui::CollapsingHeader("Outlines")) {
-        AddOutline(batch);
-        ImGui::Separator();
-        ImGui::Spacing();
-        for (auto& outlinePair : batch.GetOutlines()) {
-            if (ImGui::TreeNode(outlinePair.second->GetName().c_str())) {
-                OutlineMenu(*outlinePair.second);
-                ImGui::TreePop();
-            }
+        if (ImGui::Button(GUIDLabel("+", "AddOutlineToBatch").c_str())) 
+            ImGui::OpenPopup("AddOutlineToBatch");
+        if (ImGui::BeginPopup("AddOutlineToBatch")) {
+            OutlineCreator(batch);
+            ImGui::EndPopup();
         }
+        OutlineMenu(batch.GetOutlines());
         ImGui::Separator();
         ImGui::Spacing();
     }
+    if (ImGui::CollapsingHeader(std::string("Stats##" + batch.GetName()).c_str())) {
+        AssetBatchStats(batch);
+        ImGui::Separator();
+        ImGui::Spacing();
+    }
+}
 
+// ---------------------------------------------------------------- //
+//                          Scene.
+// ---------------------------------------------------------------- //
+
+void DebugUI::SceneStats(Scene& scene) {
+    ImGui::Text("Batches:                    %d"  , scene.GetNumAssetBatches());
+    ImGui::Separator();
+    ImGui::Text("Models:                     %llu", scene.GetNumModels());
+    ImGui::Text("Meshes:                     %llu", scene.GetNumMeshes());
+    ImGui::Text("Submeshes:                  %llu", scene.GetNumSubmeshes());
+    ImGui::Separator();
+    ImGui::Text("Materials:                  %llu", scene.GetNumMaterials());
+    ImGui::Text("Sprites:                    %llu", scene.GetNumSprites());
+    ImGui::Text("Texts:                      %llu", scene.GetNumTexts());
+    ImGui::Text("Outlines:                   %llu", scene.GetNumOutlines());
+    ImGui::Separator();
+    ImGui::Text("Submesh instances:          %llu", scene.GetNumSubmeshInstances());
+    ImGui::Text("Rendered submesh instances: %llu", scene.GetNumRenderedSubmeshInstances());
+    ImGui::Text("Loaded vertices:            %llu", scene.GetNumLoadedVertices());
+    ImGui::Text("Rendered vertices:          %llu", scene.GetNumRenderedVertices());
+}
+
+void DebugUI::SceneMenu(Scene& scene) {
+    ImGui::SeparatorText("Batches");
+    static std::uint8_t selectedBatch = 0;
+    AssetBatchSelector(selectedBatch, scene.GetAssetBatches());
+    AssetBatchMenu(*scene.GetAssetBatches()[selectedBatch]);
+    ImGui::SeparatorText("Scene");
+    if (ImGui::CollapsingHeader("Camera")) {
+        CameraMenu(scene.GetCamera());
+        ImGui::Separator();
+        ImGui::Spacing();
+    }
+    if (ImGui::CollapsingHeader("Stats")) {
+        SceneStats(scene);
+        ImGui::Separator();
+        ImGui::Spacing();
+    }
 }
 
 void DebugUI::SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags) {
@@ -1092,44 +1822,7 @@ void DebugUI::SceneWindow(Scene& scene, ImGuiWindowFlags windowFlags) {
         ImGui::End();
         return;
     }
-    if (ImGui::CollapsingHeader("Stats")) {
-        ImGui::Text("Models:                     %llu", scene.GetNumModels());
-        ImGui::Text("Meshes:                     %llu", scene.GetNumMeshes());
-        ImGui::Text("Submeshes:                  %llu", scene.GetNumSubmeshes());
-        ImGui::Separator();
-        ImGui::Text("Materials:                  %llu", scene.GetNumMaterials());
-        ImGui::Text("Sprites:                    %llu", scene.GetNumSprites());
-        ImGui::Text("Texts:                      %llu", scene.GetNumTexts());
-        ImGui::Text("Outlines:                   %llu", scene.GetNumOutlines());
-        ImGui::Separator();
-        ImGui::Text("Submesh instances:          %llu", scene.GetNumSubmeshInstances());
-        ImGui::Text("Rendered submesh instances: %llu", scene.GetNumRenderedSubmeshInstances());
-        ImGui::Text("Loaded vertices:            %llu", scene.GetNumLoadedVertices());
-        ImGui::Text("Rendered vertices:          %llu", scene.GetNumRenderedVertices());
-
-        ImGui::Separator();
-        ImGui::Spacing();
-    }
-    if (ImGui::CollapsingHeader("Camera")) {
-        CameraMenu(scene.GetCamera());
-        ImGui::Separator();
-        ImGui::Spacing();
-    }
-    ImGui::SeparatorText("Batches");
-    static std::uint8_t selectedBatch = 0;
-    if (ImGui::BeginListBox("##Batches")) {
-        for (std::uint8_t i = 0; i < scene.GetNumAssetBatches(); ++i) {
-            const bool isSelected = (selectedBatch == i);
-            if (ImGui::Selectable(scene.GetAssetBatches()[i]->GetName().c_str(), isSelected))
-                selectedBatch = i;
-            if (isSelected)
-                ImGui::SetItemDefaultFocus();
-        }
-        ImGui::EndListBox();
-    }
-    selectedBatch = selectedBatch >= scene.GetNumAssetBatches() ? 0 : selectedBatch;
-    AssetBatchMenu(*scene.GetAssetBatches()[selectedBatch]);
-
+    SceneMenu(scene);
     ImGui::End();
 }
 
