@@ -48,7 +48,7 @@ class Bone : public Asset {
 // If multiple instances need to be rendered then the **RenderFlags::Effect::Instances** should be set in the used material.
 class Submesh : public Asset {
     public:
-        Submesh(std::string name, std::uint32_t materialIndex = 0, bool visible = true) noexcept;
+        Submesh(std::string name = "", std::uint32_t materialIndex = 0, bool visible = true) noexcept;
 
     public:
         std::uint32_t GetNumCulled() const noexcept;

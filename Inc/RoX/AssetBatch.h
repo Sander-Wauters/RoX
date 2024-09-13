@@ -18,6 +18,17 @@ using Outlines  = std::unordered_map<std::uint64_t, std::shared_ptr<Outline>>;
 // Contains data that will be rendered to the display.
 class AssetBatch {
     public:
+        // Holds every type of asset that can be added and/or removed directly from an **AssetBatch**.
+        // Primarily used to make the **Remove___** functions easier to use.
+        enum class AssetType {
+            Material,
+            Model,
+            Sprite,
+            Text,
+            Outline
+        };
+
+    public:
         AssetBatch(const std::string name, bool visible = true, std::uint8_t maxNumTextures = 128) noexcept;
         ~AssetBatch() noexcept;
 
@@ -41,6 +52,7 @@ class AssetBatch {
         void RemoveSprite(std::uint64_t GUID);
         void RemoveText(std::uint64_t GUID);
         void RemoveOutline(std::uint64_t GUID);
+        void Remove(AssetBatch::AssetType type, std::uint64_t GUID);
 
         // Uses **FindGUID** internally.
         void RemoveMaterial(std::string name);
@@ -48,6 +60,7 @@ class AssetBatch {
         void RemoveSprite(std::string name);
         void RemoveText(std::string name);
         void RemoveOutline(std::string name);
+        void Remove(AssetBatch::AssetType type, std::string name);
 
         void RegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept;
         void DeregisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept;

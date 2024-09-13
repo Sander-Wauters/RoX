@@ -118,8 +118,8 @@ void Renderer::Impl::Update() {
 }
 
 void Renderer::Impl::Render(const std::function<void()>& renderImGui) {
-    // Don't try to render anything before the first Update and before a Scene is loaded.
-    if (m_pOwner->m_timer.GetFrameCount() == 0 || !m_pDeviceResourceData->SceneLoaded())
+    // Don't try to render anything before a Scene is loaded.
+    if (!m_pDeviceResourceData->SceneLoaded())
         return;
 
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
@@ -526,18 +526,17 @@ void Renderer::Impl::CreateWindowSizeDependentResources() {
         m_pDeviceResourceData->CreateWindowSizeDependentResources();
 }
 
-Renderer::Renderer(Timer& timer) 
-    noexcept : m_timer(timer), 
-    m_pImpl(std::make_unique<Impl>(this)) 
+Renderer::Renderer() 
+    noexcept : m_pImpl(std::make_unique<Impl>(this)) 
 {} 
 
 Renderer::~Renderer() noexcept {
 
 }
 
-Renderer::Renderer(Renderer&& other) noexcept : m_timer(other.m_timer), m_pImpl(std::make_unique<Impl>(this)) {
-
-}
+Renderer::Renderer(Renderer&& other) 
+    noexcept : m_pImpl(std::make_unique<Impl>(this)) 
+{}
 
 void Renderer::Initialize(HWND window, int width, int height) { 
     m_pImpl->Initialize(window, width, height); 

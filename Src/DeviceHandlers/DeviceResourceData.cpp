@@ -27,8 +27,6 @@ void DeviceResourceData::Load(Scene& scene, bool& msaaEnabled) {
 }
 
 void DeviceResourceData::UpdateEffects() {
-    // TODO: Client should be able to decide this.
-    // Store the view and projection in the object that the client has access to.
     DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&m_pScene->GetCamera().GetView());
     DirectX::XMMATRIX projection = DirectX::XMLoadFloat4x4(&m_pScene->GetCamera().GetProjection());
 

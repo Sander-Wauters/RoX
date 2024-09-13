@@ -10,7 +10,7 @@
 // Responsible for rendering the contents of a **Scene** to the display.
 class Renderer : public IWindowObserver {
     public:
-        Renderer(Timer& timer) noexcept;
+        Renderer() noexcept;
         ~Renderer() noexcept;
 
         Renderer(Renderer&& other) noexcept;
@@ -39,8 +39,6 @@ class Renderer : public IWindowObserver {
         bool IsMsaaEnabled() const noexcept;
 
     private:
-        Timer& m_timer;
-
         // Private implementation.
         class Impl;
         std::unique_ptr<Impl> m_pImpl;

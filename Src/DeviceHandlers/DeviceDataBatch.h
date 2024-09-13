@@ -103,9 +103,11 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
         DeviceResources& m_deviceResources;
         const bool& m_msaaEnabled;
 
+        std::queue<std::function<void()>> m_queuedUpdates;
+
         const std::uint8_t m_descriptorHeapSize;
         std::uint8_t m_nextDescriptorHeapIndex;
-        std::vector<std::uint8_t> m_openDescriptorHeapIndices;
+        std::queue<std::uint8_t> m_openDescriptorHeapIndices;
 
         std::unique_ptr<DirectX::DescriptorHeap> m_pDescriptorHeap;
         std::unique_ptr<DirectX::CommonStates> m_pStates;

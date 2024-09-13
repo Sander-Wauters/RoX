@@ -156,6 +156,26 @@ void AssetBatch::RemoveOutline(std::uint64_t GUID) {
     m_outlines.erase(GUID);
 }
 
+void AssetBatch::Remove(AssetBatch::AssetType type, std::uint64_t GUID) {
+    switch (type) {
+        case AssetType::Material:
+            RemoveMaterial(GUID);
+            break;
+        case AssetType::Model:
+            RemoveModel(GUID);
+            break;
+        case AssetType::Sprite:
+            RemoveSprite(GUID);
+            break;
+        case AssetType::Text:
+            RemoveText(GUID);
+            break;
+        case AssetType::Outline:
+            RemoveOutline(GUID);
+            break;
+    }
+}
+
 void AssetBatch::RemoveMaterial(std::string name) {
     std::uint64_t GUID = FindGUID(name, m_materials);
     for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
@@ -194,6 +214,26 @@ void AssetBatch::RemoveOutline(std::string name) {
         pAssetBatchObserver->OnRemove(m_outlines.at(GUID));
     }
     m_outlines.erase(GUID);
+}
+
+void AssetBatch::Remove(AssetBatch::AssetType type, std::string name) {
+    switch (type) {
+        case AssetType::Material:
+            RemoveMaterial(name);
+            break;
+        case AssetType::Model:
+            RemoveModel(name);
+            break;
+        case AssetType::Sprite:
+            RemoveSprite(name);
+            break;
+        case AssetType::Text:
+            RemoveText(name);
+            break;
+        case AssetType::Outline:
+            RemoveOutline(name);
+            break;
+    }
 }
 
 void AssetBatch::RegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept {

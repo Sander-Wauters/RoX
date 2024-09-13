@@ -66,92 +66,99 @@ void DeviceDataBatch::Add(const AssetBatch& batch) {
 }
 
 void DeviceDataBatch::OnAdd(const std::shared_ptr<Material>& pMaterial) {
-    ID3D12Device* pDevice = m_deviceResources.GetDevice();
+    m_queuedUpdates.push([=]() {
+        ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
-    DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
-    resourceUploadBatch.Begin();
+        DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
+        resourceUploadBatch.Begin();
 
-    std::unique_ptr<TextureDeviceData>& pDiffData = m_textureData[pMaterial->GetDiffuseMapFilePath()];
-    if (!pDiffData) {
-        pDiffData = std::make_unique<TextureDeviceData>(NextHeapIndex());
-        CreateTextureResource(pMaterial->GetDiffuseMapFilePath(), pDiffData, resourceUploadBatch);
-    } else
-        pDiffData->IncreaseRefCount();
+        std::unique_ptr<TextureDeviceData>& pDiffData = m_textureData[pMaterial->GetDiffuseMapFilePath()];
+        if (!pDiffData) {
+            pDiffData = std::make_unique<TextureDeviceData>(NextHeapIndex());
+            CreateTextureResource(pMaterial->GetDiffuseMapFilePath(), pDiffData, resourceUploadBatch);
+        } else
+            pDiffData->IncreaseRefCount();
 
-    std::unique_ptr<TextureDeviceData>& pNormData = m_textureData[pMaterial->GetNormalMapFilePath()];
-    if (!pNormData) {
-        pNormData = std::make_unique<TextureDeviceData>(NextHeapIndex());
-        CreateTextureResource(pMaterial->GetNormalMapFilePath(), pNormData, resourceUploadBatch);
-    } else
-        pNormData->IncreaseRefCount();
+        std::unique_ptr<TextureDeviceData>& pNormData = m_textureData[pMaterial->GetNormalMapFilePath()];
+        if (!pNormData) {
+            pNormData = std::make_unique<TextureDeviceData>(NextHeapIndex());
+            CreateTextureResource(pMaterial->GetNormalMapFilePath(), pNormData, resourceUploadBatch);
+        } else
+            pNormData->IncreaseRefCount();
 
-    std::unique_ptr<DirectX::IEffect>& pIEffect = m_materialData[pMaterial];
-    if (!pIEffect) {
-        pIEffect = BuildIEffect(*pMaterial);
-        BindTexturesToEffect(*pMaterial, *pIEffect);
-    }
+        std::unique_ptr<DirectX::IEffect>& pIEffect = m_materialData[pMaterial];
+        if (!pIEffect) {
+            pIEffect = BuildIEffect(*pMaterial);
+            BindTexturesToEffect(*pMaterial, *pIEffect);
+        }
 
-    std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
-    uploadResourceFinished.wait();
+        std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
+        uploadResourceFinished.wait();
+    });
 }
 
 void DeviceDataBatch::OnAdd(const std::shared_ptr<Model>& pModel) {
-    ID3D12Device* pDevice = m_deviceResources.GetDevice();
-    std::unique_ptr<ModelDeviceData>& pModelData = m_modelData[pModel];
+    m_queuedUpdates.push([&]() {
+        ID3D12Device* pDevice = m_deviceResources.GetDevice();
+        std::unique_ptr<ModelDeviceData>& pModelData = m_modelData[pModel];
 
+        if (!pModelData) {
+            DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
+            resourceUploadBatch.Begin();
 
-    if (!pModelData) {
-        DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
-        resourceUploadBatch.Begin();
+            pModelData = std::make_unique<ModelDeviceData>(pDevice, pModel.get(), m_meshData);
+            pModelData->LoadStaticBuffers(pDevice, resourceUploadBatch);
 
-        pModelData = std::make_unique<ModelDeviceData>(pDevice, pModel.get(), m_meshData);
-        pModelData->LoadStaticBuffers(pDevice, resourceUploadBatch);
+            pModelData->GetEffects().reserve(pModel->GetNumMaterials());
+            for (std::uint8_t i = 0; i < pModel->GetNumMaterials(); ++i) {
+                std::shared_ptr<Material> pMaterial = pModel->GetMaterials()[i];
+                OnAdd(pMaterial); // Material should already be added by now but the redundancy doesn't effect performance much.
+                pModelData->GetEffects().push_back(m_materialData.at(pMaterial).get());
+            }
+            pModelData->GetEffects().shrink_to_fit();
 
-        pModelData->GetEffects().reserve(pModel->GetNumMaterials());
-        for (std::uint8_t i = 0; i < pModel->GetNumMaterials(); ++i) {
-            std::shared_ptr<Material> pMaterial = pModel->GetMaterials()[i];
-            OnAdd(pMaterial); // Material should already be added by now but the redundancy doesn't effect performance much.
-            pModelData->GetEffects().push_back(m_materialData.at(pMaterial).get());
+            std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
+            uploadResourceFinished.wait();
         }
-        pModelData->GetEffects().shrink_to_fit();
-
-        std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
-        uploadResourceFinished.wait();
-    }
+    });
 }
 
 void DeviceDataBatch::OnAdd(const std::shared_ptr<Sprite>& pSprite) {
-    ID3D12Device* pDevice = m_deviceResources.GetDevice();
+    m_queuedUpdates.push([=]() {
+        ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
-    std::unique_ptr<TextureDeviceData>& pSpriteData = m_spriteData[pSprite]; 
+        std::unique_ptr<TextureDeviceData>& pSpriteData = m_spriteData[pSprite]; 
 
-    if (!pSpriteData) {
-        DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
-        resourceUploadBatch.Begin();
+        if (!pSpriteData) {
+            DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
+            resourceUploadBatch.Begin();
 
-        pSpriteData = std::make_unique<TextureDeviceData>(NextHeapIndex());
-        CreateSpriteResource(pSprite, pSpriteData, resourceUploadBatch);
+            pSpriteData = std::make_unique<TextureDeviceData>(NextHeapIndex());
+            CreateSpriteResource(pSprite, pSpriteData, resourceUploadBatch);
 
-        std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
-        uploadResourceFinished.wait();
-    }
+            std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
+            uploadResourceFinished.wait();
+        }
+    });
 }
 
 void DeviceDataBatch::OnAdd(const std::shared_ptr<Text>& pText) {
-    ID3D12Device* pDevice = m_deviceResources.GetDevice();
+    m_queuedUpdates.push([=]() {
+        ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
-    std::unique_ptr<TextDeviceData>& pTextData = m_textData[pText];
+        std::unique_ptr<TextDeviceData>& pTextData = m_textData[pText];
 
-    if (!pTextData) {
-        DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
-        resourceUploadBatch.Begin();
+        if (!pTextData) {
+            DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
+            resourceUploadBatch.Begin();
 
-        pTextData = std::make_unique<TextDeviceData>(NextHeapIndex());
-        CreateTextResource(pText, pTextData, resourceUploadBatch);
+            pTextData = std::make_unique<TextDeviceData>(NextHeapIndex());
+            CreateTextResource(pText, pTextData, resourceUploadBatch);
 
-        std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
-        uploadResourceFinished.wait();
-    }
+            std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
+            uploadResourceFinished.wait();
+        }
+    });
 }
 
 void DeviceDataBatch::OnAdd(const std::shared_ptr<Outline>& pOutline) {
@@ -159,40 +166,48 @@ void DeviceDataBatch::OnAdd(const std::shared_ptr<Outline>& pOutline) {
 }
 
 void DeviceDataBatch::OnRemove(const std::shared_ptr<Material>& pMaterial) {
-    m_deviceResources.WaitForGpu();
+    m_queuedUpdates.push([=]() {
+        m_deviceResources.WaitForGpu();
 
-    auto& pDiffData = m_textureData.at(pMaterial->GetDiffuseMapFilePath());
-    pDiffData->DecreaseRefCount();
-    if (!pDiffData->HasReferences()) {
-        m_openDescriptorHeapIndices.push_back(pDiffData->GetHeapIndex());
-        m_textureData.erase(pMaterial->GetDiffuseMapFilePath());
-    }
+        auto& pDiffData = m_textureData.at(pMaterial->GetDiffuseMapFilePath());
+        pDiffData->DecreaseRefCount();
+        if (!pDiffData->HasReferences()) {
+            m_openDescriptorHeapIndices.push(pDiffData->GetHeapIndex());
+            m_textureData.erase(pMaterial->GetDiffuseMapFilePath());
+        }
 
-    auto& pNormData = m_textureData.at(pMaterial->GetNormalMapFilePath());
-    pNormData->DecreaseRefCount();
-    if (!pNormData->HasReferences()) {
-        m_openDescriptorHeapIndices.push_back(pNormData->GetHeapIndex());
-        m_textureData.erase(pMaterial->GetNormalMapFilePath());
-    }
+        auto& pNormData = m_textureData.at(pMaterial->GetNormalMapFilePath());
+        pNormData->DecreaseRefCount();
+        if (!pNormData->HasReferences()) {
+            m_openDescriptorHeapIndices.push(pNormData->GetHeapIndex());
+            m_textureData.erase(pMaterial->GetNormalMapFilePath());
+        }
 
-    m_materialData.erase(pMaterial);
+        m_materialData.erase(pMaterial);
+    });
 }
 
 void DeviceDataBatch::OnRemove(const std::shared_ptr<Model>& pModel) {
-    m_deviceResources.WaitForGpu();
-    m_modelData.erase(pModel);
+    m_queuedUpdates.push([=]() {
+        m_deviceResources.WaitForGpu();
+        m_modelData.erase(pModel);
+    });
 }
 
 void DeviceDataBatch::OnRemove(const std::shared_ptr<Sprite>& pSprite) {
-    m_deviceResources.WaitForGpu();
-    m_openDescriptorHeapIndices.push_back(m_spriteData.at(pSprite)->GetHeapIndex());
-    m_spriteData.erase(pSprite); 
+    m_queuedUpdates.push([=]() {
+        m_deviceResources.WaitForGpu();
+        m_openDescriptorHeapIndices.push(m_spriteData.at(pSprite)->GetHeapIndex());
+        m_spriteData.erase(pSprite); 
+    });
 }
 
 void DeviceDataBatch::OnRemove(const std::shared_ptr<Text>& pText) {
-    m_deviceResources.WaitForGpu();
-    m_openDescriptorHeapIndices.push_back(m_textData.at(pText)->GetHeapIndex());
-    m_textData.erase(pText);
+    m_queuedUpdates.push([=]() {
+        m_deviceResources.WaitForGpu();
+        m_openDescriptorHeapIndices.push(m_textData.at(pText)->GetHeapIndex());
+        m_textData.erase(pText);
+    });
 }
 
 void DeviceDataBatch::OnRemove(const std::shared_ptr<Outline>& pOutline) {
@@ -213,6 +228,11 @@ void DeviceDataBatch::UpdateEffects(DirectX::XMMATRIX view, DirectX::XMMATRIX pr
             pNormal->SetEmissiveColor(DirectX::XMLoadFloat4(&materialPair.first->GetEmissiveColor()));
             pNormal->SetSpecularColor(DirectX::XMLoadFloat4(&materialPair.first->GetSpecularColor()));
         }
+    }
+
+    while (!m_queuedUpdates.empty()) {
+        m_queuedUpdates.front()();
+        m_queuedUpdates.pop();
     }
 }
 
@@ -259,8 +279,8 @@ void DeviceDataBatch::CreateWindowSizeDependentResources() {
 std::uint8_t DeviceDataBatch::NextHeapIndex() noexcept {
     std::uint8_t nextIndex;
     if (m_openDescriptorHeapIndices.size() > 0) {
-        nextIndex = m_openDescriptorHeapIndices.back();
-        m_openDescriptorHeapIndices.pop_back();
+        nextIndex = m_openDescriptorHeapIndices.front();
+        m_openDescriptorHeapIndices.pop();
     } else 
         nextIndex = m_nextDescriptorHeapIndex++;
 

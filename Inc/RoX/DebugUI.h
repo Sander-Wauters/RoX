@@ -34,6 +34,7 @@ namespace DebugUI {
 
     void ArrayControls(const char* label, std::uint32_t* pIndex, const std::function<void()>& onAdd, const std::function<void()>& onRemove);
 
+    void Error(bool show, const char* label);
     void SameLineError(bool show, const char* label);
 
     // Vertices and indices.
@@ -53,6 +54,13 @@ namespace DebugUI {
     bool AffineTransformation(DirectX::XMMATRIX& matrix);
     bool AffineTransformation(DirectX::XMFLOAT4X4& matrix);
     bool AffineTransformation(DirectX::XMFLOAT3X4& matrix);
+
+    // Assets.
+    void AssetRemover(AssetBatch::AssetType type, AssetBatch& batch);
+
+    void AssetMenu(Asset& asset);
+
+    void AssetRemoverPopupMenu(AssetBatch::AssetType type, AssetBatch& batch);
 
     // Materials.
     void RenderFlagsPresets(std::uint32_t& renderFlags);
@@ -85,15 +93,18 @@ namespace DebugUI {
     void SpritePosition(Sprite& sprite);
 
     void SpriteCreator(AssetBatch& batch);
-    void TextCreator(AssetBatch& batch);
 
     void SpriteMenu(Sprite& sprite);
     void SpriteMenu(const Sprites& sprites); 
 
+    void SpriteCreatorPopupMenu(AssetBatch& batch);
+
+    // Texts.
+    void TextCreator(AssetBatch& batch);
+
     void TextMenu(Text& text);
     void TextMenu(const Texts& texts);
 
-    void SpriteCreatorPopupMenu(AssetBatch& batch);
     void TextCreatorPopupMenu(AssetBatch& batch);
 
     // Bones.
@@ -161,6 +172,8 @@ namespace DebugUI {
 
     void OutlineMenu(Outline& outline);
     void OutlineMenu(const Outlines& outlines);
+
+    void OutlineCreatorPopupMenu(AssetBatch& batch);
 
     // Camera.
     void CameraMenu(Camera& camera);

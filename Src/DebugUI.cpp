@@ -134,6 +134,11 @@ void DebugUI::ArrayControls(const char* label, std::uint32_t* pIndex, const std:
         onRemove();
 }
 
+void DebugUI::Error(bool show, const char* label) {
+    if (show)
+        ImGui::TextColored(COLOR_ERROR, "%s", label);
+}
+
 void DebugUI::SameLineError(bool show, const char* label) {
     if (show) {
         ImGui::SameLine();
@@ -204,7 +209,6 @@ void DebugUI::Vertices(std::vector<VertexPositionNormalTexture>& vertices) {
     ImGui::Text("Vertices: %lu", (unsigned long)vertices.size());
 
     ImGui::Separator();
-
     ArrayControls("index##Vertices", &index, onAdd, onRemove);
     if (index >= 0 && index < vertices.size())
         Vertex(vertices[index]);
@@ -255,7 +259,6 @@ void DebugUI::Indices(std::vector<std::uint16_t>& indices, std::uint16_t numVert
     ImGui::Text("Vertices: %d", numVertices);
 
     ImGui::Separator();
-
     ArrayControls("index##Indices", &index, onAdd, onRemove);
     if (index >= 0 && index < indices.size()) {
         std::uint16_t selectedIndex = indices[index];
@@ -368,6 +371,91 @@ bool DebugUI::AffineTransformation(DirectX::XMFLOAT3X4& matrix) {
     bool transformatonApplied = AffineTransformation(M);
     DirectX::XMStoreFloat3x4(&matrix, M);
     return transformatonApplied;
+}
+
+// ---------------------------------------------------------------- //
+//                          Assets.
+// ---------------------------------------------------------------- //
+
+void DebugUI::AssetRemover(AssetBatch::AssetType type, AssetBatch& batch) {
+    static std::uint64_t GUID = 0;
+    static bool GUIDnotFound = false;
+
+    static char name[128] = "";
+    static bool nameNotFound = false;
+
+    try {
+        ImGui::InputScalar(GUIDLabel("GUID", "MaterialRemover").c_str(), ImGuiDataType_U64, &GUID);
+        ImGui::SameLine();
+        if (ImGui::SmallButton(GUIDLabel("Remove", "MaterialRemover_GUID").c_str())) {
+            GUIDnotFound = false;
+            batch.Remove(type, GUID);
+        }
+        Error(GUIDnotFound, "Material not found."); 
+    } catch (std::out_of_range ex) {
+        GUIDnotFound = true;
+    }
+
+    try {
+        ImGui::InputText(GUIDLabel("Name", "MaterialRemover").c_str(), name, std::size(name));
+        ImGui::SameLine();
+        if (ImGui::SmallButton(GUIDLabel("Remove", "MaterialRemover_Name").c_str())) {
+            nameNotFound = false;
+            batch.Remove(type, name);
+        }
+        Error(nameNotFound, "Material not found."); 
+    } catch (std::out_of_range ex) {
+        nameNotFound = true;
+    }
+}
+
+void DebugUI::AssetMenu(Asset& asset) {
+    static char name[128] = "";
+    static bool editName = false;
+
+    ImGui::Text("GUID: %llu", asset.GetGUID());
+
+    ImGui::Text("Name: %s", asset.GetName().c_str());
+    ImGui::SameLine();
+    if (ImGui::SmallButton(GUIDLabel("Change", asset.GetGUID()).c_str()))
+        editName = !editName;
+
+    if (editName) {
+        ImGui::InputText(GUIDLabel("", asset.GetGUID()).c_str(), name, std::size(name));
+        ImGui::SameLine();
+        if (ImGui::Button(GUIDLabel("Save", asset.GetGUID()).c_str())) {
+            asset.SetName(name);
+            editName = false;
+        }
+    }
+}
+
+void DebugUI::AssetRemoverPopupMenu(AssetBatch::AssetType type, AssetBatch& batch) {
+    std::string typeStr;
+    switch (type) {
+        case AssetBatch::AssetType::Material:
+            typeStr = "Material";
+            break;
+        case AssetBatch::AssetType::Model:
+            typeStr = "Model";
+            break;
+        case AssetBatch::AssetType::Sprite:
+            typeStr = "Sprite";
+            break;
+        case AssetBatch::AssetType::Text:
+            typeStr = "Text";
+            break;
+        case AssetBatch::AssetType::Outline:
+            typeStr = "Outline";
+            break;
+    }
+
+    if (ImGui::Button(GUIDLabel("-", "AssetRemoverPopupMenu" + typeStr).c_str())) 
+        ImGui::OpenPopup(std::string("AssetRemoverPopupMenu" + typeStr).c_str());
+    if (ImGui::BeginPopup(std::string("AssetRemoverPopupMenu" + typeStr).c_str())) {
+        AssetRemover(type, batch);
+        ImGui::EndPopup();
+    }
 }
 
 // ---------------------------------------------------------------- //
@@ -544,7 +632,7 @@ void DebugUI::MaterialHeader(Material& material) {
     ImVec4 diffuse  = { material.GetDiffuseColor().x,  material.GetDiffuseColor().y,  material.GetDiffuseColor().z,  material.GetDiffuseColor().w  };
     ImVec4 emissive = { material.GetEmissiveColor().x, material.GetEmissiveColor().y, material.GetEmissiveColor().z, material.GetEmissiveColor().w }; 
     ImVec4 specular = { material.GetSpecularColor().x, material.GetSpecularColor().y, material.GetSpecularColor().z, material.GetSpecularColor().w };
-    
+
     ImGui::Text("%s", material.GetName().c_str());
     ImGui::SameLine();
     ImGui::ColorButton("diffuse", diffuse, ImGuiColorEditFlags_None, buttonSize);
@@ -633,17 +721,22 @@ void DebugUI::MaterialCreator(AssetBatch& batch) {
     static float specular[4] = { 1.f, 1.f, 1.f, 1.f };
 
     ImGui::InputText("Name##MaterialCreator", name, std::size(name));
+
     ImGui::SeparatorText("Textures");
     bool validDiffuse = InputFilePath("Diffuse map##MaterialCreator", diffuseMapFilePath, std::size(diffuseMapFilePath));
     SameLineError(!validDiffuse, "file not found");
     bool validNormal = InputFilePath("Normal map##MaterialCreator", normalMapFilePath, std::size(normalMapFilePath));
-    SameLineError(!validDiffuse, "file not found");
+    SameLineError(!validNormal, "file not found");
+
     ImGui::SeparatorText("Render flags");
     RenderFlags(renderFlags);
+
     ImGui::SeparatorText("Colors");
+
     ImGui::ColorEdit4("Diffuse##MaterialCreator", diffuse);
     ImGui::ColorEdit4("Emissive##MaterialCreator", emissive);
     ImGui::ColorEdit4("Specular##MaterialCreator", specular);
+
     if (ImGui::Button("Create new material##MaterialCreator") && validDiffuse && validNormal) {
         DirectX::XMFLOAT4 D;
         LoadFloat4(diffuse, D);
@@ -666,10 +759,15 @@ void DebugUI::MaterialCreator(AssetBatch& batch) {
 void DebugUI::MaterialMenu(Material& material) {
     std::uint32_t renderFlags = material.GetFlags();
 
+    ImGui::SeparatorText("Identifiers");
+    AssetMenu(material);
+
     ImGui::SeparatorText("Textures");
     MaterialTextures(material);
+
     ImGui::SeparatorText("Render flags");
     RenderFlags(renderFlags);
+
     ImGui::SeparatorText("Colors");
     MaterialColors(material);
 }
@@ -741,14 +839,17 @@ void DebugUI::SpriteCreator(AssetBatch& batch) {
     ImGui::Checkbox("Visible##SpriteCreator", &visible);
     bool validFilePath = InputFilePath("File path##SpriteCreator", filePath, std::size(filePath));
     SameLineError(!validFilePath, "file not found");
+
     ImGui::SeparatorText("Position");
     ImGui::DragFloat2("Origin##SpriteCreator", origin);
     ImGui::DragFloat2("Offset##SpriteCreator", offset);
     ImGui::DragFloat2("Scale##SpriteCreator", scale);
     ImGui::DragFloat("Layer##SpriteCreator", &layer);
     ImGui::DragFloat("Angle##SpriteCreator", &angle);
+
     ImGui::SeparatorText("Color");
     ImGui::DragFloat4("Color##SpriteCreator", color);
+
     if (ImGui::Button("Create new sprite##SpriteCreator") && validFilePath) {
         DirectX::XMFLOAT4 C = { color[0], color[1], color[2], color[3] };
         DirectX::XMFLOAT2 Or = { origin[0], origin[1] };
@@ -764,6 +865,49 @@ void DebugUI::SpriteCreator(AssetBatch& batch) {
                     visible));
     }
 }
+
+void DebugUI::SpriteMenu(Sprite& sprite) {
+    bool visible = sprite.IsVisible();
+    if (ImGui::Checkbox("Visible", &visible))
+        sprite.SetVisible(visible);
+
+    ImGui::SeparatorText("Identifiers");
+    AssetMenu(sprite);
+
+    ImGui::SeparatorText("Textures");
+    ImGui::Text("File: %ws", sprite.GetFilePath().c_str());
+
+    ImGui::SeparatorText("Position");
+    SpritePosition(sprite);
+    float color[4];
+    StoreFloat4(sprite.GetColor(), color);
+
+    ImGui::SeparatorText("Color");
+    if (ImGui::ColorEdit4(GUIDLabel("Color", sprite.GetGUID()).c_str(), color))
+        LoadFloat4(color, sprite.GetColor());
+}
+
+void DebugUI::SpriteMenu(const Sprites& sprites) {
+    for (auto& spritePair : sprites) {
+        if (ImGui::TreeNode(spritePair.second->GetName().c_str())) {
+            SpriteMenu(*spritePair.second);
+            ImGui::TreePop();
+        }
+    }
+}
+
+void DebugUI::SpriteCreatorPopupMenu(AssetBatch& batch) {
+    if (ImGui::Button(GUIDLabel("+", "SpriteCreatorPopupMenu").c_str())) 
+        ImGui::OpenPopup("SpriteCreatorPopupMenu");
+    if (ImGui::BeginPopup("SpriteCreatorPopupMenu")) {
+        SpriteCreator(batch);
+        ImGui::EndPopup();
+    }
+}
+
+// ---------------------------------------------------------------- //
+//                          Texts.
+// ---------------------------------------------------------------- //
 
 void DebugUI::TextCreator(AssetBatch& batch) {
     static char filePath[128] = "";
@@ -782,14 +926,17 @@ void DebugUI::TextCreator(AssetBatch& batch) {
     InputTextMultiline("Contents##TextCreator", &content);
     bool validFilePath = InputFilePath("File path##TextCreator", filePath, std::size(filePath));
     SameLineError(!validFilePath, "file not found");
+
     ImGui::SeparatorText("Position");
     ImGui::DragFloat2("Origin##TextCreator", origin);
     ImGui::DragFloat2("Offset##TextCreator", offset);
     ImGui::DragFloat2("Scale##TextCreator", scale);
     ImGui::DragFloat("Layer##TextCreator", &layer);
     ImGui::DragFloat("Angle##TextCreator", &angle);
+
     ImGui::SeparatorText("Color");
     ImGui::DragFloat4("Color##TextCreator", color);
+
     if (ImGui::Button("Create new sprite##TextCreator") && validFilePath) {
         DirectX::XMFLOAT4 C = { color[0], color[1], color[2], color[3] };
         DirectX::XMFLOAT2 Or = { origin[0], origin[1] };
@@ -807,29 +954,6 @@ void DebugUI::TextCreator(AssetBatch& batch) {
     }
 }
 
-void DebugUI::SpriteMenu(Sprite& sprite) {
-    bool visible = sprite.IsVisible();
-    if (ImGui::Checkbox("Visible", &visible))
-        sprite.SetVisible(visible);
-    ImGui::Text("File: %ws", sprite.GetFilePath().c_str());
-    ImGui::SeparatorText("Position");
-    SpritePosition(sprite);
-    float color[4];
-    StoreFloat4(sprite.GetColor(), color);
-    ImGui::SeparatorText("Color");
-    if (ImGui::ColorEdit4(GUIDLabel("Color", sprite.GetGUID()).c_str(), color))
-        LoadFloat4(color, sprite.GetColor());
-}
-
-void DebugUI::SpriteMenu(const Sprites& sprites) {
-    for (auto& spritePair : sprites) {
-        if (ImGui::TreeNode(spritePair.second->GetName().c_str())) {
-            SpriteMenu(*spritePair.second);
-            ImGui::TreePop();
-        }
-    }
-}
-
 void DebugUI::TextMenu(Text& text) {
     static std::string content;
     SpriteMenu(text);
@@ -844,15 +968,6 @@ void DebugUI::TextMenu(const Texts& texts) {
             TextMenu(*textPair.second);
             ImGui::TreePop();
         }
-    }
-}
-
-void DebugUI::SpriteCreatorPopupMenu(AssetBatch& batch) {
-    if (ImGui::Button(GUIDLabel("+", "SpriteCreatorPopupMenu").c_str())) 
-        ImGui::OpenPopup("SpriteCreatorPopupMenu");
-    if (ImGui::BeginPopup("SpriteCreatorPopupMenu")) {
-        SpriteCreator(batch);
-        ImGui::EndPopup();
     }
 }
 
@@ -881,13 +996,20 @@ void DebugUI::BoneSelector(std::uint32_t& index, std::vector<Bone>& bones) {
 
 void DebugUI::BoneMenu(Model& model, std::uint32_t boneIndex) {
     std::vector<Bone>& bones = model.GetBones();
+
+    ImGui::SeparatorText("Identifiers");
+    AssetMenu(bones[boneIndex]);
+
+    ImGui::SeparatorText("Parent");
     ImGui::Text("Parent: %s", bones[boneIndex].IsRoot() ? "NONE" : bones[bones[boneIndex].GetParentIndex()].GetName().c_str());
     ImGui::Text("Parent index: %d", bones[boneIndex].GetParentIndex());
+
     if (ImGui::CollapsingHeader("Transform")) {
         AffineTransformation(model.GetBoneMatrices()[boneIndex]);
         ImGui::Separator();
         Matrix(model.GetBoneMatrices()[boneIndex]);
     }
+
     if (ImGui::CollapsingHeader("Inverse bind pose")) {
         AffineTransformation(model.GetBoneMatrices()[boneIndex]);
         ImGui::Separator();
@@ -925,7 +1047,6 @@ void DebugUI::SubmeshInstances(Submesh& submesh) {
     HelpMarker("The last n instances will be culled.");
 
     ImGui::Separator();
-
     std::function<void()> onAdd = [&]() {
         submesh.GetInstances().push_back({});
         DirectX::XMStoreFloat3x4(&submesh.GetInstances().back(), DirectX::XMMatrixIdentity());
@@ -968,9 +1089,10 @@ void DebugUI::SubmeshCreator(IMesh& iMesh, std::vector<std::shared_ptr<Material>
     static char name[128] = "";
     static std::uint32_t materialIndex = 0;
     static bool visible = true;
-    
+
     ImGui::InputText("Name##SubmeshCreator", name, std::size(name));
     ImGui::Checkbox("Visible##SubmeshCreator", &visible);
+
     ImGui::SeparatorText("Available materials");
     MaterialSelector(materialIndex, availableMaterials);
     if (ImGui::Button("Create new submesh##SubmeshCreator"))
@@ -981,13 +1103,19 @@ void DebugUI::SubmeshMenu(Submesh& submesh, std::vector<std::shared_ptr<Material
     bool visible = submesh.IsVisible();
     if (ImGui::Checkbox(GUIDLabel("Visible", submesh.GetGUID()).c_str(), &visible))
         submesh.SetVisible(visible);
+
+    ImGui::SeparatorText("Identifiers");
+    AssetMenu(submesh);
+
     if (ImGui::CollapsingHeader("Available materials")) {
         std::uint32_t materialIndex = submesh.GetMaterialIndex();
         MaterialSelector(materialIndex, availableMaterials);
         submesh.SetMaterialIndex(materialIndex);
     }
+
     if (ImGui::CollapsingHeader("Instancing"))
         SubmeshInstances(submesh);
+
     if (ImGui::CollapsingHeader("Vertex indexing"))
         SubmeshVertexIndexing(submesh);
 }
@@ -1004,6 +1132,7 @@ void DebugUI::IMeshCreator(Model& model) {
     ImGui::InputText("Name##MeshCreator", name, std::size(name));
     ImGui::Checkbox("Visible##MeshCreator", &visible);
     ImGui::Checkbox("Skinned##MeshCreator", &skinned);
+
     if (ImGui::Button("Create new mesh##MeshCreator")) {
         std::shared_ptr<IMesh> pIMesh;
         if (skinned)
@@ -1016,14 +1145,24 @@ void DebugUI::IMeshCreator(Model& model) {
 }
 
 void DebugUI::IMeshMenu(IMesh& iMesh) {
-    bool visible = iMesh.IsVisible();
-    if (ImGui::Checkbox(GUIDLabel("Visible", iMesh.GetGUID()).c_str(), &visible))
-        iMesh.SetVisible(visible);
     if (auto pMesh = dynamic_cast<Mesh*>(&iMesh)) {
+        bool visible = iMesh.IsVisible();
+        if (ImGui::Checkbox(GUIDLabel("Visible", iMesh.GetGUID()).c_str(), &visible))
+            iMesh.SetVisible(visible);
+
+        ImGui::SeparatorText("Identifiers");
+        AssetMenu(*pMesh);
+
         if (ImGui::CollapsingHeader("Vertices")) 
             Vertices(pMesh->GetVertices());
-    }
-    if (auto pSkinnedMesh = dynamic_cast<SkinnedMesh*>(&iMesh)) {
+    } else if (auto pSkinnedMesh = dynamic_cast<SkinnedMesh*>(&iMesh)) {
+        bool visible = iMesh.IsVisible();
+        if (ImGui::Checkbox(GUIDLabel("Visible", iMesh.GetGUID()).c_str(), &visible))
+            iMesh.SetVisible(visible);
+
+        ImGui::SeparatorText("Identifiers");
+        AssetMenu(*pSkinnedMesh);
+
         if (ImGui::CollapsingHeader("Vertices")) 
             Vertices(pSkinnedMesh->GetVertices());
     }
@@ -1068,7 +1207,7 @@ void DebugUI::AddCubeToIMeshCreator(IMesh& iMesh) {
 
     ImGui::InputFloat("Size##AddCubeToMesh", &size);
     if (ImGui::Button("Add to mesh##AddCubeToMesh"))
-        MeshFactory::CreateCube(iMesh, size);
+        MeshFactory::AddCube(iMesh, size);
 }
 
 void DebugUI::AddBoxToIMeshCreator(IMesh& iMesh) {
@@ -1077,8 +1216,9 @@ void DebugUI::AddBoxToIMeshCreator(IMesh& iMesh) {
 
     ImGui::InputFloat3("Size##AddBoxToMesh", size);
     ImGui::Checkbox("Invert normals##AddBoxToMesh", &invertNormal);
+
     if (ImGui::Button("Add to mesh##AddBoxToMesh"))
-        MeshFactory::CreateBox(iMesh, { size[0], size[1], size[2] }, invertNormal);
+        MeshFactory::AddBox(iMesh, { size[0], size[1], size[2] }, invertNormal);
 }
 
 void DebugUI::AddSphereToIMeshCreator(IMesh& iMesh) {
@@ -1089,8 +1229,9 @@ void DebugUI::AddSphereToIMeshCreator(IMesh& iMesh) {
     ImGui::InputFloat("Diameter##AddSphereToMesh", &diameter);
     ImGui::InputScalar("Tessellation##AddSphereToMesh", ImGuiDataType_U64, &tessellation);
     ImGui::Checkbox("Invert normals##AddSphereToMesh", &invertNormal);
+
     if (ImGui::Button("Add to mesh##AddSphereToMesh"))
-        MeshFactory::CreateSphere(iMesh, diameter, tessellation, invertNormal);
+        MeshFactory::AddSphere(iMesh, diameter, tessellation, invertNormal);
 }
 
 void DebugUI::AddGeoSphereToIMeshCreator(IMesh& iMesh) {
@@ -1099,8 +1240,9 @@ void DebugUI::AddGeoSphereToIMeshCreator(IMesh& iMesh) {
 
     ImGui::InputFloat("Diameter##AddGeoSphereToMesh", &diameter);
     ImGui::InputScalar("Tessellation##AddGeoSphereToMesh", ImGuiDataType_U64, &tessellation);
+
     if (ImGui::Button("Add to mesh##AddGeoSphereToMesh"))
-        MeshFactory::CreateGeoSphere(iMesh, diameter, tessellation);
+        MeshFactory::AddGeoSphere(iMesh, diameter, tessellation);
 }
 
 void DebugUI::AddCylinderToIMeshCreator(IMesh& iMesh) {
@@ -1111,8 +1253,9 @@ void DebugUI::AddCylinderToIMeshCreator(IMesh& iMesh) {
     ImGui::InputFloat("Height##AddCylinderToMesh", &height);
     ImGui::InputFloat("Diameter##AddCylinderToMesh", &diameter);
     ImGui::InputScalar("Tessellation##AddCylinderToMesh", ImGuiDataType_U64, &tessellation);
+
     if (ImGui::Button("Add to mesh##AddCylinderToMesh"))
-        MeshFactory::CreateCylinder(iMesh, height, diameter, tessellation);
+        MeshFactory::AddCylinder(iMesh, height, diameter, tessellation);
 }
 
 void DebugUI::AddConeToIMeshCreator(IMesh& iMesh) {
@@ -1123,8 +1266,9 @@ void DebugUI::AddConeToIMeshCreator(IMesh& iMesh) {
     ImGui::InputFloat("Diameter##AddConeToMesh", &diameter);
     ImGui::InputFloat("Height##AddConeToMesh", &height);
     ImGui::InputScalar("Tessellation##AddConeToMesh", ImGuiDataType_U64, &tessellation);
+
     if (ImGui::Button("Add to mesh##AddConeToMesh"))
-        MeshFactory::CreateCone(iMesh, diameter, height, tessellation);
+        MeshFactory::AddCone(iMesh, diameter, height, tessellation);
 }
 
 void DebugUI::AddTorusToIMeshCreator(IMesh& iMesh) {
@@ -1135,40 +1279,45 @@ void DebugUI::AddTorusToIMeshCreator(IMesh& iMesh) {
     ImGui::InputFloat("Diameter##AddTorusToMesh", &diameter);
     ImGui::InputFloat("Thickness##AddTorusToMesh", &thickness);
     ImGui::InputScalar("Tessellation##AddTorusToMesh", ImGuiDataType_U64, &tessellation);
+
     if (ImGui::Button("Add to mesh##AddTorusToMesh"))
-        MeshFactory::CreateCone(iMesh, diameter, thickness, tessellation);
+        MeshFactory::AddCone(iMesh, diameter, thickness, tessellation);
 }
 
 void DebugUI::AddTetrahedronToIMeshCreator(IMesh& iMesh) {
     static float size = 1; 
 
     ImGui::InputFloat("Size##AddTetrahedronToMesh", &size);
+
     if (ImGui::Button("Add to mesh##AddTetrahedronToMesh"))
-        MeshFactory::CreateTetrahedron(iMesh, size);
+        MeshFactory::AddTetrahedron(iMesh, size);
 }
 
 void DebugUI::AddOctahedronToIMeshCreator(IMesh& iMesh) {
     static float size = 1; 
 
     ImGui::InputFloat("Size##AddOctahedronToMesh", &size);
+
     if (ImGui::Button("Add to mesh##AddOctahedronToMesh"))
-        MeshFactory::CreateOctahedron(iMesh, size);
+        MeshFactory::AddOctahedron(iMesh, size);
 }
 
 void DebugUI::AddDodecahedronToIMeshCreator(IMesh& iMesh) {
     static float size = 1; 
 
     ImGui::InputFloat("Size##AddDodecahedronToMesh", &size);
+
     if (ImGui::Button("Add to mesh##AddDodecahedronToMesh"))
-        MeshFactory::CreateDodecahedron(iMesh, size);
+        MeshFactory::AddDodecahedron(iMesh, size);
 }
 
 void DebugUI::AddIcosahedronToIMeshCreator(IMesh& iMesh) {
     static float size = 1; 
 
     ImGui::InputFloat("Size##AddIcosahedronToMesh", &size);
+
     if (ImGui::Button("Add to mesh##AddIcosahedronToMesh"))
-        MeshFactory::CreateIcosahedron(iMesh, size);
+        MeshFactory::AddIcosahedron(iMesh, size);
 }
 
 void DebugUI::AddTeapotToIMeshCreator(IMesh& iMesh) {
@@ -1177,8 +1326,9 @@ void DebugUI::AddTeapotToIMeshCreator(IMesh& iMesh) {
 
     ImGui::InputFloat("Size##AddTeapotToMesh", &size);
     ImGui::InputScalar("Tessellation##AddTeapotToMesh", ImGuiDataType_U64, &tessellation);
+
     if (ImGui::Button("Add to mesh##AddTeapotToMesh"))
-        MeshFactory::CreateTeapot(iMesh, size, tessellation);
+        MeshFactory::AddTeapot(iMesh, size, tessellation);
 }
 
 void DebugUI::AddGeoToIMeshCreator(IMesh& iMesh) {
@@ -1276,7 +1426,7 @@ void DebugUI::ModelSelector(AssetBatch& batch, Model** ppSelectedModel, IMesh** 
                     ImGui::TreePop();
                 }
             }
-            
+
             ImGui::TreePop();
         }
     }
@@ -1284,29 +1434,63 @@ void DebugUI::ModelSelector(AssetBatch& batch, Model** ppSelectedModel, IMesh** 
 
 void DebugUI::ModelCreator(AssetBatch& batch) {
     static char name[128] = "";
+    static char filePath[128] = "";
     static std::uint64_t baseMaterialGUID = 0;
     static bool visible = true;
+    static bool skinned = false;
+    static bool packed = true;
 
     ImGui::InputText("Name##ModelCreator", name, std::size(name));
     ImGui::Checkbox("Visible##ModelCreator", &visible);
+    ImGui::Checkbox("Skinned##ModelCreator", &skinned);
+
+    ImGui::SeparatorText("Material");
     MaterialSelector(baseMaterialGUID, batch.GetMaterials());
-    if (ImGui::Button("Create new model##ModelCreator"))
-        batch.Add(std::make_unique<Model>(
+
+    ImGui::SeparatorText("Import from file (optional)");
+    bool validModel = InputFilePath("Filepath##ModelCreator", filePath, std::size(filePath)); 
+    Error(validModel, "Invalid file path");
+    ImGui::Checkbox("Pack meshes##ModelCreator", &packed);
+
+    if (ImGui::Button("Create new model##ModelCreator")) {
+        std::shared_ptr<Model> pModel;
+
+        if (validModel) {
+            pModel = AssetIO::ImportModel(filePath, batch.GetMaterial(baseMaterialGUID), skinned, packed);
+        } else {
+            pModel = std::make_unique<Model>(
                     batch.GetMaterial(baseMaterialGUID),
                     std::string(name),
-                    visible));
+                    visible);
+
+            std::shared_ptr<IMesh> pIMesh;
+            if (skinned)
+                pIMesh = std::make_shared<SkinnedMesh>();
+            else
+                pIMesh = std::make_shared<Mesh>();
+            pIMesh->Add(std::make_unique<Submesh>());
+
+            pModel->Add(std::move(pIMesh));
+        }
+
+        batch.Add(std::move(pModel));
+    }
 }
 
 void DebugUI::ModelMenu(Model& model) {
     bool visible = model.IsVisible();
     if (ImGui::Checkbox(GUIDLabel("Visible", model.GetGUID()).c_str(), &visible))
         model.SetVisible(visible);
+
+    ImGui::SeparatorText("Identifiers");
+    AssetMenu(model);
     if (ImGui::CollapsingHeader("World transform")) {
         HelpMarker("Transformation will be applied to all instances of all submeshes of all meshes in this model.\n!CAUTION! meshes could be shared beteen models.");
         DirectX::XMFLOAT3X4 W;
         if (AffineTransformation(W))
             model.SetWorldTransform(W);
     }
+
     if (ImGui::CollapsingHeader("Armature")) {
         static std::uint32_t selectedBone = std::uint32_t(-1);
         BoneSelector(selectedBone, model.GetBones());
@@ -1316,9 +1500,9 @@ void DebugUI::ModelMenu(Model& model) {
             ImGui::Separator();
         }
     }
-    if (ImGui::CollapsingHeader(GUIDLabel("Materials", "ModelMenu").c_str())) {
+
+    if (ImGui::CollapsingHeader(GUIDLabel("Materials", "ModelMenu").c_str()))
         MaterialMenu(model.GetMaterials());
-    }
 }
 
 void DebugUI::ModelCreatorPopupMenu(AssetBatch& batch) {
@@ -1365,6 +1549,7 @@ void DebugUI::OutlineCreator(AssetBatch& batch) {
     type = OutlineTypeSelector();
     ImGui::ColorEdit4("Color##OutlineCreator", color);
     ImGui::Checkbox("Visible##OutlineCreator", &visible);
+
     if (ImGui::Button("Create new outline")) {
         std::shared_ptr<Outline> pOutline;
         DirectX::XMFLOAT4 C = { color[0], color[1], color[2], color[3] };
@@ -1576,6 +1761,9 @@ void DebugUI::OutlineMenu(Outline& outline) {
     if (ImGui::Checkbox(GUIDLabel("Visible", outline.GetGUID()).c_str(), &visible))
         outline.SetVisible(visible);
 
+    ImGui::SeparatorText("Identifiers");
+    AssetMenu(outline);
+
     if (ImGui::CollapsingHeader("Position")) {
         switch (outline.GetType()) {
             case Outline::Type::BoundingBox: 
@@ -1607,6 +1795,7 @@ void DebugUI::OutlineMenu(Outline& outline) {
                 break;
         }
     }
+
     float color[4];
     StoreFloat4(outline.GetColor(), color);
     if (ImGui::CollapsingHeader("Color"))
@@ -1623,6 +1812,15 @@ void DebugUI::OutlineMenu(const Outlines& outlines) {
     }
 }
 
+void DebugUI::OutlineCreatorPopupMenu(AssetBatch& batch) {
+    if (ImGui::Button(GUIDLabel("+", "AddOutlineToBatch").c_str())) 
+        ImGui::OpenPopup("AddOutlineToBatch");
+    if (ImGui::BeginPopup("AddOutlineToBatch")) {
+        OutlineCreator(batch);
+        ImGui::EndPopup();
+    }
+}
+
 // ---------------------------------------------------------------- //
 //                          Camera.
 // ---------------------------------------------------------------- //
@@ -1633,15 +1831,17 @@ void DebugUI::CameraMenu(Camera& camera) {
     static float windowSize[2] = { pViewport->WorkSize.x, pViewport->WorkSize.y };
     static float fovY = camera.GetFovY();
 
-    bool isOrthographic = camera.IsOrthographic();
-    ImGui::Checkbox("Orthographic", &isOrthographic);
-
     if (ImGui::Button("Reset")) {
         z[0] = .1f; z[1] = 2000.f;
         windowSize[0] = pViewport->WorkSize.x; windowSize[1] = pViewport->WorkSize.y;
         fovY = DirectX::XM_PIDIV4;
     }
 
+    ImGui::SameLine();
+
+    bool isOrthographic = camera.IsOrthographic();
+    ImGui::Checkbox("Orthographic", &isOrthographic);
+    
     ImGui::SeparatorText("Projection");
     ImGui::DragFloat2("Z planes", z, 1.f, .01f, std::numeric_limits<float>::max(), "%.3f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::Text("Fov x: %f", camera.GetFovX());
@@ -1683,12 +1883,14 @@ void DebugUI::AssetBatchStats(AssetBatch& batch) {
     ImGui::Text("Models:                     %llu", batch.GetNumModels());
     ImGui::Text("Meshes:                     %llu", batch.GetNumMeshes());
     ImGui::Text("Submeshes:                  %llu", batch.GetNumSubmeshes());
+
     ImGui::Separator();
     ImGui::Text("Max assets:                 %d",   batch.GetMaxNumTextures());
     ImGui::Text("Materials:                  %llu", batch.GetNumMaterials());
     ImGui::Text("Sprites:                    %llu", batch.GetNumSprites());
     ImGui::Text("Texts:                      %llu", batch.GetNumTexts());
     ImGui::Text("Outlines:                   %llu", batch.GetNumOutlines());
+
     ImGui::Separator();
     ImGui::Text("Submesh instances:          %llu", batch.GetNumSubmeshInstances());
     ImGui::Text("Rendered submesh instances: %llu", batch.GetNumRenderedSubmeshInstances());
@@ -1706,15 +1908,17 @@ void DebugUI::AssetBatchMenu(AssetBatch& batch) {
     bool visible = batch.IsVisible();
     if (ImGui::Checkbox(GUIDLabel("Visible", batch.GetName()).c_str(), &visible))
         batch.SetVisible(visible);
+
     if (ImGui::CollapsingHeader("Models")) {
         ImGui::BeginChild(ImGui::GetID((void*)(intptr_t)ID++), ImVec2(ImGui::GetWindowWidth() - 15.f, 200.f), ImGuiChildFlags_None);
         ModelCreatorPopupMenu(batch);
+        ImGui::SameLine();
+        AssetRemoverPopupMenu(AssetBatch::AssetType::Model, batch);
         ImGui::SameLine();
         ModelSelector(batch, &pSelectedModel, &pSelectedIMesh, &pSelectedSubmesh);
         ImGui::EndChild();
 
         ImGui::Separator();
-
         ImGui::Text("%s > %s > %s", 
                 pSelectedModel ? pSelectedModel->GetName().c_str() : "...", 
                 pSelectedIMesh ? pSelectedIMesh->GetName().c_str() : "...",
@@ -1738,37 +1942,54 @@ void DebugUI::AssetBatchMenu(AssetBatch& batch) {
         ImGui::Separator();
         ImGui::Spacing();
     }
+
     if (ImGui::CollapsingHeader("Materials")) {
         MaterialCreatorPopupMenu(batch);
+        ImGui::SameLine();
+        AssetRemoverPopupMenu(AssetBatch::AssetType::Material, batch);
+
         MaterialMenu(batch.GetMaterials());
+
         ImGui::Separator();
         ImGui::Spacing();
     }
+
     if (ImGui::CollapsingHeader("Sprites")) {
         SpriteCreatorPopupMenu(batch);
+        ImGui::SameLine();
+        AssetRemoverPopupMenu(AssetBatch::AssetType::Sprite, batch);
+
         SpriteMenu(batch.GetSprites());
+
         ImGui::Separator();
         ImGui::Spacing();
     }
+
     if (ImGui::CollapsingHeader("Text")) {
         TextCreatorPopupMenu(batch);
+        ImGui::SameLine();
+        AssetRemoverPopupMenu(AssetBatch::AssetType::Text, batch);
+
         TextMenu(batch.GetTexts());
+
         ImGui::Separator();
         ImGui::Spacing();
     }
+
     if (ImGui::CollapsingHeader("Outlines")) {
-        if (ImGui::Button(GUIDLabel("+", "AddOutlineToBatch").c_str())) 
-            ImGui::OpenPopup("AddOutlineToBatch");
-        if (ImGui::BeginPopup("AddOutlineToBatch")) {
-            OutlineCreator(batch);
-            ImGui::EndPopup();
-        }
+        OutlineCreatorPopupMenu(batch);
+        ImGui::SameLine();
+        AssetRemoverPopupMenu(AssetBatch::AssetType::Text, batch);
+
         OutlineMenu(batch.GetOutlines());
+
         ImGui::Separator();
         ImGui::Spacing();
     }
+
     if (ImGui::CollapsingHeader(std::string("Stats##" + batch.GetName()).c_str())) {
         AssetBatchStats(batch);
+
         ImGui::Separator();
         ImGui::Spacing();
     }
@@ -1780,15 +2001,18 @@ void DebugUI::AssetBatchMenu(AssetBatch& batch) {
 
 void DebugUI::SceneStats(Scene& scene) {
     ImGui::Text("Batches:                    %d"  , scene.GetNumAssetBatches());
+
     ImGui::Separator();
     ImGui::Text("Models:                     %llu", scene.GetNumModels());
     ImGui::Text("Meshes:                     %llu", scene.GetNumMeshes());
     ImGui::Text("Submeshes:                  %llu", scene.GetNumSubmeshes());
+
     ImGui::Separator();
     ImGui::Text("Materials:                  %llu", scene.GetNumMaterials());
     ImGui::Text("Sprites:                    %llu", scene.GetNumSprites());
     ImGui::Text("Texts:                      %llu", scene.GetNumTexts());
     ImGui::Text("Outlines:                   %llu", scene.GetNumOutlines());
+
     ImGui::Separator();
     ImGui::Text("Submesh instances:          %llu", scene.GetNumSubmeshInstances());
     ImGui::Text("Rendered submesh instances: %llu", scene.GetNumRenderedSubmeshInstances());
@@ -1797,10 +2021,12 @@ void DebugUI::SceneStats(Scene& scene) {
 }
 
 void DebugUI::SceneMenu(Scene& scene) {
-    ImGui::SeparatorText("Batches");
     static std::uint8_t selectedBatch = 0;
+
+    ImGui::SeparatorText("Batches");
     AssetBatchSelector(selectedBatch, scene.GetAssetBatches());
     AssetBatchMenu(*scene.GetAssetBatches()[selectedBatch]);
+
     ImGui::SeparatorText("Scene");
     if (ImGui::CollapsingHeader("Camera")) {
         CameraMenu(scene.GetCamera());
