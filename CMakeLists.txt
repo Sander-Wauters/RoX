@@ -12,6 +12,7 @@ set(ASSIMP_INSTALL OFF CACHE BOOL "Assimp install" FORCE)
 add_subdirectory(Lib/assimp)
 add_subdirectory(Lib/DirectXTK12)
 add_subdirectory(Lib/ImGui)
+add_subdirectory(Tests/)
 
 set(SOURCE
     Src/DeviceHandlers/DeviceDataBatch.cpp
