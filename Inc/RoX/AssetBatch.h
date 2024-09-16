@@ -35,11 +35,11 @@ class AssetBatch {
         bool operator== (const AssetBatch& other) const noexcept;
 
     public:
-        std::uint64_t FindGUID(std::string name, Materials& materials);
-        std::uint64_t FindGUID(std::string name, Models& models);
-        std::uint64_t FindGUID(std::string name, Sprites& sprites);
-        std::uint64_t FindGUID(std::string name, Texts& texts);
-        std::uint64_t FindGUID(std::string name, Outlines& outlines);
+        std::uint64_t FindGUID(std::string name, const Materials& materials);
+        std::uint64_t FindGUID(std::string name, const Models& models);
+        std::uint64_t FindGUID(std::string name, const Sprites& sprites);
+        std::uint64_t FindGUID(std::string name, const Texts& texts);
+        std::uint64_t FindGUID(std::string name, const Outlines& outlines);
 
         void Add(std::shared_ptr<Material> pMaterial);
         void Add(std::shared_ptr<Model> pModel);
@@ -62,7 +62,7 @@ class AssetBatch {
         void RemoveOutline(std::string name);
         void Remove(AssetBatch::AssetType type, std::string name);
 
-        void RegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept;
+        void RegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver);
         void DeregisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept;
 
     public:

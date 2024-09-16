@@ -5,6 +5,9 @@
 // Abstract class that contains properties that every asset has in common.
 // Used internally, the client should NEVER be required to inherit this class.
 class Asset {
+    public:
+        static constexpr std::uint64_t INVALID_GUID = std::uint64_t(-1);
+
     protected:
         Asset(std::string defaultName, std::string name = "") noexcept;
         virtual ~Asset() = default;

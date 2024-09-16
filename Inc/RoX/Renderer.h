@@ -2,7 +2,7 @@
 
 #include <functional>
 
-#include "RoX/IWindowObserver.h"
+#include "IWindowObserver.h"
 
 #include "Timer.h"
 #include "Scene.h"

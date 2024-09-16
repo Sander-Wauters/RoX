@@ -15,47 +15,50 @@ bool AssetBatch::operator== (const AssetBatch& other) const noexcept {
     return m_name == other.m_name;
 }
 
-std::uint64_t AssetBatch::FindGUID(std::string name, Materials& materials) {
+std::uint64_t AssetBatch::FindGUID(std::string name, const Materials& materials) {
     for (auto& pair : materials) {
         if (pair.second->GetName() == name)
             return pair.first;
     }
-    return std::uint64_t(-1);
+    return Asset::INVALID_GUID;
 }
 
-std::uint64_t AssetBatch::FindGUID(std::string name, Models& models) {
+std::uint64_t AssetBatch::FindGUID(std::string name, const Models& models) {
     for (auto& pair : models) {
         if (pair.second->GetName() == name)
             return pair.first;
     }
-    return std::uint64_t(-1);
+    return Asset::INVALID_GUID;
 }
 
-std::uint64_t AssetBatch::FindGUID(std::string name, Sprites& sprites) {
+std::uint64_t AssetBatch::FindGUID(std::string name, const Sprites& sprites) {
     for (auto& pair : sprites) {
         if (pair.second->GetName() == name)
             return pair.first;
     }
-    return std::uint64_t(-1);
+    return Asset::INVALID_GUID;
 }
 
-std::uint64_t AssetBatch::FindGUID(std::string name, Texts& texts) {
+std::uint64_t AssetBatch::FindGUID(std::string name, const Texts& texts) {
     for (auto& pair : texts) {
         if (pair.second->GetName() == name)
             return pair.first;
     }
-    return std::uint64_t(-1);
+    return Asset::INVALID_GUID;
 }
 
-std::uint64_t AssetBatch::FindGUID(std::string name, Outlines& outlines) {
+std::uint64_t AssetBatch::FindGUID(std::string name, const Outlines& outlines) {
     for (auto& pair : outlines) {
         if (pair.second->GetName() == name)
             return pair.first;
     }
-    return std::uint64_t(-1);
+    return Asset::INVALID_GUID;
 }
 
 void AssetBatch::Add(std::shared_ptr<Material> pMaterial) {
+    if (!pMaterial)
+        throw std::invalid_argument("Material must be initialized.");
+
     std::shared_ptr<Material>& pMappedMaterial = m_materials[pMaterial->GetGUID()];
     if (!pMappedMaterial) {
         pMappedMaterial = pMaterial;
@@ -66,6 +69,9 @@ void AssetBatch::Add(std::shared_ptr<Material> pMaterial) {
 }
 
 void AssetBatch::Add(std::shared_ptr<Model> pModel) {
+    if (!pModel)
+        throw std::invalid_argument("Model must be initialized.");
+
     std::shared_ptr<Model>& entry = m_models[pModel->GetGUID()];
     if (!entry) {
         entry = pModel;
@@ -76,41 +82,46 @@ void AssetBatch::Add(std::shared_ptr<Model> pModel) {
         for (std::uint8_t i = 0; i < pModel->GetNumMaterials(); ++i) {
             Add(pModel->GetMaterials()[i]);
         }
-    } else
-        throw std::invalid_argument("Scene already contains this mesh.");
+    }
 }
 
 void AssetBatch::Add(std::shared_ptr<Sprite> pSprite) {
+    if (!pSprite)
+        throw std::invalid_argument("Sprite must be initialized.");
+
     std::shared_ptr<Sprite>& entry = m_sprites[pSprite->GetGUID()];
     if (!entry) {
         entry = pSprite;
         for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
             pAssetBatchObserver->OnAdd(entry);
         }
-    } else
-        throw std::invalid_argument("Scene already contains this sprite.");
+    }
 }
 
 void AssetBatch::Add(std::shared_ptr<Text> pText) {
+    if (!pText)
+        throw std::invalid_argument("Text must be initialized.");
+
     std::shared_ptr<Text>& entry = m_texts[pText->GetGUID()];
     if (!entry) {
         entry = pText;
         for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
             pAssetBatchObserver->OnAdd(entry);
         }
-    } else
-        throw std::invalid_argument("Scene already contains this text.");
+    }
 }
 
 void AssetBatch::Add(std::shared_ptr<Outline> pOutline) {
+    if (!pOutline)
+        throw std::invalid_argument("Outline must be initialized.");
+
     std::shared_ptr<Outline>& entry = m_outlines[pOutline->GetGUID()];
     if (!entry) {
         entry = pOutline;
         for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
             pAssetBatchObserver->OnAdd(entry);
         }
-    } else
-        throw std::invalid_argument("Scene already contains this outline.");
+    }
 }
 
 void AssetBatch::RemoveMaterial(std::uint64_t GUID) {
@@ -178,42 +189,27 @@ void AssetBatch::Remove(AssetBatch::AssetType type, std::uint64_t GUID) {
 
 void AssetBatch::RemoveMaterial(std::string name) {
     std::uint64_t GUID = FindGUID(name, m_materials);
-    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-        pAssetBatchObserver->OnRemove(m_materials.at(GUID));
-    }
-    m_materials.erase(GUID);
+    RemoveMaterial(GUID);
 }
 
 void AssetBatch::RemoveModel(std::string name) {
     std::uint64_t GUID = FindGUID(name, m_models);
-    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-        pAssetBatchObserver->OnRemove(m_models.at(GUID));
-    }
-    m_models.erase(GUID);
+    RemoveModel(GUID);
 }
 
 void AssetBatch::RemoveSprite(std::string name) {
     std::uint64_t GUID = FindGUID(name, m_sprites);
-    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-        pAssetBatchObserver->OnRemove(m_sprites.at(GUID));
-    }
-    m_sprites.erase(GUID);
+    RemoveSprite(GUID);
 }
 
 void AssetBatch::RemoveText(std::string name) {
     std::uint64_t GUID = FindGUID(name, m_texts);
-    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-        pAssetBatchObserver->OnRemove(m_texts.at(GUID));
-    }
-    m_texts.erase(GUID);
+    RemoveText(GUID);
 }
 
 void AssetBatch::RemoveOutline(std::string name) {
     std::uint64_t GUID = FindGUID(name, m_outlines);
-    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-        pAssetBatchObserver->OnRemove(m_outlines.at(GUID));
-    }
-    m_outlines.erase(GUID);
+    RemoveOutline(GUID);
 }
 
 void AssetBatch::Remove(AssetBatch::AssetType type, std::string name) {
@@ -236,7 +232,10 @@ void AssetBatch::Remove(AssetBatch::AssetType type, std::string name) {
     }
 }
 
-void AssetBatch::RegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept {
+void AssetBatch::RegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) {
+    if (!assetBatchObserver)
+        throw std::invalid_argument("AssetBatchObserver is nullptr.");
+
     m_assetBatchObservers.insert(assetBatchObserver);
 }
 
@@ -278,27 +277,27 @@ std::shared_ptr<Outline>& AssetBatch::GetOutline(std::uint64_t GUID) {
 
 std::shared_ptr<Material>& AssetBatch::GetMaterial(std::string name) {
     std::uint64_t GUID = FindGUID(name, m_materials);
-    return m_materials.at(GUID);
+    return GetMaterial(GUID);
 }
 
 std::shared_ptr<Model>& AssetBatch::GetModel(std::string name) {
     std::uint64_t GUID = FindGUID(name, m_models);
-    return m_models.at(GUID);
+    return GetModel(GUID);
 }
 
 std::shared_ptr<Sprite>& AssetBatch::GetSprite(std::string name) {
     std::uint64_t GUID = FindGUID(name, m_sprites);
-    return m_sprites.at(GUID);
+    return GetSprite(GUID);
 }
 
 std::shared_ptr<Text>& AssetBatch::GetText(std::string name) {
     std::uint64_t GUID = FindGUID(name, m_texts);
-    return m_texts.at(GUID);
+    return GetText(GUID);
 }
 
 std::shared_ptr<Outline>& AssetBatch::GetOutline(std::string name) {
     std::uint64_t GUID = FindGUID(name, m_outlines);
-    return m_outlines.at(GUID); 
+    return GetOutline(GUID);
 }
 
 const Materials& AssetBatch::GetMaterials() const noexcept {
