@@ -29,7 +29,7 @@ class AssetBatch {
         };
 
     public:
-        AssetBatch(const std::string name, bool visible = true, std::uint8_t maxNumTextures = 128) noexcept;
+        AssetBatch(const std::string name, std::uint8_t maxNumUniqueTextures = 128, bool visible = true) noexcept;
         ~AssetBatch() noexcept;
 
         bool operator== (const AssetBatch& other) const noexcept;
@@ -65,11 +65,15 @@ class AssetBatch {
         void RegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver);
         void DeregisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept;
 
+    private:
+        void AddUniqueTexture(std::wstring texture);
+
     public:
         std::string GetName() const noexcept;
         bool IsVisible() const noexcept;
 
-        std::uint8_t GetMaxNumTextures() const noexcept;
+        std::uint8_t GetMaxNumUniqueTextures() const noexcept;
+        std::uint8_t GetNumUniqueTextures() const noexcept;
 
         std::shared_ptr<Material>& GetMaterial(std::uint64_t GUID);
         std::shared_ptr<Model>& GetModel(std::uint64_t GUID);
@@ -90,6 +94,8 @@ class AssetBatch {
         const Texts& GetTexts() const noexcept;
         const Outlines& GetOutlines() const noexcept;
 
+        const std::unordered_set<std::wstring> GetUniqueTextures() noexcept;
+
         std::uint64_t GetNumMaterials() const noexcept;
         std::uint64_t GetNumModels() const noexcept;
         std::uint64_t GetNumMeshes() const noexcept;
@@ -109,7 +115,7 @@ class AssetBatch {
         const std::string m_name;
         bool m_visible;
 
-        const std::uint8_t m_maxNumTextures;
+        const std::uint8_t m_maxNumUniqueTextures;
 
         Materials m_materials;
         Models m_models;
@@ -117,5 +123,6 @@ class AssetBatch {
         Texts m_texts;
         Outlines m_outlines;
 
+        std::unordered_set<std::wstring> m_uniqueTextures;
         std::unordered_set<IAssetBatchObserver*> m_assetBatchObservers;
 };

@@ -2,10 +2,10 @@
 
 #include "Util/pch.h"
 
-AssetBatch::AssetBatch(const std::string name, bool visible, std::uint8_t maxNumTextures) 
+AssetBatch::AssetBatch(const std::string name, std::uint8_t maxNumUniqueTextures, bool visible) 
     noexcept : m_name(name),
     m_visible(visible),
-    m_maxNumTextures(maxNumTextures)
+    m_maxNumUniqueTextures(maxNumUniqueTextures)
 {}
 
 AssetBatch::~AssetBatch() noexcept 
@@ -59,6 +59,9 @@ void AssetBatch::Add(std::shared_ptr<Material> pMaterial) {
     if (!pMaterial)
         throw std::invalid_argument("Material must be initialized.");
 
+    AddUniqueTexture(pMaterial->GetDiffuseMapFilePath());
+    AddUniqueTexture(pMaterial->GetNormalMapFilePath());
+
     std::shared_ptr<Material>& pMappedMaterial = m_materials[pMaterial->GetGUID()];
     if (!pMappedMaterial) {
         pMappedMaterial = pMaterial;
@@ -74,13 +77,19 @@ void AssetBatch::Add(std::shared_ptr<Model> pModel) {
 
     std::shared_ptr<Model>& entry = m_models[pModel->GetGUID()];
     if (!entry) {
+        // Material can be shared so check if they aren't already loaded in.
+        try {
+            for (std::uint8_t i = 0; i < pModel->GetNumMaterials(); ++i) {
+                Add(pModel->GetMaterials()[i]);
+            }
+        } catch (std::invalid_argument ex) {
+            m_models.erase(pModel->GetGUID());
+            throw ex;
+        }
+
         entry = pModel;
         for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
             pAssetBatchObserver->OnAdd(entry);
-        }
-        // Material can be shared so check if they aren't already loaded in.
-        for (std::uint8_t i = 0; i < pModel->GetNumMaterials(); ++i) {
-            Add(pModel->GetMaterials()[i]);
         }
     }
 }
@@ -88,6 +97,8 @@ void AssetBatch::Add(std::shared_ptr<Model> pModel) {
 void AssetBatch::Add(std::shared_ptr<Sprite> pSprite) {
     if (!pSprite)
         throw std::invalid_argument("Sprite must be initialized.");
+
+    AddUniqueTexture(pSprite->GetFilePath());
 
     std::shared_ptr<Sprite>& entry = m_sprites[pSprite->GetGUID()];
     if (!entry) {
@@ -101,6 +112,8 @@ void AssetBatch::Add(std::shared_ptr<Sprite> pSprite) {
 void AssetBatch::Add(std::shared_ptr<Text> pText) {
     if (!pText)
         throw std::invalid_argument("Text must be initialized.");
+
+    AddUniqueTexture(pText->GetFilePath());
 
     std::shared_ptr<Text>& entry = m_texts[pText->GetGUID()];
     if (!entry) {
@@ -243,6 +256,14 @@ void AssetBatch::DeregisterAssetBatchObserver(IAssetBatchObserver* assetBatchObs
     m_assetBatchObservers.erase(assetBatchObserver);
 }
 
+void AssetBatch::AddUniqueTexture(std::wstring texture) {
+    m_uniqueTextures.insert(texture);
+    if (m_uniqueTextures.size() > m_maxNumUniqueTextures) {
+        m_uniqueTextures.erase(texture);
+        throw std::runtime_error("The number of unique textures exceeds the maximum number of unique textures.");
+    }
+}
+
 std::string AssetBatch::GetName() const noexcept {
     return m_name;
 }
@@ -251,8 +272,12 @@ bool AssetBatch::IsVisible() const noexcept {
     return m_visible;
 }
 
-std::uint8_t AssetBatch::GetMaxNumTextures() const noexcept {
-    return m_maxNumTextures;
+std::uint8_t AssetBatch::GetMaxNumUniqueTextures() const noexcept {
+    return m_maxNumUniqueTextures;
+}
+
+std::uint8_t AssetBatch::GetNumUniqueTextures() const noexcept {
+    return m_uniqueTextures.size();
 }
 
 std::shared_ptr<Material>& AssetBatch::GetMaterial(std::uint64_t GUID) {
@@ -320,6 +345,9 @@ const Outlines& AssetBatch::GetOutlines() const noexcept {
     return m_outlines;
 }
 
+const std::unordered_set<std::wstring> AssetBatch::GetUniqueTextures() noexcept {
+    return m_uniqueTextures;
+}
 
 std::uint64_t AssetBatch::GetNumMaterials() const noexcept {
     return m_materials.size();

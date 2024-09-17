@@ -9,20 +9,23 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
 add_subdirectory(Lib/googletest)
 
-set(SOURCE
+set(TESTS
     Src/PredefinedObjects/ValidAssetBatch.cpp
     Src/PredefinedObjects/ValidAssetBatch.h
 
     Src/AssetBatchTest.cpp 
+    Src/MockAssetBatchObserver.h
+    Src/RendererTest.cpp
 )
 
 include_directories(
     ${CMAKE_SOURCE_DIR}/RoX/Inc 
+
     Lib/googletest/googlemock/include
     Lib/googletest/googletest/include
 )
 
-add_executable(${PROJECT_NAME} ${SOURCE})
+add_executable(${PROJECT_NAME} ${TESTS})
 target_link_libraries(${PROJECT_NAME} PRIVATE
     gtest_main
     gmock_main

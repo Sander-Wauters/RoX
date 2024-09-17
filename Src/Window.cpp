@@ -54,7 +54,9 @@ Window::Window(Renderer& renderer, PCWSTR windowName, HINSTANCE hInstance,
     m_pMouse->SetWindow(m_hwnd);
 }
 
-Window::~Window() {}
+Window::~Window() {
+
+}
 
 DirectX::Mouse& Window::GetMouse() const noexcept {
     return *m_pMouse.get();
@@ -224,7 +226,6 @@ LRESULT Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             break;
 
         case WM_DESTROY:
-            ImGui_ImplWin32_Shutdown();
             PostQuitMessage(0);
             return 0;
 

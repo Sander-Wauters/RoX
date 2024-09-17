@@ -81,6 +81,7 @@ Renderer::Impl::~Impl() noexcept {
         m_pDeviceResources->WaitForGpu();
 
     ImGui_ImplDX12_Shutdown();
+    ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 }
 
