@@ -10,14 +10,13 @@
 #include "../../Lib/DirectXTK12/Inc/Keyboard.h"
 #include "../../Lib/DirectXTK12/Inc/Mouse.h"
 
-#include "Renderer.h"
 #include "IWindowObserver.h"
 
 // A window to be used be **Renderer**.
 // Handles all window events, to execute code when a event fires use the **IWindowObserver** class.
 class Window {
     public:
-        Window(Renderer& renderer, PCWSTR windowName, HINSTANCE hInstance,
+        Window(PCWSTR windowName, HINSTANCE hInstance,
                 DWORD style, DWORD exStyle = 0,
                 int x = CW_USEDEFAULT, int y = CW_USEDEFAULT,
                 int width = 1024, int height = 640,
@@ -35,6 +34,7 @@ class Window {
         float GetAspectRatio() const noexcept;
 
         void RegisterWindowObserver(IWindowObserver* windowObserver) noexcept;
+        void DeregisterWindowObserver(IWindowObserver* windowObserver) noexcept;
 
     private:
         static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -60,14 +60,12 @@ class Window {
         void HandleSuspending();
         void HandleResuming();
         void HandleWindowMoved();
-        void HandleDisplayChange();
+        void HandleDisplayChanged();
         void HandleWindowSizeChanged(int width, int height);
 
         LRESULT HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam);
 
     private:
-        Renderer& m_renderer;
-
         std::unique_ptr<DirectX::Keyboard> m_pKeyboard;
         std::unique_ptr<DirectX::Mouse> m_pMouse;
 

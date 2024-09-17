@@ -6,14 +6,10 @@
 class RendererTest : public testing::Test {
     protected: 
         RendererTest() {
-            pRenderer = std::make_unique<Renderer>();
-            pWindow = std::make_unique<Window>(*pRenderer, L"RendererTest", nullptr, NULL);
+            pWindow = std::make_unique<Window>(L"RendererTest", nullptr, NULL);
+            pRenderer = std::make_unique<Renderer>(*pWindow);
         }
 
         std::unique_ptr<Renderer> pRenderer;
         std::unique_ptr<Window> pWindow;
 };
-
-TEST_F(RendererTest, Initialize) {
-    EXPECT_NO_THROW(pRenderer->Initialize(pWindow->GetHwnd(), pWindow->GetWidth(), pWindow->GetHeight()));
-}

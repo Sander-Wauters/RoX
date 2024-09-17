@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Audio.h>
+//#include <Audio.h>
 #include <BufferHelpers.h>
 #include <CommonStates.h>
 #include <DDSTextureLoader.h>
@@ -24,5 +24,6 @@
 #include <SpriteFont.h>
 #include <VertexTypes.h>
 #include <WICTextureLoader.h>
+#include <GraphicsMemory.h>
 
 #include "../Exceptions/ThrowIfFailed.h"

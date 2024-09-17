@@ -5,15 +5,13 @@
 
 #include "ImGuiBackends/imgui_impl_win32.h"
 
-Window::Window(Renderer& renderer, PCWSTR windowName, HINSTANCE hInstance,
+Window::Window(PCWSTR windowName, HINSTANCE hInstance,
         DWORD style, DWORD exStyle,
         int x, int y,
         int width, int height,
         HWND parent, HMENU menu
-        ) : m_renderer(renderer), m_width(width), m_height(height) 
+        ) : m_width(width), m_height(height) 
 {
-    RegisterWindowObserver(&m_renderer);
-
     if (!DirectX::XMVerifyCPUSupport())
         ThrowIfFailed(E_NOTIMPL);
 
@@ -86,6 +84,10 @@ void Window::RegisterWindowObserver(IWindowObserver* windowObserver) noexcept {
     m_windowObservers.insert(windowObserver);
 }
 
+void Window::DeregisterWindowObserver(IWindowObserver* windowObserver) noexcept {
+    m_windowObservers.erase(windowObserver);
+}
+
 void Window::HandleActivated() {
     for (IWindowObserver* pWindowObserver : m_windowObservers) {
         pWindowObserver->OnActivated();
@@ -116,9 +118,9 @@ void Window::HandleWindowMoved() {
     }
 }
 
-void Window::HandleDisplayChange() {
+void Window::HandleDisplayChanged() {
     for (IWindowObserver* pWindowObserver : m_windowObservers) {
-        pWindowObserver->OnDisplayChange();
+        pWindowObserver->OnDisplayChanged();
     }
 }
 
@@ -140,18 +142,13 @@ LRESULT Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
 
     switch (msg) {
         case WM_PAINT:
-            if (s_in_sizemove) {
-                m_renderer.Update();
-                m_renderer.Render();
-            } else {
-                PAINTSTRUCT ps;
-                std::ignore = BeginPaint(m_hwnd, &ps);
-                EndPaint(m_hwnd, &ps);
-            }
+            PAINTSTRUCT ps;
+            std::ignore = BeginPaint(m_hwnd, &ps);
+            EndPaint(m_hwnd, &ps);
             break;
 
         case WM_DISPLAYCHANGE:
-            HandleDisplayChange();
+            HandleDisplayChanged();
             break;
 
         case WM_MOVE:

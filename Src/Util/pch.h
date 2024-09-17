@@ -80,9 +80,6 @@
 #include <dxgidebug.h>
 #endif
 
-// If using the DirectX Tool Kit for DX12, uncomment this line:
-//#include "GraphicsMemory.h"
-
 #ifdef __MINGW32__
 namespace Microsoft
 {

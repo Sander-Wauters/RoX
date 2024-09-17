@@ -9,6 +9,6 @@ class IWindowObserver {
         virtual void OnSuspending() = 0;
         virtual void OnResuming() = 0;
         virtual void OnWindowMoved() = 0;
-        virtual void OnDisplayChange() = 0;
+        virtual void OnDisplayChanged() = 0;
         virtual void OnWindowSizeChanged(int width, int height) = 0;
 };

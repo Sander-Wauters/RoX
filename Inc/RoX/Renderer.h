@@ -4,13 +4,15 @@
 
 #include "IWindowObserver.h"
 
-#include "Timer.h"
 #include "Scene.h"
+#include "Window.h"
+
+class Window;
 
 // Responsible for rendering the contents of a **Scene** to the display.
 class Renderer : public IWindowObserver {
     public:
-        Renderer() noexcept;
+        Renderer(Window& window) noexcept;
         ~Renderer() noexcept;
 
         Renderer(Renderer&& other) noexcept;
@@ -19,7 +21,6 @@ class Renderer : public IWindowObserver {
         Renderer& operator= (Renderer const&) = delete;
 
     public:
-        void Initialize(HWND window, int width, int height);
         void Load(Scene& scene);
 
         void Update();
@@ -31,7 +32,7 @@ class Renderer : public IWindowObserver {
         void OnSuspending() override;
         void OnResuming() override;
         void OnWindowMoved() override;
-        void OnDisplayChange() override;
+        void OnDisplayChanged() override;
         void OnWindowSizeChanged(int width, int height) override;
 
     public:

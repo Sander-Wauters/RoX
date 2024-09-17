@@ -36,7 +36,7 @@ class Renderer::Impl : public IDeviceObserver {
         void OnSuspending();
         void OnResuming();
         void OnWindowMoved();
-        void OnDisplayChange();
+        void OnDisplayChanged();
         void OnWindowSizeChanged(int width, int height);
 
         void SetMsaa(bool state) noexcept;
@@ -210,7 +210,7 @@ void Renderer::Impl::OnWindowMoved() {
     m_pDeviceResources->WindowSizeChanged(r.right, r.bottom);
 }
 
-void Renderer::Impl::OnDisplayChange() {
+void Renderer::Impl::OnDisplayChanged() {
     m_pDeviceResources->UpdateColorSpace();
 }
 
@@ -527,9 +527,12 @@ void Renderer::Impl::CreateWindowSizeDependentResources() {
         m_pDeviceResourceData->CreateWindowSizeDependentResources();
 }
 
-Renderer::Renderer() 
+Renderer::Renderer(Window& window) 
     noexcept : m_pImpl(std::make_unique<Impl>(this)) 
-{} 
+{
+    window.RegisterWindowObserver(this);
+    m_pImpl->Initialize(window.GetHwnd(), window.GetWidth(), window.GetHeight()); 
+} 
 
 Renderer::~Renderer() noexcept {
 
@@ -538,10 +541,6 @@ Renderer::~Renderer() noexcept {
 Renderer::Renderer(Renderer&& other) 
     noexcept : m_pImpl(std::make_unique<Impl>(this)) 
 {}
-
-void Renderer::Initialize(HWND window, int width, int height) { 
-    m_pImpl->Initialize(window, width, height); 
-}
 
 void Renderer::Load(Scene& scene) { 
     m_pImpl->Load(scene); 
@@ -579,8 +578,8 @@ void Renderer::OnWindowMoved() {
     m_pImpl->OnWindowMoved(); 
 }
 
-void Renderer::OnDisplayChange() { 
-    m_pImpl->OnDisplayChange(); 
+void Renderer::OnDisplayChanged() { 
+    m_pImpl->OnDisplayChanged(); 
 }
 
 void Renderer::OnWindowSizeChanged(int width, int height) { 
