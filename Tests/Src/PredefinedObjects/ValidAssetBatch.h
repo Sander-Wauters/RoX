@@ -3,7 +3,8 @@
 
 class ValidAssetBatch {
     public:
-        static constexpr char INVALID_NAME[13] = "INVALID_NAME";
+        static constexpr char INVALID_NAME[128] = "INVALID_NAME";
+        static constexpr wchar_t TEXTURE_FILE_PATH[128] = L"texture.png";
 
     public:
         ValidAssetBatch();

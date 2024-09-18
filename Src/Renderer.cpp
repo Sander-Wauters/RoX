@@ -14,7 +14,7 @@
 
 class Renderer::Impl : public IDeviceObserver {
     public:
-        Impl(Renderer* pOwner) noexcept;
+        Impl(Renderer* pOwner, HWND window, int width, int height) noexcept;
         ~Impl() noexcept;
 
         Impl(Impl&&) = default;
@@ -23,7 +23,6 @@ class Renderer::Impl : public IDeviceObserver {
         Impl(Impl const&) = delete;
         Impl& operator= (Impl const&) = delete;
 
-        void Initialize(HWND window, int width, int height);
         void Load(Scene& scene);
 
         void Update();
@@ -66,7 +65,7 @@ class Renderer::Impl : public IDeviceObserver {
 
 };
 
-Renderer::Impl::Impl(Renderer* pOwner) 
+Renderer::Impl::Impl(Renderer* pOwner, HWND window, int width, int height) 
     noexcept : m_pOwner(pOwner),
     m_msaaEnabled(false)
 {
@@ -74,20 +73,10 @@ Renderer::Impl::Impl(Renderer* pOwner)
     m_pDeviceResources->RegisterDeviceObserver(this);
 
     m_pDeviceResourceData = std::make_unique<DeviceResourceData>(*m_pDeviceResources);
-}
 
-Renderer::Impl::~Impl() noexcept {
-    if (m_pDeviceResources)
-        m_pDeviceResources->WaitForGpu();
-
-    ImGui_ImplDX12_Shutdown();
-    ImGui_ImplWin32_Shutdown();
-    ImGui::DestroyContext();
-}
-
-void Renderer::Impl::Initialize(HWND window, int width, int height) {
     m_pDeviceResources->SetWindow(window, width, height);
     m_pDeviceResources->CreateDeviceResources();
+    m_pDeviceResources->CreateWindowSizeDependentResources();
 
     m_pGraphicsMemory = std::make_unique<DirectX::GraphicsMemory>(m_pDeviceResources->GetDevice());
 
@@ -105,7 +94,15 @@ void Renderer::Impl::Initialize(HWND window, int width, int height) {
             pDesc->Heap(),
             pDesc->GetCpuHandle(0),
             pDesc->GetGpuHandle(0));
+}
 
+Renderer::Impl::~Impl() noexcept {
+    if (m_pDeviceResources)
+        m_pDeviceResources->WaitForGpu();
+
+    ImGui_ImplDX12_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
 }
 
 void Renderer::Impl::Load(Scene& scene) {
@@ -115,7 +112,7 @@ void Renderer::Impl::Load(Scene& scene) {
 
 void Renderer::Impl::Update() {
     if (m_pDeviceResourceData->SceneLoaded()) 
-        m_pDeviceResourceData->UpdateEffects();
+        m_pDeviceResourceData->Update();
 }
 
 void Renderer::Impl::Render(const std::function<void()>& renderImGui) {
@@ -528,10 +525,9 @@ void Renderer::Impl::CreateWindowSizeDependentResources() {
 }
 
 Renderer::Renderer(Window& window) 
-    noexcept : m_pImpl(std::make_unique<Impl>(this)) 
+    noexcept : m_pImpl(std::make_unique<Impl>(this, window.GetHwnd(), window.GetWidth(), window.GetHeight())) 
 {
     window.RegisterWindowObserver(this);
-    m_pImpl->Initialize(window.GetHwnd(), window.GetWidth(), window.GetHeight()); 
 } 
 
 Renderer::~Renderer() noexcept {
@@ -539,7 +535,7 @@ Renderer::~Renderer() noexcept {
 }
 
 Renderer::Renderer(Renderer&& other) 
-    noexcept : m_pImpl(std::make_unique<Impl>(this)) 
+    noexcept : m_pImpl(std::move(other.m_pImpl)) 
 {}
 
 void Renderer::Load(Scene& scene) { 

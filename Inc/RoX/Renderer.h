@@ -7,8 +7,6 @@
 #include "Scene.h"
 #include "Window.h"
 
-class Window;
-
 // Responsible for rendering the contents of a **Scene** to the display.
 class Renderer : public IWindowObserver {
     public:

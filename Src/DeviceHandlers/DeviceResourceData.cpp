@@ -26,12 +26,12 @@ void DeviceResourceData::Load(Scene& scene, bool& msaaEnabled) {
         DirtyLoad(scene, msaaEnabled);
 }
 
-void DeviceResourceData::UpdateEffects() {
+void DeviceResourceData::Update() {
     DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&m_pScene->GetCamera().GetView());
     DirectX::XMMATRIX projection = DirectX::XMLoadFloat4x4(&m_pScene->GetCamera().GetProjection());
 
     for (std::uint8_t i = 0; i < GetNumDataBatches(); ++i) {
-        m_dataBatches[i]->UpdateEffects(view, projection);
+        m_dataBatches[i]->Update(view, projection);
     }
 }
 

@@ -214,9 +214,14 @@ void DeviceDataBatch::OnRemove(const std::shared_ptr<Outline>& pOutline) {
 
 }
 
-void DeviceDataBatch::UpdateEffects(DirectX::XMMATRIX view, DirectX::XMMATRIX projection) {
+void DeviceDataBatch::Update(DirectX::XMMATRIX view, DirectX::XMMATRIX projection) {
     m_pOutlineEffect->SetView(view);
     m_pOutlineEffect->SetProjection(projection);
+
+    while (!m_queuedUpdates.empty()) {
+        m_queuedUpdates.front()();
+        m_queuedUpdates.pop();
+    }
 
     for (MaterialPair& materialPair : m_materialData) {
         if (auto pIMatrices = dynamic_cast<DirectX::IEffectMatrices*>(materialPair.second.get())) {
@@ -228,11 +233,6 @@ void DeviceDataBatch::UpdateEffects(DirectX::XMMATRIX view, DirectX::XMMATRIX pr
             pNormal->SetEmissiveColor(DirectX::XMLoadFloat4(&materialPair.first->GetEmissiveColor()));
             pNormal->SetSpecularColor(DirectX::XMLoadFloat4(&materialPair.first->GetSpecularColor()));
         }
-    }
-
-    while (!m_queuedUpdates.empty()) {
-        m_queuedUpdates.front()();
-        m_queuedUpdates.pop();
     }
 }
 

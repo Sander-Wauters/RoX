@@ -19,7 +19,7 @@ class DeviceResourceData : public IDeviceObserver {
         void OnDeviceRestored() override;
 
         void Load(Scene& scene, bool& msaaEnabled);
-        void UpdateEffects();
+        void Update();
 
         void CreateDeviceDependentResources();
         void CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch);

@@ -49,7 +49,7 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
         void OnRemove(const std::shared_ptr<Text>& pText) override;
         void OnRemove(const std::shared_ptr<Outline>& pOutline) override;
 
-        void UpdateEffects(DirectX::XMMATRIX view, DirectX::XMMATRIX projection);
+        void Update(DirectX::XMMATRIX view, DirectX::XMMATRIX projection);
 
         void CreateDeviceDependentResources();
         void CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
