@@ -17,12 +17,7 @@ class MeshDeviceData {
 
         void PrepareForDraw(ID3D12GraphicsCommandList* pCommandList) const;
 
-        void IncreaseRefCount() noexcept; 
-        void DecreaseRefCount() noexcept;
-
     public:
-        bool HasReferences() const noexcept;
-
         std::vector<std::unique_ptr<SubmeshDeviceData>>& GetSubmeshes() noexcept;
 
         std::uint32_t GetIndexBufferSize() const noexcept;
@@ -41,8 +36,6 @@ class MeshDeviceData {
         void SetStaticVertexBuffer(ID3D12Resource* pVertexBuffer);
 
     private:
-        std::uint8_t m_numReferences;
-
         std::vector<std::unique_ptr<SubmeshDeviceData>> m_submeshes;
 
         std::uint32_t m_vertexStride;

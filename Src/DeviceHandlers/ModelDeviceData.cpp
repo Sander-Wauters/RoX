@@ -1,16 +1,14 @@
 #include "ModelDeviceData.h"
 
 ModelDeviceData::ModelDeviceData(ID3D12Device* pDevice, Model* pModel, 
-        std::unordered_map<std::shared_ptr<IMesh>, std::unique_ptr<MeshDeviceData>>& sharedMeshes) 
+        std::unordered_map<std::shared_ptr<IMesh>, std::shared_ptr<MeshDeviceData>>& sharedMeshes) 
 {
     m_meshes.reserve(pModel->GetNumMeshes()); 
     for (std::uint64_t i = 0; i < pModel->GetNumMeshes(); ++i) {
-        std::unique_ptr<MeshDeviceData>& pMeshData = sharedMeshes[pModel->GetMeshes()[i]];
+        std::shared_ptr<MeshDeviceData>& pMeshData = sharedMeshes[pModel->GetMeshes()[i]];
         if (!pMeshData)
             pMeshData = std::make_unique<MeshDeviceData>(pDevice, pModel->GetMeshes()[i].get());
-        else
-            pMeshData->IncreaseRefCount();
-        m_meshes.push_back(pMeshData.get());
+        m_meshes.push_back(pMeshData);
     }
     m_meshes.shrink_to_fit();
 }

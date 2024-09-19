@@ -1,7 +1,6 @@
 #include "MeshDeviceData.h"
 
 MeshDeviceData::MeshDeviceData(ID3D12Device* pDevice, IMesh* pIMesh) :
-    m_numReferences(1),
     m_indexBufferSize(0),
     m_vertexBufferSize(0),
     m_primitiveType(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST),
@@ -81,18 +80,6 @@ void MeshDeviceData::PrepareForDraw(ID3D12GraphicsCommandList* pCommandList) con
     pCommandList->IASetIndexBuffer(&ibv);
 
     pCommandList->IASetPrimitiveTopology(m_primitiveType);
-}
-
-void MeshDeviceData::IncreaseRefCount() noexcept {
-    ++m_numReferences;
-}
-
-void MeshDeviceData::DecreaseRefCount() noexcept {
-    --m_numReferences;
-}
-
-bool MeshDeviceData::HasReferences() const noexcept {
-    return m_numReferences != 0;
 }
 
 std::vector<std::unique_ptr<SubmeshDeviceData>>& MeshDeviceData::GetSubmeshes() noexcept {

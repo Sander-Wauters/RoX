@@ -9,7 +9,7 @@
 class ModelDeviceData {
     public:
         ModelDeviceData(ID3D12Device* pDevice, Model* pModel, 
-            std::unordered_map<std::shared_ptr<IMesh>, std::unique_ptr<MeshDeviceData>>& sharedMeshes);
+            std::unordered_map<std::shared_ptr<IMesh>, std::shared_ptr<MeshDeviceData>>& sharedMeshes);
 
         void DrawSkinned(ID3D12GraphicsCommandList* pCommandList, Model* pModel);
         void LoadStaticBuffers(ID3D12Device* pDevice, DirectX::ResourceUploadBatch& resourceUploadBatch, bool keepMemory = false);
@@ -20,5 +20,5 @@ class ModelDeviceData {
 
     private:
         std::vector<DirectX::IEffect*> m_effects; 
-        std::vector<MeshDeviceData*> m_meshes;
+        std::vector<std::shared_ptr<MeshDeviceData>> m_meshes;
 };

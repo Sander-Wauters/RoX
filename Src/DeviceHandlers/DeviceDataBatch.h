@@ -18,7 +18,7 @@
 
 using MaterialPair = std::pair<const std::shared_ptr<Material>, std::unique_ptr<DirectX::IEffect>>;
 using ModelPair    = std::pair<const std::shared_ptr<Model>,    std::unique_ptr<ModelDeviceData>>;
-using MeshPair     = std::pair<const std::shared_ptr<IMesh>,    std::unique_ptr<MeshDeviceData>>; 
+using MeshPair     = std::pair<const std::shared_ptr<IMesh>,    std::shared_ptr<MeshDeviceData>>; 
 using TexturePair  = std::pair<const std::wstring,              std::unique_ptr<TextureDeviceData>>;
 using SpritePair   = std::pair<const std::shared_ptr<Sprite>,   std::unique_ptr<TextureDeviceData>>;
 using TextPair     = std::pair<const std::shared_ptr<Text>,     std::unique_ptr<TextDeviceData>>;
@@ -60,6 +60,12 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
     private:
         std::uint8_t NextHeapIndex() noexcept;
 
+        void Add(const std::shared_ptr<Material>& pMaterial);
+        void Add(const std::shared_ptr<Model>& pModel);
+        void Add(const std::shared_ptr<Sprite>& pSprite);
+        void Add(const std::shared_ptr<Text>& pText);
+        void Add(const std::shared_ptr<Outline>& pOutline);
+
         void CreateDescriptorHeapResources();
         void CreateSpriteBatchResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
 
@@ -67,9 +73,9 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
         void CreateTextResource(const std::shared_ptr<Text>& pText, std::unique_ptr<TextDeviceData>& pTextData, DirectX::ResourceUploadBatch& resourceUploadBatch);
         void CreateTextureResource(const std::wstring& fileName, std::unique_ptr<TextureDeviceData>& pTextureData, DirectX::ResourceUploadBatch& resourceUploadBatch);
 
-        void BindTexturesToEffect(Material& material, DirectX::IEffect& iEffect);
-
         void CreateOutlineBatchResources();
+
+        void BindTexturesToEffect(Material& material, DirectX::IEffect& iEffect);
 
         std::unique_ptr<DirectX::IEffect> BuildIEffect(Material& material) const;
 
@@ -121,7 +127,7 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
 
         std::unordered_map<std::shared_ptr<Material>, std::unique_ptr<DirectX::IEffect>>  m_materialData;
         std::unordered_map<std::shared_ptr<Model>,    std::unique_ptr<ModelDeviceData>>   m_modelData;
-        std::unordered_map<std::shared_ptr<IMesh>,    std::unique_ptr<MeshDeviceData>>    m_meshData;
+        std::unordered_map<std::shared_ptr<IMesh>,    std::shared_ptr<MeshDeviceData>>    m_meshData;
         std::unordered_map<std::wstring,              std::unique_ptr<TextureDeviceData>> m_textureData;
         std::unordered_map<std::shared_ptr<Sprite>,   std::unique_ptr<TextureDeviceData>> m_spriteData;
         std::unordered_map<std::shared_ptr<Text>,     std::unique_ptr<TextDeviceData>>    m_textData;  
