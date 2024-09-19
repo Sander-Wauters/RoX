@@ -11,11 +11,11 @@ class TextureDeviceData {
 
         void OnDeviceLost() noexcept { m_pTexture.Reset(); }
 
-        void IncreaseRefCount() { ++m_numReferences; }
-        void DecreaseRefCount() { --m_numReferences; }
+        void IncreaseRefCount() noexcept { ++m_numReferences; }
+        void DecreaseRefCount() noexcept { --m_numReferences; }
 
     public:
-        bool HasReferences() { return m_numReferences != 0; }
+        bool HasReferences() const noexcept { return m_numReferences != 0; }
 
         std::uint8_t GetHeapIndex() const noexcept { return m_desciptorHeapIndex; }
 

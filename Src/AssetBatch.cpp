@@ -74,6 +74,8 @@ void AssetBatch::Add(std::shared_ptr<Material> pMaterial) {
 void AssetBatch::Add(std::shared_ptr<Model> pModel) {
     if (!pModel)
         throw std::invalid_argument("Model must be initialized.");
+    if (pModel->GetNumVertices() == 0)
+        throw std::invalid_argument("Model has no geometry.");
 
     std::shared_ptr<Model>& entry = m_models[pModel->GetGUID()];
     if (!entry) {
@@ -242,6 +244,13 @@ void AssetBatch::Remove(AssetBatch::AssetType type, std::string name) {
         case AssetType::Outline:
             RemoveOutline(name);
             break;
+    }
+}
+
+void AssetBatch::UpdateIMesh(std::uint64_t modelGUID, std::uint64_t meshGUID) {
+    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
+        std::shared_ptr<Model>& pModel = m_models.at(modelGUID);
+        pAssetBatchObserver->OnUpdate(pModel, pModel->GetIMesh(meshGUID));
     }
 }
 

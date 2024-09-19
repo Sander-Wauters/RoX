@@ -299,16 +299,27 @@ void Model::MakeInverseBoneMatricesArray(std::uint64_t count) {
     m_inverseBindPoseMatrices = Bone::MakeArray(count);
 }
 
-std::uint32_t Model::GetNumBones() const noexcept {
-    return m_bones.size();
+void Model::RemoveMaterial(std::uint8_t index) {
+    if (m_materials.size() == 1)
+        return;
+
+    m_materials.erase(m_materials.begin() + index);
+    for (auto& pIMesh : m_meshes) {
+        for (auto& pSubmesh : pIMesh->GetSubmeshes()) {
+            if (pSubmesh->GetMaterialIndex() == index)
+                pSubmesh->SetMaterialIndex(0);
+        }
+    }
 }
 
-std::uint32_t Model::GetNumMeshes() const noexcept {
-    return m_meshes.size();
-}
-
-std::uint32_t Model::GetNumMaterials() const noexcept {
-    return m_materials.size();
+void Model::ApplyWorldTransform(DirectX::XMFLOAT3X4 W) {
+    for (std::shared_ptr<IMesh>& pIMesh : m_meshes) {
+        for (std::unique_ptr<Submesh>& pSubmesh : pIMesh->GetSubmeshes()) {
+            for (DirectX::XMFLOAT3X4& instance : pSubmesh->GetInstances()) {
+                instance = W;
+            }
+        }
+    }
 }
 
 std::vector<std::shared_ptr<Material>>& Model::GetMaterials() noexcept {
@@ -317,6 +328,22 @@ std::vector<std::shared_ptr<Material>>& Model::GetMaterials() noexcept {
 
 std::vector<std::shared_ptr<IMesh>>& Model::GetMeshes() noexcept {
     return m_meshes;
+}
+
+std::shared_ptr<Material>& Model::GetMaterial(std::uint64_t GUID) {
+    for (std::shared_ptr<Material>& pMaterial : m_materials) {
+        if (pMaterial->GetGUID() == GUID)
+            return pMaterial;
+    }
+    throw std::invalid_argument("No material with GUID: " + std::to_string(GUID));
+}
+
+std::shared_ptr<IMesh>& Model::GetIMesh(std::uint64_t GUID) {
+    for (std::shared_ptr<IMesh>& pIMesh : m_meshes) {
+        if (pIMesh->GetGUID() == GUID)
+            return pIMesh;
+    }
+    throw std::invalid_argument("No mesh with GUID: " + std::to_string(GUID));
 }
 
 std::vector<Bone>& Model::GetBones() noexcept {
@@ -336,26 +363,42 @@ bool Model::IsVisible() const noexcept {
 }
 
 bool Model::IsSkinned() const noexcept {
-    bool isSkinned = true;
-    for (const std::shared_ptr<IMesh>& pMesh : m_meshes) {
-        auto pSkinnedMesh = dynamic_cast<SkinnedMesh*>(pMesh.get());
-        if (!pSkinnedMesh)
-            isSkinned = false;
+    for (const std::shared_ptr<Material>& pMaterial : m_materials) {
+        if (pMaterial->GetFlags() & RenderFlags::Effect::Skinned)
+            return true;
     }
-    return isSkinned;
+    return false;
 }
 
 void Model::SetVisible(bool visible) noexcept {
     m_visible = visible;
 }
 
-void Model::SetWorldTransform(DirectX::XMFLOAT3X4 W) {
-    for (std::shared_ptr<IMesh>& pIMesh : m_meshes) {
-        for (std::unique_ptr<Submesh>& pSubmesh : pIMesh->GetSubmeshes()) {
-            for (DirectX::XMFLOAT3X4& instance : pSubmesh->GetInstances()) {
-                instance = W;
-            }
-        }
+std::uint32_t Model::GetNumBones() const noexcept {
+    return m_bones.size();
+}
+
+std::uint32_t Model::GetNumMeshes() const noexcept {
+    return m_meshes.size();
+}
+
+std::uint32_t Model::GetNumMaterials() const noexcept {
+    return m_materials.size();
+}
+
+std::uint32_t Model::GetNumVertices() const noexcept {
+    std::uint32_t total = 0;
+    for (const std::shared_ptr<IMesh>& pIMesh : m_meshes) {
+        total += pIMesh->GetNumVertices();
     }
+    return total;
+}
+
+std::uint32_t Model::GetNumIndices() const noexcept {
+    std::uint32_t total = 0;
+    for (const std::shared_ptr<IMesh>& pIMesh : m_meshes) {
+        total += pIMesh->GetNumIndices();
+    }
+    return total;
 }
 

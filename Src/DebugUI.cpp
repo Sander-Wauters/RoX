@@ -1,7 +1,6 @@
 #include "RoX/DebugUI.h"
 
 #include "RoX/AssetIO.h"
-#include "RoX/MeshFactory.h"
 
 #include "Util/pch.h"
 #include "Util/dxtk12pch.h"
@@ -391,7 +390,7 @@ void DebugUI::AssetRemover(AssetBatch::AssetType type, AssetBatch& batch) {
             GUIDnotFound = false;
             batch.Remove(type, GUID);
         }
-        Error(GUIDnotFound, "Material not found."); 
+        Error(GUIDnotFound, "GUID not found."); 
     } catch (std::out_of_range ex) {
         GUIDnotFound = true;
     }
@@ -403,7 +402,7 @@ void DebugUI::AssetRemover(AssetBatch::AssetType type, AssetBatch& batch) {
             nameNotFound = false;
             batch.Remove(type, name);
         }
-        Error(nameNotFound, "Material not found."); 
+        Error(nameNotFound, "Name not found."); 
     } catch (std::out_of_range ex) {
         nameNotFound = true;
     }
@@ -650,7 +649,7 @@ bool DebugUI::SelectableMaterialHeader(bool state, Material& material) {
     ImVec4 specular = { material.GetSpecularColor().x, material.GetSpecularColor().y, material.GetSpecularColor().z, material.GetSpecularColor().w };
 
     ImGui::SetNextItemAllowOverlap();
-    if (ImGui::Selectable(material.GetName().c_str(), state))
+    if (ImGui::Selectable(material.GetName().c_str(), state, ImGuiSelectableFlags_DontClosePopups))
         selected = true;
     ImGui::SameLine();
     ImGui::ColorButton("diffuse", diffuse, ImGuiColorEditFlags_None, buttonSize);
@@ -797,6 +796,30 @@ void DebugUI::MaterialCreatorPopupMenu(AssetBatch& batch) {
         ImGui::OpenPopup("MaterialCreatorPopupMenu");
     if (ImGui::BeginPopup("MaterialCreatorPopupMenu")) {
         MaterialCreator(batch);
+        ImGui::EndPopup();
+    }
+}
+
+void DebugUI::MaterialAdderPopupMenu(Model& model, const Materials& availableMaterials) {
+    if (ImGui::Button(GUIDLabel("+", "MaterialAdderPopupMenu").c_str())) 
+        ImGui::OpenPopup("MaterialAdderPopupMenu");
+    if (ImGui::BeginPopup("MaterialAdderPopupMenu")) {
+        std::uint64_t selected = Asset::INVALID_GUID;
+        MaterialSelector(selected, availableMaterials);
+        if (selected != Asset::INVALID_GUID)
+            model.GetMaterials().push_back(availableMaterials.at(selected));
+        ImGui::EndPopup();
+    }
+}
+
+void DebugUI::MaterialRemoverPopupMenu(Model& model) {
+    if (ImGui::Button(GUIDLabel("-", "MaterialRemoverPopupMenu").c_str())) 
+        ImGui::OpenPopup("MaterialRemoverPopupMenu");
+    if (ImGui::BeginPopup("MaterialRemoverPopupMenu")) {
+        std::uint32_t selected = std::uint32_t(-1);
+        MaterialSelector(selected, model.GetMaterials());
+        if (selected != std::uint32_t(-1))
+            model.RemoveMaterial(selected);
         ImGui::EndPopup();
     }
 }
@@ -1025,7 +1048,7 @@ void DebugUI::SubmeshInstances(Submesh& submesh) {
     static std::uint32_t index = 0;
     if (index < 0)
         index = 0;
-    if (index > submesh.GetNumInstances())
+    if (index >= submesh.GetNumInstances())
         index = submesh.GetNumInstances() - 1;
 
     static ImU32 steps = 1;
@@ -1057,7 +1080,7 @@ void DebugUI::SubmeshInstances(Submesh& submesh) {
             submesh.GetInstances().pop_back();
         }
     };
-    ArrayControls("index##SubmeshInstances", &index, onAdd, onRemove);
+    ArrayControls("Index##SubmeshInstances", &index, onAdd, onRemove);
 
     ImGui::Spacing();
 
@@ -1179,17 +1202,17 @@ void DebugUI::IMeshCreatorPopupMenu(Model& model) {
     }
 }
 
-void DebugUI::IMeshAddGeoOrSubmeshPopupMenu(IMesh& iMesh, std::vector<std::shared_ptr<Material>>& availableMaterials) {
+void DebugUI::IMeshAddGeoOrSubmeshPopupMenu(AssetBatch& batch, Model& model, IMesh& iMesh) {
     if (ImGui::Button(GUIDLabel("+", "IMeshAddGeoOrSubmeshPopupMenu").c_str()))
         ImGui::OpenPopup("IMeshAddGeoOrSubmeshPopupMenu");
     if (ImGui::BeginPopup("IMeshAddGeoOrSubmeshPopupMenu", ImGuiWindowFlags_MenuBar)) {
         if (ImGui::BeginMenuBar()) {
             if (ImGui::BeginMenu(GUIDLabel("Add submesh", "IMeshAddGeoOrSubmeshPopupMenu").c_str())) {
-                SubmeshCreator(iMesh, availableMaterials);
+                SubmeshCreator(iMesh, model.GetMaterials());
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu(GUIDLabel("Add geometry", "IMeshAddGeoOrSubmeshPopupMenu").c_str())) {
-                AddGeoToIMeshCreator(iMesh);
+                AddGeoToIMeshCreator(batch, model, iMesh);
                 ImGui::EndMenu();
             }
             ImGui::EndMenuBar();
@@ -1202,26 +1225,50 @@ void DebugUI::IMeshAddGeoOrSubmeshPopupMenu(IMesh& iMesh, std::vector<std::share
 //                          Mesh factory.
 // ---------------------------------------------------------------- //
 
-void DebugUI::AddCubeToIMeshCreator(IMesh& iMesh) {
+void DebugUI::GeoSelector(MeshFactory::Geometry& geo) {
+    static std::uint8_t selected = 0;
+    static const MeshFactory::Geometry options[12] = { MeshFactory::Geometry::Cube, MeshFactory::Geometry::Box, MeshFactory::Geometry::Sphere, MeshFactory::Geometry::GeoSphere, MeshFactory::Geometry::Cylinder, MeshFactory::Geometry::Cone, MeshFactory::Geometry::Torus, MeshFactory::Geometry::Tetrahedron, MeshFactory::Geometry::Octahedron, MeshFactory::Geometry::Dodecahedron, MeshFactory::Geometry::Icosahedron, MeshFactory::Geometry::Teapot };
+    static const std::string optionsStr[12] = { "Cube", "Box", "Sphere", "GeoSphere", "Cylinder", "Cone", "Torus", "Tetrahedron", "Octahedron", "Dodecahedron", "Icosahedron", "Teapot" };
+
+    if (ImGui::Button(GUIDLabel(optionsStr[selected], "AddGeoToIMeshCreator").c_str()))
+        ImGui::OpenPopup("GeoTypeSelector");
+    if (ImGui::BeginPopup("GeoTypeSelector")) {
+        for (std::uint8_t i = 0; i < std::size(optionsStr); ++i) {
+            if (ImGui::Selectable(GUIDLabel(optionsStr[i], "AddGeoToIMeshCreator").c_str(), selected == i)) {
+                selected = i;
+                geo = options[i];
+            }
+        }
+        ImGui::EndPopup();
+    }
+    ImGui::SameLine();
+    ImGui::Text("Geometry");
+}
+
+void DebugUI::AddCubeToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
     static float size = 1; 
 
     ImGui::InputFloat("Size##AddCubeToMesh", &size);
-    if (ImGui::Button("Add to mesh##AddCubeToMesh"))
+    if (ImGui::Button("Add to mesh##AddCubeToMesh")) {
         MeshFactory::AddCube(iMesh, size);
+        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
+    }
 }
 
-void DebugUI::AddBoxToIMeshCreator(IMesh& iMesh) {
+void DebugUI::AddBoxToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
     static float size[3] = { 1.f, 1.f, 1.f };
     static bool invertNormal = false;
 
     ImGui::InputFloat3("Size##AddBoxToMesh", size);
     ImGui::Checkbox("Invert normals##AddBoxToMesh", &invertNormal);
 
-    if (ImGui::Button("Add to mesh##AddBoxToMesh"))
+    if (ImGui::Button("Add to mesh##AddBoxToMesh")) {
         MeshFactory::AddBox(iMesh, { size[0], size[1], size[2] }, invertNormal);
+        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
+    }
 }
 
-void DebugUI::AddSphereToIMeshCreator(IMesh& iMesh) {
+void DebugUI::AddSphereToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
     static float diameter = 1.f;
     static std::uint64_t tessellation = 16;
     static bool invertNormal = false;
@@ -1230,22 +1277,26 @@ void DebugUI::AddSphereToIMeshCreator(IMesh& iMesh) {
     ImGui::InputScalar("Tessellation##AddSphereToMesh", ImGuiDataType_U64, &tessellation);
     ImGui::Checkbox("Invert normals##AddSphereToMesh", &invertNormal);
 
-    if (ImGui::Button("Add to mesh##AddSphereToMesh"))
+    if (ImGui::Button("Add to mesh##AddSphereToMesh")) {
         MeshFactory::AddSphere(iMesh, diameter, tessellation, invertNormal);
+        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
+    }
 }
 
-void DebugUI::AddGeoSphereToIMeshCreator(IMesh& iMesh) {
+void DebugUI::AddGeoSphereToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
     static float diameter = 1.f;
     static std::uint64_t tessellation = 3;
 
     ImGui::InputFloat("Diameter##AddGeoSphereToMesh", &diameter);
     ImGui::InputScalar("Tessellation##AddGeoSphereToMesh", ImGuiDataType_U64, &tessellation);
 
-    if (ImGui::Button("Add to mesh##AddGeoSphereToMesh"))
+    if (ImGui::Button("Add to mesh##AddGeoSphereToMesh")) {
         MeshFactory::AddGeoSphere(iMesh, diameter, tessellation);
+        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
+    }
 }
 
-void DebugUI::AddCylinderToIMeshCreator(IMesh& iMesh) {
+void DebugUI::AddCylinderToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
     static float height = 1.f;
     static float diameter = 1.f;
     static std::uint64_t tessellation = 32;
@@ -1254,11 +1305,13 @@ void DebugUI::AddCylinderToIMeshCreator(IMesh& iMesh) {
     ImGui::InputFloat("Diameter##AddCylinderToMesh", &diameter);
     ImGui::InputScalar("Tessellation##AddCylinderToMesh", ImGuiDataType_U64, &tessellation);
 
-    if (ImGui::Button("Add to mesh##AddCylinderToMesh"))
+    if (ImGui::Button("Add to mesh##AddCylinderToMesh")) {
         MeshFactory::AddCylinder(iMesh, height, diameter, tessellation);
+        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
+    }
 }
 
-void DebugUI::AddConeToIMeshCreator(IMesh& iMesh) {
+void DebugUI::AddConeToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
     static float diameter = 1.f;
     static float height = 1.f;
     static std::uint64_t tessellation = 32;
@@ -1267,11 +1320,13 @@ void DebugUI::AddConeToIMeshCreator(IMesh& iMesh) {
     ImGui::InputFloat("Height##AddConeToMesh", &height);
     ImGui::InputScalar("Tessellation##AddConeToMesh", ImGuiDataType_U64, &tessellation);
 
-    if (ImGui::Button("Add to mesh##AddConeToMesh"))
+    if (ImGui::Button("Add to mesh##AddConeToMesh")) {
         MeshFactory::AddCone(iMesh, diameter, height, tessellation);
+        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
+    }
 }
 
-void DebugUI::AddTorusToIMeshCreator(IMesh& iMesh) {
+void DebugUI::AddTorusToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
     static float diameter = 1.f;
     static float thickness = .333f;
     static std::uint64_t tessellation = 32;
@@ -1280,96 +1335,98 @@ void DebugUI::AddTorusToIMeshCreator(IMesh& iMesh) {
     ImGui::InputFloat("Thickness##AddTorusToMesh", &thickness);
     ImGui::InputScalar("Tessellation##AddTorusToMesh", ImGuiDataType_U64, &tessellation);
 
-    if (ImGui::Button("Add to mesh##AddTorusToMesh"))
+    if (ImGui::Button("Add to mesh##AddTorusToMesh")) {
         MeshFactory::AddCone(iMesh, diameter, thickness, tessellation);
+        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
+    }
 }
 
-void DebugUI::AddTetrahedronToIMeshCreator(IMesh& iMesh) {
+void DebugUI::AddTetrahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
     static float size = 1; 
 
     ImGui::InputFloat("Size##AddTetrahedronToMesh", &size);
 
-    if (ImGui::Button("Add to mesh##AddTetrahedronToMesh"))
+    if (ImGui::Button("Add to mesh##AddTetrahedronToMesh")) {
         MeshFactory::AddTetrahedron(iMesh, size);
+        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
+    }
 }
 
-void DebugUI::AddOctahedronToIMeshCreator(IMesh& iMesh) {
+void DebugUI::AddOctahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
     static float size = 1; 
 
     ImGui::InputFloat("Size##AddOctahedronToMesh", &size);
 
-    if (ImGui::Button("Add to mesh##AddOctahedronToMesh"))
+    if (ImGui::Button("Add to mesh##AddOctahedronToMesh")) {
         MeshFactory::AddOctahedron(iMesh, size);
+        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
+    }
 }
 
-void DebugUI::AddDodecahedronToIMeshCreator(IMesh& iMesh) {
+void DebugUI::AddDodecahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
     static float size = 1; 
 
     ImGui::InputFloat("Size##AddDodecahedronToMesh", &size);
 
-    if (ImGui::Button("Add to mesh##AddDodecahedronToMesh"))
+    if (ImGui::Button("Add to mesh##AddDodecahedronToMesh")) {
         MeshFactory::AddDodecahedron(iMesh, size);
+        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
+    }
 }
 
-void DebugUI::AddIcosahedronToIMeshCreator(IMesh& iMesh) {
+void DebugUI::AddIcosahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
     static float size = 1; 
 
     ImGui::InputFloat("Size##AddIcosahedronToMesh", &size);
 
-    if (ImGui::Button("Add to mesh##AddIcosahedronToMesh"))
+    if (ImGui::Button("Add to mesh##AddIcosahedronToMesh")) {
         MeshFactory::AddIcosahedron(iMesh, size);
+        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
+    }
 }
 
-void DebugUI::AddTeapotToIMeshCreator(IMesh& iMesh) {
+void DebugUI::AddTeapotToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
     static float size = 1; 
     static std::uint64_t tessellation = 8;
 
     ImGui::InputFloat("Size##AddTeapotToMesh", &size);
     ImGui::InputScalar("Tessellation##AddTeapotToMesh", ImGuiDataType_U64, &tessellation);
 
-    if (ImGui::Button("Add to mesh##AddTeapotToMesh"))
+    if (ImGui::Button("Add to mesh##AddTeapotToMesh")) {
         MeshFactory::AddTeapot(iMesh, size, tessellation);
+        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
+    }
 }
 
-void DebugUI::AddGeoToIMeshCreator(IMesh& iMesh) {
-    static std::uint8_t selected = 0;
-    static const std::string options[12] = { "Cube", "Box", "Sphere", "GeoSphere", "Cylinder", "Cone", "Torus", "Tetrahedron", "Octahedron", "Dodecahedron", "Icosahedron", "Teapot" };
+void DebugUI::AddGeoToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
+    static MeshFactory::Geometry geo;
+    GeoSelector(geo);
 
-    if (ImGui::Button(GUIDLabel(options[selected], "AddGeoToIMeshCreator").c_str()))
-        ImGui::OpenPopup("OutlineTypeSelector");
-    if (ImGui::BeginPopup("OutlineTypeSelector")) {
-        for (std::uint8_t i = 0; i < std::size(options); ++i) {
-            if (ImGui::Selectable(GUIDLabel(options[i], "AddGeoToIMeshCreator").c_str(), selected == i))
-                selected = i;
-        }
-        ImGui::EndPopup();
-    }
-
-    switch (selected) {
-        case 0:
-            AddCubeToIMeshCreator(iMesh); break;
-        case 1:
-            AddBoxToIMeshCreator(iMesh); break;
-        case 2:
-            AddSphereToIMeshCreator(iMesh); break;
-        case 3:
-            AddGeoSphereToIMeshCreator(iMesh); break;
-        case 4:
-            AddCylinderToIMeshCreator(iMesh); break;
-        case 5:
-            AddConeToIMeshCreator(iMesh); break;
-        case 6:
-            AddTorusToIMeshCreator(iMesh); break;
-        case 7:
-            AddTetrahedronToIMeshCreator(iMesh); break;
-        case 8:
-            AddOctahedronToIMeshCreator(iMesh); break;
-        case 9:
-            AddDodecahedronToIMeshCreator(iMesh); break;
-        case 10:
-            AddIcosahedronToIMeshCreator(iMesh); break;
-        default:
-            AddTeapotToIMeshCreator(iMesh); break;
+    switch (geo) {
+        case MeshFactory::Geometry::Cube:
+            AddCubeToIMeshCreator(batch, model, iMesh); break;
+        case MeshFactory::Geometry::Box:
+            AddBoxToIMeshCreator(batch, model, iMesh); break;
+        case MeshFactory::Geometry::Sphere:
+            AddSphereToIMeshCreator(batch, model, iMesh); break;
+        case MeshFactory::Geometry::GeoSphere:
+            AddGeoSphereToIMeshCreator(batch, model, iMesh); break;
+        case MeshFactory::Geometry::Cylinder:
+            AddCylinderToIMeshCreator(batch, model, iMesh); break;
+        case MeshFactory::Geometry::Cone:
+            AddConeToIMeshCreator(batch, model, iMesh); break;
+        case MeshFactory::Geometry::Torus:
+            AddTorusToIMeshCreator(batch, model, iMesh); break;
+        case MeshFactory::Geometry::Tetrahedron:
+            AddTetrahedronToIMeshCreator(batch, model, iMesh); break;
+        case MeshFactory::Geometry::Octahedron:
+            AddOctahedronToIMeshCreator(batch, model, iMesh); break;
+        case MeshFactory::Geometry::Dodecahedron:
+            AddDodecahedronToIMeshCreator(batch, model, iMesh); break;
+        case MeshFactory::Geometry::Icosahedron:
+            AddIcosahedronToIMeshCreator(batch, model, iMesh); break;
+        case MeshFactory::Geometry::Teapot:
+            AddTeapotToIMeshCreator(batch, model, iMesh); break;
     }
 }
 
@@ -1434,8 +1491,9 @@ void DebugUI::ModelSelector(AssetBatch& batch, Model** ppSelectedModel, IMesh** 
 
 void DebugUI::ModelCreator(AssetBatch& batch) {
     static char name[128] = "";
+    static MeshFactory::Geometry geo = MeshFactory::Geometry::Cube;
     static char filePath[128] = "";
-    static std::uint64_t baseMaterialGUID = 0;
+    static std::uint64_t baseMaterialGUID = Asset::INVALID_GUID;
     static bool visible = true;
     static bool skinned = false;
     static bool packed = true;
@@ -1443,16 +1501,18 @@ void DebugUI::ModelCreator(AssetBatch& batch) {
     ImGui::InputText("Name##ModelCreator", name, std::size(name));
     ImGui::Checkbox("Visible##ModelCreator", &visible);
     ImGui::Checkbox("Skinned##ModelCreator", &skinned);
+    GeoSelector(geo);
 
     ImGui::SeparatorText("Material");
     MaterialSelector(baseMaterialGUID, batch.GetMaterials());
+    Error(baseMaterialGUID == Asset::INVALID_GUID, "Must select a material.");
 
     ImGui::SeparatorText("Import from file (optional)");
     bool validModel = InputFilePath("Filepath##ModelCreator", filePath, std::size(filePath)); 
     Error(validModel, "Invalid file path");
     ImGui::Checkbox("Pack meshes##ModelCreator", &packed);
 
-    if (ImGui::Button("Create new model##ModelCreator")) {
+    if (ImGui::Button("Create new model##ModelCreator") && (baseMaterialGUID != Asset::INVALID_GUID)) {
         std::shared_ptr<Model> pModel;
 
         if (validModel) {
@@ -1468,7 +1528,8 @@ void DebugUI::ModelCreator(AssetBatch& batch) {
                 pIMesh = std::make_shared<SkinnedMesh>();
             else
                 pIMesh = std::make_shared<Mesh>();
-            pIMesh->Add(std::make_unique<Submesh>());
+
+            MeshFactory::Add(geo, *pIMesh);
 
             pModel->Add(std::move(pIMesh));
         }
@@ -1477,7 +1538,7 @@ void DebugUI::ModelCreator(AssetBatch& batch) {
     }
 }
 
-void DebugUI::ModelMenu(Model& model) {
+void DebugUI::ModelMenu(Model& model, const Materials& availableMaterials) {
     bool visible = model.IsVisible();
     if (ImGui::Checkbox(GUIDLabel("Visible", model.GetGUID()).c_str(), &visible))
         model.SetVisible(visible);
@@ -1486,9 +1547,9 @@ void DebugUI::ModelMenu(Model& model) {
     AssetMenu(model);
     if (ImGui::CollapsingHeader("World transform")) {
         HelpMarker("Transformation will be applied to all instances of all submeshes of all meshes in this model.\n!CAUTION! meshes could be shared beteen models.");
-        DirectX::XMFLOAT3X4 W;
+        DirectX::XMFLOAT3X4 W = model.GetMeshes()[0]->GetSubmeshes()[0]->GetInstances()[0];
         if (AffineTransformation(W))
-            model.SetWorldTransform(W);
+            model.ApplyWorldTransform(W);
     }
 
     if (ImGui::CollapsingHeader("Armature")) {
@@ -1501,8 +1562,13 @@ void DebugUI::ModelMenu(Model& model) {
         }
     }
 
-    if (ImGui::CollapsingHeader(GUIDLabel("Materials", "ModelMenu").c_str()))
+    if (ImGui::CollapsingHeader(GUIDLabel("Materials", "ModelMenu").c_str())) {
+        MaterialAdderPopupMenu(model, availableMaterials);
+        ImGui::SameLine();
+        MaterialRemoverPopupMenu(model);
+
         MaterialMenu(model.GetMaterials());
+    }
 }
 
 void DebugUI::ModelCreatorPopupMenu(AssetBatch& batch) {
@@ -1930,14 +1996,14 @@ void DebugUI::AssetBatchMenu(AssetBatch& batch) {
         if (pSelectedSubmesh)
             SubmeshMenu(*pSelectedSubmesh, pSelectedModel->GetMaterials());
         else if (pSelectedIMesh) {
-            IMeshAddGeoOrSubmeshPopupMenu(*pSelectedIMesh, pSelectedModel->GetMaterials());
+            IMeshAddGeoOrSubmeshPopupMenu(batch, *pSelectedModel, *pSelectedIMesh);
             ImGui::SameLine();
             IMeshMenu(*pSelectedIMesh);
         }
         else if (pSelectedModel) {
             IMeshCreatorPopupMenu(*pSelectedModel);
             ImGui::SameLine();
-            ModelMenu(*pSelectedModel);
+            ModelMenu(*pSelectedModel, batch.GetMaterials());
         }
 
         ImGui::Separator();
@@ -1980,7 +2046,7 @@ void DebugUI::AssetBatchMenu(AssetBatch& batch) {
     if (ImGui::CollapsingHeader("Outlines")) {
         OutlineCreatorPopupMenu(batch);
         ImGui::SameLine();
-        AssetRemoverPopupMenu(AssetBatch::AssetType::Text, batch);
+        AssetRemoverPopupMenu(AssetBatch::AssetType::Outline, batch);
 
         OutlineMenu(batch.GetOutlines());
 

@@ -49,6 +49,8 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
         void OnRemove(const std::shared_ptr<Text>& pText) override;
         void OnRemove(const std::shared_ptr<Outline>& pOutline) override;
 
+        void OnUpdate(const std::shared_ptr<Model>& pModel, const std::shared_ptr<IMesh>& pIMesh) override;
+
         void Update(DirectX::XMMATRIX view, DirectX::XMMATRIX projection);
 
         void CreateDeviceDependentResources();

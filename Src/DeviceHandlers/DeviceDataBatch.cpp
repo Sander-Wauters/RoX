@@ -107,7 +107,7 @@ void DeviceDataBatch::OnAdd(const std::shared_ptr<Model>& pModel) {
             resourceUploadBatch.Begin();
 
             pModelData = std::make_unique<ModelDeviceData>(pDevice, pModel.get(), m_meshData);
-            pModelData->LoadStaticBuffers(pDevice, resourceUploadBatch);
+            //pModelData->LoadStaticBuffers(pDevice, resourceUploadBatch);
 
             pModelData->GetEffects().reserve(pModel->GetNumMaterials());
             for (std::uint8_t i = 0; i < pModel->GetNumMaterials(); ++i) {
@@ -190,7 +190,18 @@ void DeviceDataBatch::OnRemove(const std::shared_ptr<Material>& pMaterial) {
 void DeviceDataBatch::OnRemove(const std::shared_ptr<Model>& pModel) {
     m_queuedUpdates.push([=]() {
         m_deviceResources.WaitForGpu();
+       
+        for (MeshDeviceData* pMeshData : m_modelData.at(pModel)->GetMeshes()) {
+            pMeshData->DecreaseRefCount();
+        }
         m_modelData.erase(pModel);
+
+        for (auto it = m_meshData.begin(); it != m_meshData.end();) {
+            if (!it->second->HasReferences())
+                it = m_meshData.erase(it);
+            else
+                ++it;
+        }
     });
 }
 
@@ -212,6 +223,19 @@ void DeviceDataBatch::OnRemove(const std::shared_ptr<Text>& pText) {
 
 void DeviceDataBatch::OnRemove(const std::shared_ptr<Outline>& pOutline) {
 
+}
+
+void DeviceDataBatch::OnUpdate(const std::shared_ptr<Model>& pModel, const std::shared_ptr<IMesh>& pIMesh) {
+    m_queuedUpdates.push([=]() {
+        ID3D12Device* pDevice = m_deviceResources.GetDevice();
+        std::unique_ptr<MeshDeviceData>& pMeshData = m_meshData.at(pIMesh);
+
+        pMeshData->GetSubmeshes().push_back(std::make_unique<SubmeshDeviceData>(pDevice, pIMesh->GetSubmeshes().back().get()));
+
+        m_deviceResources.WaitForGpu();
+        pMeshData->LoadVertexBuffer(pDevice, pIMesh.get());
+        pMeshData->LoadIndexBuffer(pDevice, pIMesh.get());
+    });
 }
 
 void DeviceDataBatch::Update(DirectX::XMMATRIX view, DirectX::XMMATRIX projection) {
@@ -254,7 +278,7 @@ void DeviceDataBatch::CreateDeviceDependentResources() {
         CreateTextureResource(texturePair.first, texturePair.second, resourceUploadBatch);
     }
     for (ModelPair& modelPair : m_modelData) {
-        modelPair.second->LoadStaticBuffers(pDevice, resourceUploadBatch);
+        //modelPair.second->LoadStaticBuffers(pDevice, resourceUploadBatch);
     }
 
     CreateRenderTargetDependentResources(resourceUploadBatch);
@@ -283,9 +307,6 @@ std::uint8_t DeviceDataBatch::NextHeapIndex() noexcept {
         m_openDescriptorHeapIndices.pop();
     } else 
         nextIndex = m_nextDescriptorHeapIndex++;
-
-    std::string out = std::to_string(nextIndex) + "\n";
-    OutputDebugStringA(out.c_str());
     
     return nextIndex;
 }

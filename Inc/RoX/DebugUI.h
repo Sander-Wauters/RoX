@@ -4,6 +4,7 @@
 
 #include "VertexTypes.h"
 #include "Material.h"
+#include "MeshFactory.h"
 #include "Model.h"
 #include "Scene.h"
 #include "Outline.h"
@@ -88,6 +89,8 @@ namespace DebugUI {
     void MaterialMenu(const std::unordered_map<std::uint64_t, std::shared_ptr<Material>>& materials);
 
     void MaterialCreatorPopupMenu(AssetBatch& batch);
+    void MaterialAdderPopupMenu(Model& model, const Materials& availableMaterials);
+    void MaterialRemoverPopupMenu(Model& model);
 
     // Sprites.
     void SpritePosition(Sprite& sprite);
@@ -128,30 +131,32 @@ namespace DebugUI {
     void IMeshMenu(IMesh& iMesh);
 
     void IMeshCreatorPopupMenu(Model& model);
-    void IMeshAddGeoOrSubmeshPopupMenu(IMesh& iMesh, std::vector<std::shared_ptr<Material>>& availableMaterials);
+    void IMeshAddGeoOrSubmeshPopupMenu(AssetBatch& batch, Model& model, IMesh& iMesh);
 
     // Mesh factory.
-    void AddCubeToIMeshCreator(IMesh& iMesh);
-    void AddBoxToIMeshCreator(IMesh& iMesh);
-    void AddSphereToIMeshCreator(IMesh& iMesh);
-    void AddGeoSphereToIMeshCreator(IMesh& iMesh);
-    void AddCylinderToIMeshCreator(IMesh& iMesh);
-    void AddConeToIMeshCreator(IMesh& iMesh);
-    void AddTorusToIMeshCreator(IMesh& iMesh);
-    void AddTetrahedronToIMeshCreator(IMesh& iMesh);
-    void AddOctahedronToIMeshCreator(IMesh& iMesh);
-    void AddDodecahedronToIMeshCreator(IMesh& iMesh);
-    void AddIcosahedronToIMeshCreator(IMesh& iMesh);
-    void AddTeapotToIMeshCreator(IMesh& iMesh);
+    void GeoSelector(MeshFactory::Geometry& geo);
 
-    void AddGeoToIMeshCreator(IMesh& iMesh);
+    void AddCubeToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
+    void AddBoxToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
+    void AddSphereToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
+    void AddGeoSphereToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
+    void AddCylinderToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
+    void AddConeToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
+    void AddTorusToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
+    void AddTetrahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
+    void AddOctahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
+    void AddDodecahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
+    void AddIcosahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
+    void AddTeapotToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
+
+    void AddGeoToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
 
     // Models.
     void ModelSelector(AssetBatch& batch, Model** ppSelectedModel, IMesh** ppSelectedIMesh, Submesh** ppSelectedSubmesh);
 
     void ModelCreator(AssetBatch& batch);
 
-    void ModelMenu(Model& model);
+    void ModelMenu(Model& model, const Materials& availableMaterials);
 
     void ModelCreatorPopupMenu(AssetBatch& batch);
 

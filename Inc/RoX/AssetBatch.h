@@ -62,6 +62,8 @@ class AssetBatch {
         void RemoveOutline(std::string name);
         void Remove(AssetBatch::AssetType type, std::string name);
 
+        void UpdateIMesh(std::uint64_t modelGUID, std::uint64_t meshGUID);
+
         void RegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver);
         void DeregisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept;
 

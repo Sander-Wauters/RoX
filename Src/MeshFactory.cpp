@@ -204,3 +204,32 @@ void MeshFactory::AddTeapot(IMesh& mesh, float size, size_t tessellation) {
 
     mesh.Add(std::move(pSubmesh));
 }
+
+void MeshFactory::Add(Geometry geo, IMesh& iMesh) {
+    switch (geo) {
+        case MeshFactory::Geometry::Cube:
+            AddCube(iMesh); break;
+        case MeshFactory::Geometry::Box:
+            AddBox(iMesh); break;
+        case MeshFactory::Geometry::Sphere:
+            AddSphere(iMesh); break;
+        case MeshFactory::Geometry::GeoSphere:
+            AddGeoSphere(iMesh); break;
+        case MeshFactory::Geometry::Cylinder:
+            AddCylinder(iMesh); break;
+        case MeshFactory::Geometry::Cone:
+            AddCone(iMesh); break;
+        case MeshFactory::Geometry::Torus:
+            AddTorus(iMesh); break;
+        case MeshFactory::Geometry::Tetrahedron:
+            AddTetrahedron(iMesh); break;
+        case MeshFactory::Geometry::Octahedron:
+            AddOctahedron(iMesh); break;
+        case MeshFactory::Geometry::Dodecahedron:
+            AddDodecahedron(iMesh); break;
+        case MeshFactory::Geometry::Icosahedron:
+            AddIcosahedron(iMesh); break;
+        case MeshFactory::Geometry::Teapot:
+            AddTeapot(iMesh); break;
+    }
+}

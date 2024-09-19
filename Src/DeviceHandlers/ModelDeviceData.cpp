@@ -6,9 +6,10 @@ ModelDeviceData::ModelDeviceData(ID3D12Device* pDevice, Model* pModel,
     m_meshes.reserve(pModel->GetNumMeshes()); 
     for (std::uint64_t i = 0; i < pModel->GetNumMeshes(); ++i) {
         std::unique_ptr<MeshDeviceData>& pMeshData = sharedMeshes[pModel->GetMeshes()[i]];
-        if (!pMeshData) {
+        if (!pMeshData)
             pMeshData = std::make_unique<MeshDeviceData>(pDevice, pModel->GetMeshes()[i].get());
-        }
+        else
+            pMeshData->IncreaseRefCount();
         m_meshes.push_back(pMeshData.get());
     }
     m_meshes.shrink_to_fit();

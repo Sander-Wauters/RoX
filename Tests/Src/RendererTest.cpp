@@ -36,37 +36,35 @@ class RendererTest : public testing::Test, public ValidAssetBatch {
         std::unique_ptr<Scene> pScene;
 };
 
-// @todo: figure out how to integration test the renderer.
+TEST_F(RendererTest, Load_Fresh_WithEmptyScene) {
+    pScene = std::make_unique<Scene>("RendererTest", *pCamera);
 
-//TEST_F(RendererTest, Load_Fresh_WithEmptyScene) {
-//    pScene = std::make_unique<Scene>("RendererTest", *pCamera);
-//
-//    ASSERT_NO_THROW(pRenderer->Load(*pScene));
-//
-//    ASSERT_NO_THROW(pRenderer->Update());
-//    ASSERT_NO_THROW(pRenderer->Render());
-//
-//    ASSERT_NO_THROW(pRenderer->OnActivated());
-//    ASSERT_NO_THROW(pRenderer->OnDeactivated());
-//    ASSERT_NO_THROW(pRenderer->OnSuspending());
-//    ASSERT_NO_THROW(pRenderer->OnResuming());
-//    ASSERT_NO_THROW(pRenderer->OnWindowMoved());
-//    ASSERT_NO_THROW(pRenderer->OnDisplayChanged());
-//    ASSERT_NO_THROW(pRenderer->OnWindowSizeChanged(g_pWindow->GetWidth(), g_pWindow->GetHeight()));
-//}
-//
-//TEST_F(RendererTest, Load_Fresh_WithOccupiedScene) {
-//    ASSERT_NO_THROW(pRenderer->Load(*pScene));
-//
-//    ASSERT_NO_THROW(pRenderer->Update());
-//    ASSERT_NO_THROW(pRenderer->Render());
-//
-//    ASSERT_NO_THROW(pRenderer->OnActivated());
-//    ASSERT_NO_THROW(pRenderer->OnDeactivated());
-//    ASSERT_NO_THROW(pRenderer->OnSuspending());
-//    ASSERT_NO_THROW(pRenderer->OnResuming());
-//    ASSERT_NO_THROW(pRenderer->OnWindowMoved());
-//    ASSERT_NO_THROW(pRenderer->OnDisplayChanged());
-//    ASSERT_NO_THROW(pRenderer->OnWindowSizeChanged(g_pWindow->GetWidth(), g_pWindow->GetHeight()));
-//}
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+
+    ASSERT_NO_THROW(pRenderer->Update());
+    ASSERT_NO_THROW(pRenderer->Render());
+
+    ASSERT_NO_THROW(pRenderer->OnActivated());
+    ASSERT_NO_THROW(pRenderer->OnDeactivated());
+    ASSERT_NO_THROW(pRenderer->OnSuspending());
+    ASSERT_NO_THROW(pRenderer->OnResuming());
+    ASSERT_NO_THROW(pRenderer->OnWindowMoved());
+    ASSERT_NO_THROW(pRenderer->OnDisplayChanged());
+    ASSERT_NO_THROW(pRenderer->OnWindowSizeChanged(g_pWindow->GetWidth(), g_pWindow->GetHeight()));
+}
+
+TEST_F(RendererTest, Load_Fresh_WithOccupiedScene) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+
+    ASSERT_NO_THROW(pRenderer->Update());
+    ASSERT_NO_THROW(pRenderer->Render());
+
+    ASSERT_NO_THROW(pRenderer->OnActivated());
+    ASSERT_NO_THROW(pRenderer->OnDeactivated());
+    ASSERT_NO_THROW(pRenderer->OnSuspending());
+    ASSERT_NO_THROW(pRenderer->OnResuming());
+    ASSERT_NO_THROW(pRenderer->OnWindowMoved());
+    ASSERT_NO_THROW(pRenderer->OnDisplayChanged());
+    ASSERT_NO_THROW(pRenderer->OnWindowSizeChanged(g_pWindow->GetWidth(), g_pWindow->GetHeight()));
+}
 

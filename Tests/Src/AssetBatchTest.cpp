@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
+#include <RoX/MeshFactory.h>
+
 #include "MockAssetBatchObserver.h"
 
 #include "PredefinedObjects/ValidAssetBatch.h"
@@ -123,6 +125,10 @@ TEST_F(GeneralAssetBatchTest, Add_WithInvalidModel) {
 
     EXPECT_THROW(pBatch->Add(std::shared_ptr<Model>()), std::invalid_argument);
     EXPECT_EQ(pBatch->GetNumModels(), 0);
+
+    auto pModelWithoutGeo = std::make_shared<Model>(pMaterial);
+    EXPECT_THROW(pBatch->Add(pModelWithoutGeo), std::invalid_argument);
+    EXPECT_EQ(pBatch->GetNumModels(), 0);
 }
 
 TEST_F(GeneralAssetBatchTest, Add_WithInvalidSprite) {
@@ -237,6 +243,30 @@ TEST_F(GeneralAssetBatchTest, Remove_ByTypeAndName_WithInvalidName) {
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Sprite, INVALID_NAME),   std::out_of_range);
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Text, INVALID_NAME),     std::out_of_range);
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Outline, INVALID_NAME),  std::out_of_range);
+}
+
+TEST_F(GeneralAssetBatchTest, UpdateIMesh_WithValidModelGUIDAndInalidIMeshGUID) {
+    MockAssetBatchObserver observer;
+    EXPECT_CALL(observer, OnUpdate(pModel, pModel->GetMeshes().front())).Times(testing::Exactly(0));
+    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+
+    EXPECT_THROW(pBatch->UpdateIMesh(pModel->GetGUID(), Asset::INVALID_GUID), std::out_of_range);
+}
+
+TEST_F(GeneralAssetBatchTest, UpdateIMesh_WithInvalidModelGUIDAndValidIMeshGUID) {
+    MockAssetBatchObserver observer;
+    EXPECT_CALL(observer, OnUpdate(pModel, pModel->GetMeshes().front())).Times(testing::Exactly(0));
+    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+
+    EXPECT_THROW(pBatch->UpdateIMesh(Asset::INVALID_GUID, pModel->GetMeshes().front()->GetGUID()), std::out_of_range);
+}
+
+TEST_F(GeneralAssetBatchTest, UpdateIMesh_WithInvalidModelGUIDAndInvalidIMeshGUID) {
+    MockAssetBatchObserver observer;
+    EXPECT_CALL(observer, OnUpdate(pModel, pModel->GetMeshes().front())).Times(testing::Exactly(0));
+    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+
+    EXPECT_THROW(pBatch->UpdateIMesh(Asset::INVALID_GUID, Asset::INVALID_GUID), std::out_of_range);
 }
 
 TEST_F(GeneralAssetBatchTest, GetAsset_ByGUID_WithGUID) {
@@ -475,7 +505,10 @@ TEST_F(FilledAssetBatchTest, Add_WithExistingModel) {
 }
 
 TEST_F(FilledAssetBatchTest, Add_WithNewModelWithExistingMaterial) {
+    auto pNewMesh = std::make_shared<Mesh>();
+    MeshFactory::AddCube(*pNewMesh);
     auto pNewModel = std::make_shared<Model>(pMaterial);
+    pNewModel->Add(pNewMesh);
 
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pMaterial)   ).Times(testing::Exactly(0));
@@ -490,9 +523,8 @@ TEST_F(FilledAssetBatchTest, Add_WithNewModelWithExistingMaterial) {
 }
 
 TEST_F(FilledAssetBatchTest, Add_WithNewModelWithNewMaterial) {
-    auto pNewSubmesh = std::make_unique<Submesh>();
     auto pNewMesh = std::make_shared<Mesh>();
-    pNewMesh->Add(std::move(pNewSubmesh));
+    MeshFactory::AddCube(*pNewMesh);
 
     auto pNewMaterial = std::make_shared<Material>(L"", L"");
 
@@ -716,6 +748,16 @@ TEST_F(FilledAssetBatchTest, Remove_ByTypeAndName_WithValidName) {
     EXPECT_NO_THROW(pBatch->Remove(AssetBatch::AssetType::Outline, OutlineName));
     EXPECT_THROW(pBatch->GetOutline(OutlineGUID), std::out_of_range);
 }
+
+TEST_F(FilledAssetBatchTest, UpdateIMesh_WithValidModelGUIDAndValidIMeshGUID) {
+    MockAssetBatchObserver observer;
+    EXPECT_CALL(observer, OnUpdate(pModel, pModel->GetMeshes().front())).Times(testing::Exactly(1));
+    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+
+    EXPECT_NO_THROW(pBatch->UpdateIMesh(pModel->GetGUID(), pModel->GetMeshes().front()->GetGUID()));
+}
+
+
 TEST_F(FilledAssetBatchTest, GetAsset_ByGUID_WithValidGUID) {
     EXPECT_EQ(pBatch->GetMaterial(MaterialGUID), pMaterial);
     EXPECT_EQ(pBatch->GetModel(ModelGUID),       pModel);
@@ -743,7 +785,7 @@ TEST_F(FilledAssetBatchTest, GetStats) {
 
     EXPECT_EQ(pBatch->GetNumSubmeshInstances(),         1);
     EXPECT_EQ(pBatch->GetNumRenderedSubmeshInstances(), 1);
-    EXPECT_EQ(pBatch->GetNumLoadedVertices(),           0);
-    EXPECT_EQ(pBatch->GetNumRenderedVertices(),         0);
+    EXPECT_EQ(pBatch->GetNumLoadedVertices(),           24);
+    EXPECT_EQ(pBatch->GetNumRenderedVertices(),         24);
 }
 

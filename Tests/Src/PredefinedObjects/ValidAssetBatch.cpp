@@ -1,9 +1,10 @@
 #include "ValidAssetBatch.h"
 
+#include <RoX/MeshFactory.h>
+
 ValidAssetBatch::ValidAssetBatch() {
-    auto pSubmesh = std::make_unique<Submesh>();
     auto pMesh = std::make_shared<Mesh>();
-    pMesh->Add(std::move(pSubmesh));
+    MeshFactory::AddCube(*pMesh);
 
     pMaterial = std::make_shared<Material>(TEXTURE_FILE_PATH, TEXTURE_FILE_PATH);
 
@@ -11,7 +12,7 @@ ValidAssetBatch::ValidAssetBatch() {
     pModel->Add(pMesh);
 
     pSprite = std::make_shared<Sprite>(TEXTURE_FILE_PATH);
-    pText = std::make_shared<Text>(TEXTURE_FILE_PATH, L"");
+    pText = std::make_shared<Text>(FONT_FILE_PATH, L"");
 
     pOutline = std::make_shared<RayOutline>();
 

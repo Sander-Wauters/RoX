@@ -1,10 +1,11 @@
 #pragma once
-#include "../../../Inc/RoX/AssetBatch.h"
+#include <RoX/AssetBatch.h>
 
 class ValidAssetBatch {
     public:
         static constexpr char INVALID_NAME[128] = "INVALID_NAME";
         static constexpr wchar_t TEXTURE_FILE_PATH[128] = L"texture.png";
+        static constexpr wchar_t FONT_FILE_PATH[128] = L"font.spritefont";
 
     public:
         ValidAssetBatch();

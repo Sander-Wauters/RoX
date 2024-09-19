@@ -213,22 +213,38 @@ class Model : public Asset {
         void MakeBoneMatricesArray(std::uint64_t count);
         void MakeInverseBoneMatricesArray(std::uint64_t count);
 
-    public:
-        std::uint32_t GetNumBones() const noexcept;
-        std::uint32_t GetNumMeshes() const noexcept;
-        std::uint32_t GetNumMaterials() const noexcept;
+        // Removes the material at the given index if there is more than one material.
+        // Any submeshes than pointed to the removed material will now point to index 0.
+        void RemoveMaterial(std::uint8_t index);
 
+        // Sets every instance of every submesh of every mesh to the given matrix.
+        // Should only be used on models that don't use GPU instancing.
+        void ApplyWorldTransform(DirectX::XMFLOAT3X4 W);
+
+    public:
         std::vector<std::shared_ptr<Material>>& GetMaterials() noexcept;
         std::vector<std::shared_ptr<IMesh>>& GetMeshes() noexcept;
+
+        std::shared_ptr<Material>& GetMaterial(std::uint64_t GUID);
+        std::shared_ptr<IMesh>& GetIMesh(std::uint64_t GUID);
+
         std::vector<Bone>& GetBones() noexcept;
+
         Bone::TransformArray& GetBoneMatrices() noexcept;
         Bone::TransformArray& GetInverseBindPoseMatrices() noexcept;
 
         bool IsVisible() const noexcept;
+
+        // A model is skinned if it contains one material with the **Skinned** effect.
         bool IsSkinned() const noexcept;
 
         void SetVisible(bool visible) noexcept;
-        void SetWorldTransform(DirectX::XMFLOAT3X4 W);
+
+        std::uint32_t GetNumBones() const noexcept;
+        std::uint32_t GetNumMeshes() const noexcept;
+        std::uint32_t GetNumMaterials() const noexcept;
+        std::uint32_t GetNumVertices() const noexcept;
+        std::uint32_t GetNumIndices() const noexcept;
     
     private:
         std::vector<std::shared_ptr<Material>> m_materials;

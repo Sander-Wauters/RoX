@@ -20,4 +20,6 @@ class IAssetBatchObserver {
         virtual void OnRemove(const std::shared_ptr<Sprite>& pSprite) = 0;
         virtual void OnRemove(const std::shared_ptr<Text>& pText) = 0;
         virtual void OnRemove(const std::shared_ptr<Outline>& pOutline) = 0;
+
+        virtual void OnUpdate(const std::shared_ptr<Model>& pModel, const std::shared_ptr<IMesh>& pIMesh) = 0;
 };

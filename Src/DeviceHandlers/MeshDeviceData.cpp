@@ -1,6 +1,7 @@
 #include "MeshDeviceData.h"
 
 MeshDeviceData::MeshDeviceData(ID3D12Device* pDevice, IMesh* pIMesh) :
+    m_numReferences(1),
     m_indexBufferSize(0),
     m_vertexBufferSize(0),
     m_primitiveType(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST),
@@ -11,6 +12,11 @@ MeshDeviceData::MeshDeviceData(ID3D12Device* pDevice, IMesh* pIMesh) :
         m_submeshes.push_back(std::make_unique<SubmeshDeviceData>(pDevice, pIMesh->GetSubmeshes()[i].get()));
     }
 
+    LoadVertexBuffer(pDevice, pIMesh);
+    LoadIndexBuffer(pDevice, pIMesh);
+}
+
+void MeshDeviceData::LoadVertexBuffer(ID3D12Device* pDevice, IMesh* pIMesh) {
     void* vertexData;
 
     if (auto pMesh = dynamic_cast<Mesh*>(pIMesh)) {
@@ -20,7 +26,7 @@ MeshDeviceData::MeshDeviceData(ID3D12Device* pDevice, IMesh* pIMesh) :
         m_vertexStride = sizeof(VertexPositionNormalTextureSkinning);
         vertexData = pSkinnedMesh->GetVertices().data();
     } else {
-        throw std::invalid_argument("Mesh failed to downcast.");
+        throw std::runtime_error("Mesh failed to downcast.");
     }
 
     if (pIMesh->GetNumVertices() >= USHRT_MAX)
@@ -35,8 +41,10 @@ MeshDeviceData::MeshDeviceData(ID3D12Device* pDevice, IMesh* pIMesh) :
     m_vertexBufferSize = sizeInBytes;      
     m_vertexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(sizeInBytes, 16, DirectX::GraphicsMemory::TAG_VERTEX);
     memcpy(m_vertexBuffer.Memory(), vertexData, sizeInBytes);
+}
 
-    sizeInBytes = static_cast<std::uint32_t>(pIMesh->GetNumIndices()) * sizeof(std::uint16_t);
+void MeshDeviceData::LoadIndexBuffer(ID3D12Device* pDevice, IMesh* pIMesh) {
+    std::uint32_t sizeInBytes = static_cast<std::uint32_t>(pIMesh->GetNumIndices()) * sizeof(std::uint16_t);
     if (sizeInBytes > static_cast<std::uint32_t>(D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u))
         throw std::invalid_argument("IB too large for DirectX 12");
 
@@ -73,6 +81,18 @@ void MeshDeviceData::PrepareForDraw(ID3D12GraphicsCommandList* pCommandList) con
     pCommandList->IASetIndexBuffer(&ibv);
 
     pCommandList->IASetPrimitiveTopology(m_primitiveType);
+}
+
+void MeshDeviceData::IncreaseRefCount() noexcept {
+    ++m_numReferences;
+}
+
+void MeshDeviceData::DecreaseRefCount() noexcept {
+    --m_numReferences;
+}
+
+bool MeshDeviceData::HasReferences() const noexcept {
+    return m_numReferences != 0;
 }
 
 std::vector<std::unique_ptr<SubmeshDeviceData>>& MeshDeviceData::GetSubmeshes() noexcept {
