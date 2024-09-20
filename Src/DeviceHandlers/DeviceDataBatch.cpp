@@ -141,7 +141,7 @@ void DeviceDataBatch::OnRemove(const std::shared_ptr<Outline>& pOutline) {
 
 }
 
-void DeviceDataBatch::OnUpdate(const std::shared_ptr<Model>& pModel, const std::shared_ptr<IMesh>& pIMesh) {
+void DeviceDataBatch::OnUpdate(const std::shared_ptr<IMesh>& pIMesh) {
     m_queuedUpdates.push([=]() {
         ID3D12Device* pDevice = m_deviceResources.GetDevice();
         std::shared_ptr<MeshDeviceData>& pMeshData = m_meshData.at(pIMesh);
@@ -205,6 +205,7 @@ void DeviceDataBatch::CreateDeviceDependentResources() {
 
 void DeviceDataBatch::CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
     for (MaterialPair& materialPair : m_materialData) {
+        CreateIEffect(*materialPair.first, materialPair.second);
         BindTexturesToEffect(*materialPair.first, *materialPair.second);
     }
     CreateOutlineBatchResources();
@@ -249,7 +250,7 @@ void DeviceDataBatch::Add(const std::shared_ptr<Material>& pMaterial) {
 
         std::unique_ptr<DirectX::IEffect>& pIEffect = m_materialData[pMaterial];
         if (!pIEffect) {
-            pIEffect = BuildIEffect(*pMaterial);
+            CreateIEffect(*pMaterial, pIEffect);
             BindTexturesToEffect(*pMaterial, *pIEffect);
         }
 
@@ -274,7 +275,7 @@ void DeviceDataBatch::Add(const std::shared_ptr<Model>& pModel) {
         for (std::uint8_t i = 0; i < pModel->GetNumMaterials(); ++i) {
             std::shared_ptr<Material> pMaterial = pModel->GetMaterials()[i];
             OnAdd(pMaterial); // Material should already be added by now but the redundancy doesn't effect performance much.
-            pModelData->GetEffects().push_back(m_materialData.at(pMaterial).get());
+            pModelData->GetEffects().push_back(&m_materialData.at(pMaterial));
         }
         pModelData->GetEffects().shrink_to_fit();
 
@@ -368,6 +369,36 @@ void DeviceDataBatch::CreateTextureResource(const std::wstring& fileName, std::u
             m_pDescriptorHeap->GetCpuHandle(pTextureData->GetHeapIndex()));
 }
 
+void DeviceDataBatch::CreateIEffect(Material& material, std::unique_ptr<DirectX::IEffect>& pIEffect) const {
+    ID3D12Device* pDevice = m_deviceResources.GetDevice();
+
+    std::uint32_t flags = material.GetFlags();
+    D3D12_INPUT_LAYOUT_DESC inputLayout = InputLayoutDesc(flags);
+    DirectX::EffectPipelineStateDescription pd(
+            &inputLayout,
+            BlendDesc(flags),
+            DepthStencilDesc(flags),
+            RasterizerDesc(flags),
+            RenderTargetState());
+
+    std::unique_ptr<DirectX::NormalMapEffect> pNormEffect;
+
+    if (flags & RenderFlags::Effect::Instanced)
+        pNormEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Instancing, pd);
+    else if (flags & RenderFlags::Effect::Skinned) 
+        pNormEffect = std::make_unique<DirectX::SkinnedNormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting, pd);
+    else
+        pNormEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting | DirectX::EffectFlags::Texture, pd);
+
+    pNormEffect->SetColorAndAlpha(DirectX::XMLoadFloat4(&material.GetDiffuseColor()));
+    pNormEffect->SetEmissiveColor(DirectX::XMLoadFloat4(&material.GetEmissiveColor()));
+    pNormEffect->SetSpecularColor(DirectX::XMLoadFloat4(&material.GetSpecularColor()));
+
+    pNormEffect->EnableDefaultLighting();
+
+    pIEffect = std::move(pNormEffect);
+}
+
 void DeviceDataBatch::CreateOutlineBatchResources() {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
@@ -396,36 +427,6 @@ void DeviceDataBatch::BindTexturesToEffect(Material& material, DirectX::IEffect&
             SamplerDesc(material.GetFlags()));
     effect.SetNormalTexture(
             m_pDescriptorHeap->GetGpuHandle(m_textureData.at(material.GetNormalMapFilePath())->GetHeapIndex()));
-}
-
-std::unique_ptr<DirectX::IEffect> DeviceDataBatch::BuildIEffect(Material& material) const {
-    ID3D12Device* pDevice = m_deviceResources.GetDevice();
-
-    std::uint32_t flags = material.GetFlags();
-    std::unique_ptr<DirectX::NormalMapEffect> pEffect;
-
-    D3D12_INPUT_LAYOUT_DESC inputLayout = InputLayoutDesc(flags);
-    DirectX::EffectPipelineStateDescription pd(
-            &inputLayout,
-            BlendDesc(flags),
-            DepthStencilDesc(flags),
-            RasterizerDesc(flags),
-            RenderTargetState());
-
-    if (flags & RenderFlags::Effect::Instanced)
-        pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Instancing, pd);
-    else if (flags & RenderFlags::Effect::Skinned) 
-        pEffect = std::make_unique<DirectX::SkinnedNormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting, pd);
-    else
-        pEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting | DirectX::EffectFlags::Texture, pd);
-
-    pEffect->SetColorAndAlpha(DirectX::XMLoadFloat4(&material.GetDiffuseColor()));
-    pEffect->SetEmissiveColor(DirectX::XMLoadFloat4(&material.GetEmissiveColor()));
-    pEffect->SetSpecularColor(DirectX::XMLoadFloat4(&material.GetSpecularColor()));
-
-    pEffect->EnableDefaultLighting();
-
-    return std::move(pEffect);
 }
 
 DirectX::RenderTargetState DeviceDataBatch::RenderTargetState() const noexcept {

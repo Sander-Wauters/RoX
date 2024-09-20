@@ -24,16 +24,16 @@ void ModelDeviceData::DrawSkinned(ID3D12GraphicsCommandList* pCommandList, Model
 
         for (std::uint64_t submeshIndex = 0; submeshIndex < pMesh->GetNumSubmeshes(); ++submeshIndex) {
             Submesh* pSubmesh = pMesh->GetSubmeshes()[submeshIndex].get();
-            DirectX::IEffect* pEffect = m_effects[pSubmesh->GetMaterialIndex()];
+            DirectX::IEffect* pIEffect = m_effects[pSubmesh->GetMaterialIndex()]->get();
 
-            auto iMatrices = dynamic_cast<DirectX::IEffectMatrices*>(pEffect);
-            if (iMatrices)
-                iMatrices->SetWorld(DirectX::XMLoadFloat3x4(&pSubmesh->GetInstances()[0]));
+            auto pIMatrices = dynamic_cast<DirectX::IEffectMatrices*>(pIEffect);
+            if (pIMatrices)
+                pIMatrices->SetWorld(DirectX::XMLoadFloat3x4(&pSubmesh->GetInstances()[0]));
 
-            auto iSkinning = dynamic_cast<DirectX::IEffectSkinning*>(pEffect);
-            if (iSkinning) {
+            auto pISkinning = dynamic_cast<DirectX::IEffectSkinning*>(pIEffect);
+            if (pISkinning) {
                 if (pMesh->GetBoneInfluences().empty())
-                    iSkinning->SetBoneTransforms(pModel->GetBoneMatrices().get(), pModel->GetNumBones());
+                    pISkinning->SetBoneTransforms(pModel->GetBoneMatrices().get(), pModel->GetNumBones());
                 else {
                     if (!temp) {
                         temp = Bone::MakeArray(DirectX::IEffectSkinning::MaxBones);
@@ -49,16 +49,16 @@ void ModelDeviceData::DrawSkinned(ID3D12GraphicsCommandList* pCommandList, Model
                         }
                     }
 
-                    iSkinning->SetBoneTransforms(temp.get(), pMesh->GetBoneInfluences().size());
+                    pISkinning->SetBoneTransforms(temp.get(), pMesh->GetBoneInfluences().size());
                 }
-            } else if (iMatrices) {
+            } else if (pIMatrices) {
                 DirectX::XMMATRIX boneTransforms = (pMesh->GetBoneIndex() != Bone::INVALID_INDEX && pMesh->GetBoneIndex() < pModel->GetNumBones()) 
                     ? pModel->GetBoneMatrices()[pMesh->GetBoneIndex()] : DirectX::XMMatrixIdentity();
 
-                iMatrices->SetWorld(DirectX::XMMatrixMultiply(boneTransforms, DirectX::XMLoadFloat3x4(&pSubmesh->GetInstances()[0])));
+                pIMatrices->SetWorld(DirectX::XMMatrixMultiply(boneTransforms, DirectX::XMLoadFloat3x4(&pSubmesh->GetInstances()[0])));
             }
 
-            pEffect->Apply(pCommandList);
+            pIEffect->Apply(pCommandList);
             pCommandList->DrawIndexedInstanced(pSubmesh->GetIndexCount(), 1, pSubmesh->GetStartIndex(), pSubmesh->GetVertexOffset(), 0);
         }
     }
@@ -66,8 +66,8 @@ void ModelDeviceData::DrawSkinned(ID3D12GraphicsCommandList* pCommandList, Model
 
 void ModelDeviceData::LoadStaticBuffers(ID3D12Device* pDevice, DirectX::ResourceUploadBatch& resourceUploadBatch, bool keepMemory) {
     std::set<MeshDeviceData*> uniqueMeshes;
-    for (MeshDeviceData* pMeshData : m_meshes) {
-        uniqueMeshes.insert(pMeshData);
+    for (std::shared_ptr<MeshDeviceData>& pMeshData : m_meshes) {
+        uniqueMeshes.insert(pMeshData.get());
     }
 
     const CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
@@ -148,10 +148,10 @@ void ModelDeviceData::LoadStaticBuffers(ID3D12Device* pDevice, DirectX::Resource
     }
 }
 
-std::vector<DirectX::IEffect*>& ModelDeviceData::GetEffects() noexcept {
+std::vector<std::unique_ptr<DirectX::IEffect>*>& ModelDeviceData::GetEffects() noexcept {
     return m_effects;
 }
 
-std::vector<MeshDeviceData*>& ModelDeviceData::GetMeshes() noexcept {
+std::vector<std::shared_ptr<MeshDeviceData>>& ModelDeviceData::GetMeshes() noexcept {
     return m_meshes;
 }

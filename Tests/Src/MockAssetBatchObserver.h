@@ -1,7 +1,7 @@
 #pragma once
 #include <gmock/gmock.h>
 
-#include "RoX/IAssetBatchObserver.h"
+#include "RoX/AssetBatch.h"
 
 class MockAssetBatchObserver : public IAssetBatchObserver {
     public:
@@ -17,5 +17,5 @@ class MockAssetBatchObserver : public IAssetBatchObserver {
         MOCK_METHOD(void, OnRemove, (const std::shared_ptr<Text>& pText),         (override));
         MOCK_METHOD(void, OnRemove, (const std::shared_ptr<Outline>& pOutline),   (override));
 
-        MOCK_METHOD(void, OnUpdate, (const std::shared_ptr<Model>& pModel, const std::shared_ptr<IMesh>& pIMesh), (override));
+        MOCK_METHOD(void, OnUpdate, (const std::shared_ptr<IMesh>& pIMesh), (override));
 };

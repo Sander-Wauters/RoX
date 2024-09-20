@@ -2,8 +2,6 @@
 
 #include <functional>
 
-#include "IWindowObserver.h"
-
 #include "Scene.h"
 #include "Window.h"
 

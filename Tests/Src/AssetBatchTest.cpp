@@ -245,17 +245,9 @@ TEST_F(GeneralAssetBatchTest, Remove_ByTypeAndName_WithInvalidName) {
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Outline, INVALID_NAME),  std::out_of_range);
 }
 
-TEST_F(GeneralAssetBatchTest, UpdateIMesh_WithValidModelGUIDAndInalidIMeshGUID) {
-    MockAssetBatchObserver observer;
-    EXPECT_CALL(observer, OnUpdate(pModel, pModel->GetMeshes().front())).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
-
-    EXPECT_THROW(pBatch->UpdateIMesh(pModel->GetGUID(), Asset::INVALID_GUID), std::out_of_range);
-}
-
 TEST_F(GeneralAssetBatchTest, UpdateIMesh_WithInvalidModelGUIDAndValidIMeshGUID) {
     MockAssetBatchObserver observer;
-    EXPECT_CALL(observer, OnUpdate(pModel, pModel->GetMeshes().front())).Times(testing::Exactly(0));
+    EXPECT_CALL(observer, OnUpdate(pModel->GetMeshes().front())).Times(testing::Exactly(0));
     ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
 
     EXPECT_THROW(pBatch->UpdateIMesh(Asset::INVALID_GUID, pModel->GetMeshes().front()->GetGUID()), std::out_of_range);
@@ -263,7 +255,7 @@ TEST_F(GeneralAssetBatchTest, UpdateIMesh_WithInvalidModelGUIDAndValidIMeshGUID)
 
 TEST_F(GeneralAssetBatchTest, UpdateIMesh_WithInvalidModelGUIDAndInvalidIMeshGUID) {
     MockAssetBatchObserver observer;
-    EXPECT_CALL(observer, OnUpdate(pModel, pModel->GetMeshes().front())).Times(testing::Exactly(0));
+    EXPECT_CALL(observer, OnUpdate(pModel->GetMeshes().front())).Times(testing::Exactly(0));
     ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
 
     EXPECT_THROW(pBatch->UpdateIMesh(Asset::INVALID_GUID, Asset::INVALID_GUID), std::out_of_range);
@@ -751,12 +743,19 @@ TEST_F(FilledAssetBatchTest, Remove_ByTypeAndName_WithValidName) {
 
 TEST_F(FilledAssetBatchTest, UpdateIMesh_WithValidModelGUIDAndValidIMeshGUID) {
     MockAssetBatchObserver observer;
-    EXPECT_CALL(observer, OnUpdate(pModel, pModel->GetMeshes().front())).Times(testing::Exactly(1));
+    EXPECT_CALL(observer, OnUpdate(pModel->GetMeshes().front())).Times(testing::Exactly(1));
     ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
 
     EXPECT_NO_THROW(pBatch->UpdateIMesh(pModel->GetGUID(), pModel->GetMeshes().front()->GetGUID()));
 }
 
+TEST_F(FilledAssetBatchTest, UpdateIMesh_WithValidModelGUIDAndInvalidIMeshGUID) {
+    MockAssetBatchObserver observer;
+    EXPECT_CALL(observer, OnUpdate(pModel->GetMeshes().front())).Times(testing::Exactly(0));
+    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+
+    EXPECT_THROW(pBatch->UpdateIMesh(pModel->GetGUID(), Asset::INVALID_GUID), std::invalid_argument);
+}
 
 TEST_F(FilledAssetBatchTest, GetAsset_ByGUID_WithValidGUID) {
     EXPECT_EQ(pBatch->GetMaterial(MaterialGUID), pMaterial);

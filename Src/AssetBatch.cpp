@@ -250,7 +250,7 @@ void AssetBatch::Remove(AssetBatch::AssetType type, std::string name) {
 void AssetBatch::UpdateIMesh(std::uint64_t modelGUID, std::uint64_t meshGUID) {
     for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
         std::shared_ptr<Model>& pModel = m_models.at(modelGUID);
-        pAssetBatchObserver->OnUpdate(pModel, pModel->GetIMesh(meshGUID));
+        pAssetBatchObserver->OnUpdate(pModel->GetIMesh(meshGUID));
     }
 }
 

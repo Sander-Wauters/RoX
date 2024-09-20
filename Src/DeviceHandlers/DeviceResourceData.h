@@ -6,7 +6,6 @@
 #include "RoX/Scene.h"
 
 #include "DeviceDataBatch.h"
-#include "IDeviceObserver.h"
 #include "DeviceResources.h"
 
 class DeviceResourceData : public IDeviceObserver {

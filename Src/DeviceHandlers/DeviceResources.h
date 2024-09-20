@@ -1,7 +1,12 @@
 #pragma once
 
 #include "../Util/pch.h"
-#include "IDeviceObserver.h"
+
+class IDeviceObserver {
+    public:
+        virtual void OnDeviceLost() = 0;
+        virtual void OnDeviceRestored() = 0;
+};
 
 class DeviceResources {
     public:

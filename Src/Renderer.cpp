@@ -7,7 +7,6 @@
 #include "Util/pch.h"
 
 #include "DebugDraw.h"
-#include "DeviceHandlers/IDeviceObserver.h"
 #include "DeviceHandlers/DeviceDataBatch.h"
 #include "DeviceHandlers/DeviceResources.h"
 #include "DeviceHandlers/DeviceResourceData.h"
@@ -295,7 +294,7 @@ void Renderer::Impl::RenderMeshes(const DeviceDataBatch& batch, std::uint8_t bat
 
         for (std::uint64_t meshIndex = 0; meshIndex < modelPair.first->GetNumMeshes(); ++meshIndex) {
             IMesh* pMesh = modelPair.first->GetMeshes()[meshIndex].get();
-            MeshDeviceData* pMeshData = modelPair.second->GetMeshes()[meshIndex];
+            MeshDeviceData* pMeshData = modelPair.second->GetMeshes()[meshIndex].get();
 
             if (!pMesh->IsVisible())
                 continue;
@@ -309,7 +308,7 @@ void Renderer::Impl::RenderMeshes(const DeviceDataBatch& batch, std::uint8_t bat
                 if (!pSubmesh->IsVisible())
                     continue;
 
-                DirectX::IEffect* pEffect = modelPair.second->GetEffects()[pSubmesh->GetMaterialIndex()];
+                DirectX::IEffect* pEffect = modelPair.second->GetEffects()[pSubmesh->GetMaterialIndex()]->get();
 
                 std::uint32_t flags = pSubmesh->GetMaterial(*modelPair.first)->GetFlags();
 

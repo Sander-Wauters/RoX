@@ -1,5 +1,6 @@
 #pragma once
 #include <RoX/AssetBatch.h>
+#include <RoX/MeshFactory.h>
 
 class ValidAssetBatch {
     public:
@@ -9,6 +10,13 @@ class ValidAssetBatch {
 
     public:
         ValidAssetBatch();
+
+        std::shared_ptr<Material> NewValidMaterial();
+        std::shared_ptr<Sprite>   NewValidSprite();
+        std::shared_ptr<Text>     NewValidText();
+        std::shared_ptr<Model>    NewValidModelWithNewValidMaterial();
+        std::shared_ptr<Model>    NewValidModelWithExistingMaterial();
+        std::shared_ptr<Outline>  NewValidOutline();
 
     public:
         std::shared_ptr<Material> pMaterial;

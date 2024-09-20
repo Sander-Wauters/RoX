@@ -6,7 +6,7 @@
 #include "RoX/Camera.h"
 #include "RoX/Renderer.h"
 #include "RoX/Window.h"
-
+#include "RoX/DXException.h"
 
 std::unique_ptr<Window> g_pWindow = std::make_unique<Window>(L"RendererTest", GetModuleHandle(NULL), NULL);
 
@@ -36,35 +36,513 @@ class RendererTest : public testing::Test, public ValidAssetBatch {
         std::unique_ptr<Scene> pScene;
 };
 
+testing::AssertionResult SimulateMainLoop(Renderer& renderer, std::uint8_t count = 2) {
+    try {
+        for (std::uint8_t i = 0; i < count; ++i) {
+            renderer.Update();
+            renderer.Render();
+
+            renderer.OnActivated();
+            renderer.OnDeactivated();
+            renderer.OnSuspending();
+            renderer.OnResuming();
+            renderer.OnWindowMoved();
+            renderer.OnDisplayChanged();
+            renderer.OnWindowSizeChanged(g_pWindow->GetWidth(), g_pWindow->GetHeight());
+        }
+    } catch(DXException ex) {
+        return testing::AssertionFailure() << ex.ToString();
+    } catch(std::exception ex) {
+        return testing::AssertionFailure() << ex.what();
+    }
+    return testing::AssertionSuccess();
+}
+
+TEST_F(RendererTest, PreLoad_SimulateMainLoop) {
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PreLoad_ToggleMSAA_StartOn) {
+    ASSERT_NO_THROW(pRenderer->SetMsaa(true));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    ASSERT_NO_THROW(pRenderer->SetMsaa(false));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PreLoad_ToggleMSAA_StartOff) {
+    ASSERT_NO_THROW(pRenderer->SetMsaa(false));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    ASSERT_NO_THROW(pRenderer->SetMsaa(true));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
 TEST_F(RendererTest, Load_Fresh_WithEmptyScene) {
     pScene = std::make_unique<Scene>("RendererTest", *pCamera);
 
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
-
-    ASSERT_NO_THROW(pRenderer->Update());
-    ASSERT_NO_THROW(pRenderer->Render());
-
-    ASSERT_NO_THROW(pRenderer->OnActivated());
-    ASSERT_NO_THROW(pRenderer->OnDeactivated());
-    ASSERT_NO_THROW(pRenderer->OnSuspending());
-    ASSERT_NO_THROW(pRenderer->OnResuming());
-    ASSERT_NO_THROW(pRenderer->OnWindowMoved());
-    ASSERT_NO_THROW(pRenderer->OnDisplayChanged());
-    ASSERT_NO_THROW(pRenderer->OnWindowSizeChanged(g_pWindow->GetWidth(), g_pWindow->GetHeight()));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
 TEST_F(RendererTest, Load_Fresh_WithOccupiedScene) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
 
-    ASSERT_NO_THROW(pRenderer->Update());
-    ASSERT_NO_THROW(pRenderer->Render());
+TEST_F(RendererTest, Load_Dirty_WithEmptyScene) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
-    ASSERT_NO_THROW(pRenderer->OnActivated());
-    ASSERT_NO_THROW(pRenderer->OnDeactivated());
-    ASSERT_NO_THROW(pRenderer->OnSuspending());
-    ASSERT_NO_THROW(pRenderer->OnResuming());
-    ASSERT_NO_THROW(pRenderer->OnWindowMoved());
-    ASSERT_NO_THROW(pRenderer->OnDisplayChanged());
-    ASSERT_NO_THROW(pRenderer->OnWindowSizeChanged(g_pWindow->GetWidth(), g_pWindow->GetHeight()));
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, Load_Dirty_WithOccupiedScene) {
+    auto pNewScene = std::make_unique<Scene>("RendererTest", *pCamera);
+
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    ASSERT_NO_THROW(pRenderer->Load(*pNewScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_ToggleMSAA_StartOn) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+
+    ASSERT_NO_THROW(pRenderer->SetMsaa(true));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    ASSERT_NO_THROW(pRenderer->SetMsaa(false));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_ToggleMSAA_StartOff) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+
+    ASSERT_NO_THROW(pRenderer->SetMsaa(false));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    ASSERT_NO_THROW(pRenderer->SetMsaa(true));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewMaterial_NumUniqueTexturesExceedsMaxNumUniqueTextures) {
+    pBatch = std::make_shared<AssetBatch>("ValidAssetBatch", 1, true);
+    pScene->GetAssetBatches()[0] = pBatch;
+
+    auto pNewMaterial1 = NewValidMaterial();
+    auto pNewMaterial2 = std::make_shared<Material>(L"unique_texture_1", L"unique_texture_2");
+
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->Add(pNewMaterial1));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Add(pNewMaterial2), std::runtime_error);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewSprite_NumUniqueTexturesExceedsMaxNumUniqueTextures) {
+    pBatch = std::make_shared<AssetBatch>("ValidAssetBatch", 1, true);
+    pScene->GetAssetBatches()[0] = pBatch;
+
+    auto pNewSprite1 = NewValidSprite();
+    auto pNewSprite2 = std::make_shared<Sprite>(L"unique_texture_2");
+
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->Add(pNewSprite1));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Add(pNewSprite2), std::runtime_error);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewText_NumUniqueTexturesExceedsMaxNumUniqueTextures) {
+    pBatch = std::make_shared<AssetBatch>("ValidAssetBatch", 1, true);
+    pScene->GetAssetBatches()[0] = pBatch;
+
+    auto pNewText1 = NewValidText();
+    auto pNewText2 = std::make_shared<Text>(L"unique_texture_2", L"");
+
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->Add(pNewText1));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Add(pNewText2), std::runtime_error);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewMaterial) {
+    auto pNewMaterial = NewValidMaterial();
+
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    ASSERT_NO_THROW(pBatch->Add(pNewMaterial));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithExistingMaterial) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    ASSERT_NO_THROW(pBatch->Add(pMaterial));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithInvalidMaterial) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Add(std::shared_ptr<Material>()), std::invalid_argument);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithExistingModel) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    ASSERT_NO_THROW(pBatch->Add(pModel));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewModelExistingMaterial) {
+    auto pNewModel = NewValidModelWithExistingMaterial();
+
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    ASSERT_NO_THROW(pBatch->Add(pNewModel));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewModelNewMaterial) {
+    auto pNewModel = NewValidModelWithNewValidMaterial();
+
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    ASSERT_NO_THROW(pBatch->Add(pNewModel));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewModelWithInvalidMaterial) {
+    auto pNewModel = NewValidModelWithNewValidMaterial();
+    pNewModel->GetMaterials() = { nullptr };
+
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Add(pNewModel), std::invalid_argument);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithInvalidModel) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Add(std::shared_ptr<Model>()), std::invalid_argument);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    auto pModelWithoutGeo = std::make_shared<Model>(pMaterial);
+    EXPECT_THROW(pBatch->Add(pModelWithoutGeo), std::invalid_argument);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewSprite) {
+    auto pNewSprite = NewValidSprite();
+
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    ASSERT_NO_THROW(pBatch->Add(pNewSprite));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithExistingSprite) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    ASSERT_NO_THROW(pBatch->Add(pSprite));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithInvalidSprite) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Add(std::shared_ptr<Sprite>()), std::invalid_argument);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewText) {
+    auto pNewText = NewValidText();
+
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    ASSERT_NO_THROW(pBatch->Add(pNewText));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithExistingText) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    ASSERT_NO_THROW(pBatch->Add(pText));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithInvalidText) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Add(std::shared_ptr<Text>()), std::invalid_argument);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewOutline) {
+    auto pNewOutline = NewValidOutline();
+
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    ASSERT_NO_THROW(pBatch->Add(pNewOutline));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithExistingOutline) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    ASSERT_NO_THROW(pBatch->Add(pOutline));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithInvalidOutline) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Add(std::shared_ptr<Outline>()), std::invalid_argument);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByGUID_WithValidGUID) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    // Material still in use by pModel
+    EXPECT_THROW(pBatch->RemoveMaterial(MaterialGUID), std::runtime_error);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->RemoveModel(ModelGUID));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    // Material no longer in use by pModel
+    EXPECT_NO_THROW(pBatch->RemoveMaterial(MaterialGUID));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->RemoveSprite(SpriteGUID));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->RemoveText(TextGUID));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->RemoveOutline(OutlineGUID));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByGUID_WithInvalidGUID) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->RemoveMaterial(Asset::INVALID_GUID), std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->RemoveModel(Asset::INVALID_GUID),    std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->RemoveSprite(Asset::INVALID_GUID),   std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->RemoveText(Asset::INVALID_GUID),     std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->RemoveOutline(Asset::INVALID_GUID),  std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByTypeAndGUID_WithValidGUID) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    // Material still in use by pModel
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Material, MaterialGUID), std::runtime_error);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->Remove(AssetBatch::AssetType::Model, ModelGUID));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    // Material no longer in use by pModel
+    EXPECT_NO_THROW(pBatch->Remove(AssetBatch::AssetType::Material, MaterialGUID));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->Remove(AssetBatch::AssetType::Sprite, SpriteGUID));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->Remove(AssetBatch::AssetType::Text, TextGUID));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+    
+    EXPECT_NO_THROW(pBatch->Remove(AssetBatch::AssetType::Outline, OutlineGUID));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByTypeAndGUID_WithInvalidGUID) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Material, Asset::INVALID_GUID), std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Model, Asset::INVALID_GUID),    std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Sprite, Asset::INVALID_GUID),   std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Text, Asset::INVALID_GUID),     std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Outline, Asset::INVALID_GUID),  std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByName_WithValidName) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    // Material still in use by pModel
+    EXPECT_THROW(pBatch->RemoveMaterial(MaterialName), std::runtime_error);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->RemoveModel(ModelName));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    // Material no longer in use by pModel
+    EXPECT_NO_THROW(pBatch->RemoveMaterial(MaterialName));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->RemoveSprite(SpriteName));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->RemoveText(TextName));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->RemoveOutline(OutlineName));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByName_WithInvalidName) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->RemoveMaterial(INVALID_NAME), std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->RemoveModel(INVALID_NAME),    std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->RemoveSprite(INVALID_NAME),   std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->RemoveText(INVALID_NAME),     std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->RemoveOutline(INVALID_NAME),  std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByTypeAndName_WithValidName) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    // Material still in use by pModel
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Material, MaterialName), std::runtime_error);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->Remove(AssetBatch::AssetType::Model, ModelName));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    // Material no longer in use by pModel
+    EXPECT_NO_THROW(pBatch->Remove(AssetBatch::AssetType::Material, MaterialName));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->Remove(AssetBatch::AssetType::Sprite, SpriteName));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->Remove(AssetBatch::AssetType::Text, TextName));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->Remove(AssetBatch::AssetType::Outline, OutlineName));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByTypeAndName_WithInvalidName) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Material, INVALID_NAME), std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Model, INVALID_NAME),    std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Sprite, INVALID_NAME),   std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Text, INVALID_NAME),     std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Outline, INVALID_NAME),  std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_UpdateIMesh_WithValidModelGUIDAndValidIMeshGUID) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_NO_THROW(pBatch->UpdateIMesh(pModel->GetGUID(), pModel->GetMeshes().front()->GetGUID()));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_UpdateIMesh_WithValidModelGUIDAndInvalidIMeshGUID) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->UpdateIMesh(pModel->GetGUID(), Asset::INVALID_GUID), std::invalid_argument);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_UpdateIMesh_WithInvalidModelGUIDAndValidIMeshGUID) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->UpdateIMesh(Asset::INVALID_GUID, pModel->GetMeshes().front()->GetGUID()), std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostLoad_AssetBatch_UpdateIMesh_WithInvalidModelGUIDAndInvalidIMeshGUID) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    EXPECT_THROW(pBatch->UpdateIMesh(Asset::INVALID_GUID, Asset::INVALID_GUID), std::out_of_range);
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 

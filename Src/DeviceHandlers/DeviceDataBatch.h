@@ -4,12 +4,10 @@
 #include "../Util/dxtk12pch.h"
 
 #include "RoX/AssetBatch.h"
-#include "RoX/IAssetBatchObserver.h"
 #include "RoX/Material.h"
 #include "RoX/Model.h"
 #include "RoX/Sprite.h"
 
-#include "IDeviceObserver.h"
 #include "DeviceResources.h"
 #include "ModelDeviceData.h"
 #include "MeshDeviceData.h"
@@ -49,7 +47,7 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
         void OnRemove(const std::shared_ptr<Text>& pText) override;
         void OnRemove(const std::shared_ptr<Outline>& pOutline) override;
 
-        void OnUpdate(const std::shared_ptr<Model>& pModel, const std::shared_ptr<IMesh>& pIMesh) override;
+        void OnUpdate(const std::shared_ptr<IMesh>& pIMesh) override;
 
         void Update(DirectX::XMMATRIX view, DirectX::XMMATRIX projection);
 
@@ -72,12 +70,10 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
         void CreateSpriteResource(const std::shared_ptr<Sprite>& pSprite, std::unique_ptr<TextureDeviceData>& pSpriteData, DirectX::ResourceUploadBatch& resourceUploadBatch);
         void CreateTextResource(const std::shared_ptr<Text>& pText, std::unique_ptr<TextDeviceData>& pTextData, DirectX::ResourceUploadBatch& resourceUploadBatch);
         void CreateTextureResource(const std::wstring& fileName, std::unique_ptr<TextureDeviceData>& pTextureData, DirectX::ResourceUploadBatch& resourceUploadBatch);
-
+        void CreateIEffect(Material& material, std::unique_ptr<DirectX::IEffect>& pIEffect) const;
         void CreateOutlineBatchResources();
 
         void BindTexturesToEffect(Material& material, DirectX::IEffect& iEffect);
-
-        std::unique_ptr<DirectX::IEffect> BuildIEffect(Material& material) const;
 
         DirectX::RenderTargetState RenderTargetState() const noexcept;
 

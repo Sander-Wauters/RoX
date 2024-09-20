@@ -7,13 +7,32 @@
 #include "Model.h"
 #include "Sprite.h"
 #include "Outline.h"
-#include "IAssetBatchObserver.h"
 
 using Materials = std::unordered_map<std::uint64_t, std::shared_ptr<Material>>;
 using Models    = std::unordered_map<std::uint64_t, std::shared_ptr<Model>>;
 using Sprites   = std::unordered_map<std::uint64_t, std::shared_ptr<Sprite>>;
 using Texts     = std::unordered_map<std::uint64_t, std::shared_ptr<Text>>;
 using Outlines  = std::unordered_map<std::uint64_t, std::shared_ptr<Outline>>;
+
+// Mainly used internally but can be used by the client to execute code when an asset gets added and/or removed.
+class IAssetBatchObserver {
+    public:
+        virtual ~IAssetBatchObserver() = default;
+
+        virtual void OnAdd(const std::shared_ptr<Material>& pMaterial) = 0;
+        virtual void OnAdd(const std::shared_ptr<Model>& pModel) = 0;
+        virtual void OnAdd(const std::shared_ptr<Sprite>& pSprite) = 0;
+        virtual void OnAdd(const std::shared_ptr<Text>& pText) = 0;
+        virtual void OnAdd(const std::shared_ptr<Outline>& pOutline) = 0;
+
+        virtual void OnRemove(const std::shared_ptr<Material>& pMaterial) = 0;
+        virtual void OnRemove(const std::shared_ptr<Model>& pModel) = 0;
+        virtual void OnRemove(const std::shared_ptr<Sprite>& pSprite) = 0;
+        virtual void OnRemove(const std::shared_ptr<Text>& pText) = 0;
+        virtual void OnRemove(const std::shared_ptr<Outline>& pOutline) = 0;
+
+        virtual void OnUpdate(const std::shared_ptr<IMesh>& pIMesh) = 0;
+};
 
 // Contains data that will be rendered to the display.
 class AssetBatch {
