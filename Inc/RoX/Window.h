@@ -44,8 +44,8 @@ class Window {
         int GetHeight() const noexcept;
         float GetAspectRatio() const noexcept;
 
-        void RegisterWindowObserver(IWindowObserver* windowObserver) noexcept;
-        void DeregisterWindowObserver(IWindowObserver* windowObserver) noexcept;
+        void Attach(IWindowObserver* pIWindowObserver);
+        void Detach(IWindowObserver* pIWindowObserver) noexcept;
 
     private:
         static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {

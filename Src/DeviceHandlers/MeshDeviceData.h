@@ -14,6 +14,7 @@ class MeshDeviceData {
         void LoadIndexBuffer(ID3D12Device* pDevice, IMesh* pIMesh);
 
         void OnDeviceLost() noexcept;
+        void OnDeviceRestored();
 
         void PrepareForDraw(ID3D12GraphicsCommandList* pCommandList) const;
 

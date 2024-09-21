@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <vector>
+#include <unordered_set>
 
 #include "Asset.h"
 #include "VertexTypes.h"
@@ -86,6 +87,13 @@ class Submesh : public Asset {
         bool m_visible;
 };
 
+class IMeshObserver {
+    public:
+        virtual void OnAdd(const std::unique_ptr<Submesh>& pSubmesh) = 0;
+
+        virtual void OnRemove(const std::unique_ptr<Submesh>& pSubmesh) = 0;
+};
+
 // Abstract interface representing any mesh which can be used by the **Renderer**.
 // A mesh contains the vertices and indices of a part of a model.
 class IMesh {
@@ -98,6 +106,9 @@ class IMesh {
         virtual ~IMesh() = default;
 
         virtual void Add(std::unique_ptr<Submesh> pSubmesh) noexcept = 0;
+
+        virtual void Attach(IMeshObserver* pIMeshObserver) = 0;
+        virtual void Detach(IMeshObserver* pIMeshObserver) noexcept = 0;
 
     public:
         virtual std::string GetName() const noexcept = 0;
@@ -127,6 +138,9 @@ class Mesh : public IMesh, public Asset {
     public:
         void Add(std::unique_ptr<Submesh> pSubmesh) noexcept override;
 
+        void Attach(IMeshObserver* pIMeshObserver) override;
+        void Detach(IMeshObserver* pIMeshObserver) noexcept override;
+
     public:
         std::string GetName() const noexcept override;
         std::uint64_t GetGUID() const noexcept override;
@@ -148,6 +162,8 @@ class Mesh : public IMesh, public Asset {
         void SetVisible(bool visible) noexcept override;
 
     private:
+        std::unordered_set<IMeshObserver*> m_iMeshObservers;
+
         std::uint32_t m_boneIndex;
 
         std::vector<std::uint32_t> m_boneInfluences;
@@ -165,6 +181,9 @@ class SkinnedMesh : public IMesh, public Asset {
 
     public:
         void Add(std::unique_ptr<Submesh> pSubmesh) noexcept override;
+
+        void Attach(IMeshObserver* pIMeshObserver) override;
+        void Detach(IMeshObserver* pIMeshObserver) noexcept override;
 
     public:
         std::string GetName() const noexcept override;
@@ -187,6 +206,8 @@ class SkinnedMesh : public IMesh, public Asset {
         void SetVisible(bool visible) noexcept override;
 
     private:
+        std::unordered_set<IMeshObserver*> m_iMeshObservers;
+
         std::uint32_t m_boneIndex;
 
         std::vector<std::uint32_t> m_boneInfluences;
@@ -195,6 +216,15 @@ class SkinnedMesh : public IMesh, public Asset {
         std::vector<std::uint16_t> m_indices;
 
         bool m_visible;
+};
+
+class IModelObserver {
+    public:
+        virtual void OnAdd(const std::shared_ptr<Material>& pMaterial) = 0;
+        virtual void OnAdd(const std::shared_ptr<IMesh>& pIMesh) = 0;
+
+        virtual void OnRemove(const std::shared_ptr<Material>& pMaterial) = 0;
+        virtual void OnRemove(const std::shared_ptr<IMesh>& pIMesh) = 0;
 };
 
 // Contains 1 or more meshes, all the materials used by there submeshes and a collection of tranformations to animate the model.
@@ -220,6 +250,9 @@ class Model : public Asset {
         // Sets every instance of every submesh of every mesh to the given matrix.
         // Should only be used on models that don't use GPU instancing.
         void ApplyWorldTransform(DirectX::XMFLOAT3X4 W);
+
+        void Attach(IModelObserver* pIModelObserver);
+        void Detach(IModelObserver* pIModelObserver) noexcept;
 
     public:
         std::vector<std::shared_ptr<Material>>& GetMaterials() noexcept;
@@ -247,6 +280,8 @@ class Model : public Asset {
         std::uint32_t GetNumIndices() const noexcept;
     
     private:
+        std::unordered_set<IModelObserver*> m_modelObservers;
+
         std::vector<std::shared_ptr<Material>> m_materials;
         std::vector<std::shared_ptr<IMesh>> m_meshes;
         std::vector<Bone> m_bones;

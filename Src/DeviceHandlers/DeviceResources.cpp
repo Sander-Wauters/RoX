@@ -448,9 +448,9 @@ bool DeviceResources::WindowSizeChanged(int width, int height) {
 }
 
 void DeviceResources::HandleDeviceLost() {
-    for (IDeviceObserver* pDeviceObserver : m_deviceObservers) {
-        if (pDeviceObserver)
-            pDeviceObserver->OnDeviceLost();
+    for (IDeviceObserver* pIDeviceObserver : m_deviceObservers) {
+        if (pIDeviceObserver)
+            pIDeviceObserver->OnDeviceLost();
     }
 
     for (UINT i = 0; i < m_backBufferCount; ++i) {
@@ -483,9 +483,9 @@ void DeviceResources::HandleDeviceLost() {
     CreateDeviceResources();
     CreateWindowSizeDependentResources();
 
-    for (IDeviceObserver* pDeviceObserver : m_deviceObservers) {
-        if (pDeviceObserver)
-            pDeviceObserver->OnDeviceRestored();
+    for (IDeviceObserver* pIDeviceObserver : m_deviceObservers) {
+        if (pIDeviceObserver)
+            pIDeviceObserver->OnDeviceRestored();
     }
 }
 
@@ -657,12 +657,14 @@ void DeviceResources::UpdateColorSpace() {
 
 }
 
-void DeviceResources::RegisterDeviceObserver(IDeviceObserver* pDeviceObserver) noexcept {
-    m_deviceObservers.insert(pDeviceObserver);
+void DeviceResources::Attach(IDeviceObserver* pIDeviceObserver) {
+    if (!pIDeviceObserver)
+        throw std::invalid_argument("IDeviceObserver is nullptr.");
+    m_deviceObservers.insert(pIDeviceObserver);
 }
 
-void DeviceResources::DeregisterDeviceObserver(IDeviceObserver* pDeviceObserver) noexcept {
-    m_deviceObservers.erase(pDeviceObserver);
+void DeviceResources::Detach(IDeviceObserver* pIDeviceObserver) noexcept {
+    m_deviceObservers.erase(pIDeviceObserver);
 }
 
 void DeviceResources::SetWindow(HWND window, int width, int height) noexcept {

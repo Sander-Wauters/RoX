@@ -32,9 +32,6 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
         void OnDeviceLost() override;
         void OnDeviceRestored() override;
 
-        // Used when loading in a new Scene.
-        void Add(const AssetBatch& batch);
-
         void OnAdd(const std::shared_ptr<Material>& pMaterial) override;
         void OnAdd(const std::shared_ptr<Model>& pModel) override;
         void OnAdd(const std::shared_ptr<Sprite>& pSprite) override;
@@ -47,8 +44,10 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
         void OnRemove(const std::shared_ptr<Text>& pText) override;
         void OnRemove(const std::shared_ptr<Outline>& pOutline) override;
 
-        void OnUpdate(const std::shared_ptr<IMesh>& pIMesh) override;
-
+    public:
+        // Used when loading in a new Scene.
+        void Add(const AssetBatch& batch);
+        
         void Update(DirectX::XMMATRIX view, DirectX::XMMATRIX projection);
 
         void CreateDeviceDependentResources();
@@ -57,12 +56,6 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
 
     private:
         std::uint8_t NextHeapIndex() noexcept;
-
-        void Add(const std::shared_ptr<Material>& pMaterial);
-        void Add(const std::shared_ptr<Model>& pModel);
-        void Add(const std::shared_ptr<Sprite>& pSprite);
-        void Add(const std::shared_ptr<Text>& pText);
-        void Add(const std::shared_ptr<Outline>& pOutline);
 
         void CreateDescriptorHeapResources();
         void CreateSpriteBatchResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
@@ -106,8 +99,6 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
     private:
         DeviceResources& m_deviceResources;
         const bool& m_msaaEnabled;
-
-        std::queue<std::function<void()>> m_queuedUpdates;
 
         const std::uint8_t m_descriptorHeapSize;
         std::uint8_t m_nextDescriptorHeapIndex;

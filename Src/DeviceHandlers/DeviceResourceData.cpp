@@ -4,10 +4,11 @@ DeviceResourceData::DeviceResourceData(DeviceResources& deviceResources)
     noexcept : m_pScene(nullptr),
     m_deviceResources(deviceResources)
 {
-    m_deviceResources.RegisterDeviceObserver(this);
+    m_deviceResources.Attach(this);
 }
 
 DeviceResourceData::~DeviceResourceData() noexcept {
+    m_deviceResources.Detach(this);
 }
 
 void DeviceResourceData::OnDeviceLost() {
@@ -69,18 +70,18 @@ void DeviceResourceData::FreshLoad(Scene& scene, bool& msaaEnabled) {
         auto pAssetBatch = m_pScene->GetAssetBatches()[i];
 
         auto pDataBatch = std::make_unique<DeviceDataBatch>(m_deviceResources, pAssetBatch->GetMaxNumUniqueTextures(), msaaEnabled);
+
         pDataBatch->Add(*m_pScene->GetAssetBatches()[i]);
 
-        pAssetBatch->RegisterAssetBatchObserver(pDataBatch.get());
+        pAssetBatch->Attach(pDataBatch.get());
         m_dataBatches.push_back(std::move(pDataBatch));
     }
 }
 
 void DeviceResourceData::DirtyLoad(Scene& scene, bool& msaaEnabled) {
-    // Deregister the data batches.
+    // Detach the data batches.
     for (std::uint8_t i = 0; i < m_pScene->GetNumAssetBatches(); ++i) {
-        m_pScene->GetAssetBatches()[i]->DeregisterAssetBatchObserver(m_dataBatches[i].get());
-        m_deviceResources.DeregisterDeviceObserver(m_dataBatches[i].get());
+        m_pScene->GetAssetBatches()[i]->Detach(m_dataBatches[i].get());
     }
 
     // Find all batches that are already loaded.
@@ -103,13 +104,13 @@ void DeviceResourceData::DirtyLoad(Scene& scene, bool& msaaEnabled) {
 
         auto pos = std::find(currentlyLoadedBatches.begin(), currentlyLoadedBatches.end(), scene.GetAssetBatches()[i]->GetName()) - currentlyLoadedBatches.begin();
         if (pos < currentlyLoadedBatches.size()) {
-            pAssetBatch->RegisterAssetBatchObserver(currentlyLoadedDataBatches[pos].get());
+            pAssetBatch->Attach(currentlyLoadedDataBatches[pos].get());
             m_dataBatches.push_back(std::move(currentlyLoadedDataBatches[pos]));
         } else {
             auto pDataBatch = std::make_unique<DeviceDataBatch>(m_deviceResources, scene.GetAssetBatches()[i]->GetMaxNumUniqueTextures(), msaaEnabled);
             pDataBatch->Add(*scene.GetAssetBatches()[i]);
 
-            pAssetBatch->RegisterAssetBatchObserver(pDataBatch.get());
+            pAssetBatch->Attach(pDataBatch.get());
             m_dataBatches.push_back(std::move(pDataBatch));
         }
     }

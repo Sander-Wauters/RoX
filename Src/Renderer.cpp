@@ -69,7 +69,7 @@ Renderer::Impl::Impl(Renderer* pOwner, HWND window, int width, int height)
     m_msaaEnabled(false)
 {
     m_pDeviceResources = std::make_unique<DeviceResources>();
-    m_pDeviceResources->RegisterDeviceObserver(this);
+    m_pDeviceResources->Attach(this);
 
     m_pDeviceResourceData = std::make_unique<DeviceResourceData>(*m_pDeviceResources);
 
@@ -96,8 +96,10 @@ Renderer::Impl::Impl(Renderer* pOwner, HWND window, int width, int height)
 }
 
 Renderer::Impl::~Impl() noexcept {
-    if (m_pDeviceResources)
+    if (m_pDeviceResources) {
+        m_pDeviceResources->Detach(this);
         m_pDeviceResources->WaitForGpu();
+    }
 
     ImGui_ImplDX12_Shutdown();
     ImGui_ImplWin32_Shutdown();
@@ -526,7 +528,7 @@ void Renderer::Impl::CreateWindowSizeDependentResources() {
 Renderer::Renderer(Window& window) 
     noexcept : m_pImpl(std::make_unique<Impl>(this, window.GetHwnd(), window.GetWidth(), window.GetHeight())) 
 {
-    window.RegisterWindowObserver(this);
+    window.Attach(this);
 } 
 
 Renderer::~Renderer() noexcept {

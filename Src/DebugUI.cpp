@@ -9,7 +9,18 @@
 #undef max
 #include <ImGui/imgui.h>
 
+#include <queue>
+
 constexpr ImVec4 COLOR_ERROR = { 255.f, 0.f, 0.f, 1.f };
+
+std::queue<std::function<void()>> g_queuedUpdates;
+
+void DebugUI::Update() {
+    while (!g_queuedUpdates.empty()) {
+        g_queuedUpdates.front()();
+        g_queuedUpdates.pop();
+    }
+}
 
 // ---------------------------------------------------------------- //
 //                          XMFLOAT util.
@@ -383,29 +394,33 @@ void DebugUI::AssetRemover(AssetBatch::AssetType type, AssetBatch& batch) {
     static char name[128] = "";
     static bool nameNotFound = false;
 
-    try {
-        ImGui::InputScalar(GUIDLabel("GUID", "MaterialRemover").c_str(), ImGuiDataType_U64, &GUID);
-        ImGui::SameLine();
-        if (ImGui::SmallButton(GUIDLabel("Remove", "MaterialRemover_GUID").c_str())) {
-            GUIDnotFound = false;
-            batch.Remove(type, GUID);
-        }
-        Error(GUIDnotFound, "GUID not found."); 
-    } catch (std::out_of_range ex) {
-        GUIDnotFound = true;
+    ImGui::InputScalar(GUIDLabel("GUID", "MaterialRemover").c_str(), ImGuiDataType_U64, &GUID);
+    ImGui::SameLine();
+    if (ImGui::SmallButton(GUIDLabel("Remove", "MaterialRemover_GUID").c_str())) {
+        GUIDnotFound = false;
+        g_queuedUpdates.push([&, type](){ 
+            try {
+                batch.Remove(type, GUID); 
+            } catch (std::out_of_range ex) {
+                GUIDnotFound = true;
+            }
+        });
     }
+    Error(GUIDnotFound, "GUID not found."); 
 
-    try {
-        ImGui::InputText(GUIDLabel("Name", "MaterialRemover").c_str(), name, std::size(name));
-        ImGui::SameLine();
-        if (ImGui::SmallButton(GUIDLabel("Remove", "MaterialRemover_Name").c_str())) {
-            nameNotFound = false;
-            batch.Remove(type, name);
-        }
-        Error(nameNotFound, "Name not found."); 
-    } catch (std::out_of_range ex) {
-        nameNotFound = true;
+    ImGui::InputText(GUIDLabel("Name", "MaterialRemover").c_str(), name, std::size(name));
+    ImGui::SameLine();
+    if (ImGui::SmallButton(GUIDLabel("Remove", "MaterialRemover_Name").c_str())) {
+        nameNotFound = false;
+        g_queuedUpdates.push([&, type](){ 
+            try {
+                batch.Remove(type, name);
+            } catch (std::out_of_range ex) {
+                nameNotFound = true;
+            }
+        });
     }
+    Error(nameNotFound, "Name not found."); 
 }
 
 void DebugUI::AssetMenu(Asset& asset) {
@@ -737,21 +752,23 @@ void DebugUI::MaterialCreator(AssetBatch& batch) {
     ImGui::ColorEdit4("Specular##MaterialCreator", specular);
 
     if (ImGui::Button("Create new material##MaterialCreator") && validDiffuse && validNormal) {
-        DirectX::XMFLOAT4 D;
-        LoadFloat4(diffuse, D);
-        DirectX::XMFLOAT4 E;
-        LoadFloat4(emissive, E);
-        DirectX::XMFLOAT4 S;
-        LoadFloat4(specular, S);
+        g_queuedUpdates.push([&](){
+            DirectX::XMFLOAT4 D;
+            LoadFloat4(diffuse, D);
+            DirectX::XMFLOAT4 E;
+            LoadFloat4(emissive, E);
+            DirectX::XMFLOAT4 S;
+            LoadFloat4(specular, S);
 
-        batch.Add(std::make_shared<Material>(
-                    AnsiToWString(diffuseMapFilePath),
-                    AnsiToWString(normalMapFilePath),
-                    std::string(name),
-                    renderFlags,
-                    DirectX::XMLoadFloat4(&D), 
-                    DirectX::XMLoadFloat4(&E),
-                    DirectX::XMLoadFloat4(&S)));
+            batch.Add(std::make_shared<Material>(
+                        AnsiToWString(diffuseMapFilePath),
+                        AnsiToWString(normalMapFilePath),
+                        std::string(name),
+                        renderFlags,
+                        DirectX::XMLoadFloat4(&D), 
+                        DirectX::XMLoadFloat4(&E),
+                        DirectX::XMLoadFloat4(&S)));
+        });
     }
 }
 
@@ -807,7 +824,7 @@ void DebugUI::MaterialAdderPopupMenu(Model& model, const Materials& availableMat
         std::uint64_t selected = Asset::INVALID_GUID;
         MaterialSelector(selected, availableMaterials);
         if (selected != Asset::INVALID_GUID)
-            model.GetMaterials().push_back(availableMaterials.at(selected));
+            g_queuedUpdates.push([&](){ model.Add(availableMaterials.at(selected)); });
         ImGui::EndPopup();
     }
 }
@@ -819,7 +836,7 @@ void DebugUI::MaterialRemoverPopupMenu(Model& model) {
         std::uint32_t selected = std::uint32_t(-1);
         MaterialSelector(selected, model.GetMaterials());
         if (selected != std::uint32_t(-1))
-            model.RemoveMaterial(selected);
+            g_queuedUpdates.push([&](){ model.RemoveMaterial(selected); });
         ImGui::EndPopup();
     }
 }
@@ -855,7 +872,7 @@ void DebugUI::SpriteCreator(AssetBatch& batch) {
     static float scale[2] = { 1.f, 1.f };
     static float layer = 0.f;
     static float angle = 0.f;
-    static float color[4] = { 0.f, 0.f, 0.f, 1.f };
+    static float color[4] = { 1.f, 1.f, 1.f, 1.f };
     static bool visible = true;
 
     ImGui::InputText("Name##SpriteCreator", name, std::size(name));
@@ -871,21 +888,23 @@ void DebugUI::SpriteCreator(AssetBatch& batch) {
     ImGui::DragFloat("Angle##SpriteCreator", &angle);
 
     ImGui::SeparatorText("Color");
-    ImGui::DragFloat4("Color##SpriteCreator", color);
+    ImGui::ColorEdit4("Color##SpriteCreator", color);
 
     if (ImGui::Button("Create new sprite##SpriteCreator") && validFilePath) {
-        DirectX::XMFLOAT4 C = { color[0], color[1], color[2], color[3] };
-        DirectX::XMFLOAT2 Or = { origin[0], origin[1] };
-        DirectX::XMFLOAT2 Of = { offset[0], offset[1] };
-        DirectX::XMFLOAT2 S = { scale[0], scale[1] };
-        batch.Add(std::make_shared<Sprite>(
-                    AnsiToWString(filePath),
-                    std::string(name),
-                    Or, Of, S,
-                    layer,
-                    angle,
-                    DirectX::XMLoadFloat4(&C),
-                    visible));
+        g_queuedUpdates.push([&]() {
+            DirectX::XMFLOAT4 C = { color[0], color[1], color[2], color[3] };
+            DirectX::XMFLOAT2 Or = { origin[0], origin[1] };
+            DirectX::XMFLOAT2 Of = { offset[0], offset[1] };
+            DirectX::XMFLOAT2 S = { scale[0], scale[1] };
+            batch.Add(std::make_shared<Sprite>(
+                        AnsiToWString(filePath),
+                        std::string(name),
+                        Or, Of, S,
+                        layer,
+                        angle,
+                        DirectX::XMLoadFloat4(&C),
+                        visible));
+        });
     }
 }
 
@@ -958,22 +977,24 @@ void DebugUI::TextCreator(AssetBatch& batch) {
     ImGui::DragFloat("Angle##TextCreator", &angle);
 
     ImGui::SeparatorText("Color");
-    ImGui::DragFloat4("Color##TextCreator", color);
+    ImGui::ColorEdit4("Color##TextCreator", color);
 
     if (ImGui::Button("Create new sprite##TextCreator") && validFilePath) {
-        DirectX::XMFLOAT4 C = { color[0], color[1], color[2], color[3] };
-        DirectX::XMFLOAT2 Or = { origin[0], origin[1] };
-        DirectX::XMFLOAT2 Of = { offset[0], offset[1] };
-        DirectX::XMFLOAT2 S = { scale[0], scale[1] };
-        batch.Add(std::make_shared<Text>(
-                    AnsiToWString(filePath),
-                    AnsiToWString(content),
-                    std::string(name),
-                    Or, Of, S,
-                    layer,
-                    angle,
-                    DirectX::XMLoadFloat4(&C),
-                    visible));
+        g_queuedUpdates.push([&](){
+            DirectX::XMFLOAT4 C = { color[0], color[1], color[2], color[3] };
+            DirectX::XMFLOAT2 Or = { origin[0], origin[1] };
+            DirectX::XMFLOAT2 Of = { offset[0], offset[1] };
+            DirectX::XMFLOAT2 S = { scale[0], scale[1] };
+            batch.Add(std::make_shared<Text>(
+                        AnsiToWString(filePath),
+                        AnsiToWString(content),
+                        std::string(name),
+                        Or, Of, S,
+                        layer,
+                        angle,
+                        DirectX::XMLoadFloat4(&C),
+                        visible));
+        });
     }
 }
 
@@ -1119,7 +1140,7 @@ void DebugUI::SubmeshCreator(IMesh& iMesh, std::vector<std::shared_ptr<Material>
     ImGui::SeparatorText("Available materials");
     MaterialSelector(materialIndex, availableMaterials);
     if (ImGui::Button("Create new submesh##SubmeshCreator"))
-        iMesh.Add(std::make_unique<Submesh>(name, materialIndex, visible));
+        g_queuedUpdates.push([&](){ iMesh.Add(std::make_unique<Submesh>(name, materialIndex, visible)); });
 }
 
 void DebugUI::SubmeshMenu(Submesh& submesh, std::vector<std::shared_ptr<Material>>& availableMaterials) {
@@ -1157,13 +1178,15 @@ void DebugUI::IMeshCreator(Model& model) {
     ImGui::Checkbox("Skinned##MeshCreator", &skinned);
 
     if (ImGui::Button("Create new mesh##MeshCreator")) {
-        std::shared_ptr<IMesh> pIMesh;
-        if (skinned)
-            pIMesh = std::make_shared<SkinnedMesh>(name, visible);
-        else
-            pIMesh = std::make_shared<Mesh>(name, visible);
-        pIMesh->Add(std::make_unique<Submesh>(std::string(name) + "_submesh"));
-        model.Add(std::move(pIMesh));
+        g_queuedUpdates.push([&](){ 
+            std::shared_ptr<IMesh> pIMesh;
+            if (skinned)
+                pIMesh = std::make_shared<SkinnedMesh>(name, visible);
+            else
+                pIMesh = std::make_shared<Mesh>(name, visible);
+            pIMesh->Add(std::make_unique<Submesh>(std::string(name) + "_submesh"));
+            model.Add(std::move(pIMesh)); 
+        });
     }
 }
 
@@ -1249,10 +1272,8 @@ void DebugUI::AddCubeToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMes
     static float size = 1; 
 
     ImGui::InputFloat("Size##AddCubeToMesh", &size);
-    if (ImGui::Button("Add to mesh##AddCubeToMesh")) {
-        MeshFactory::AddCube(iMesh, size);
-        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
-    }
+    if (ImGui::Button("Add to mesh##AddCubeToMesh"))
+        g_queuedUpdates.push([&](){ MeshFactory::AddCube(iMesh, size); });
 }
 
 void DebugUI::AddBoxToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
@@ -1262,10 +1283,8 @@ void DebugUI::AddBoxToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh
     ImGui::InputFloat3("Size##AddBoxToMesh", size);
     ImGui::Checkbox("Invert normals##AddBoxToMesh", &invertNormal);
 
-    if (ImGui::Button("Add to mesh##AddBoxToMesh")) {
-        MeshFactory::AddBox(iMesh, { size[0], size[1], size[2] }, invertNormal);
-        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
-    }
+    if (ImGui::Button("Add to mesh##AddBoxToMesh"))
+        g_queuedUpdates.push([&](){ MeshFactory::AddBox(iMesh, { size[0], size[1], size[2] }, invertNormal); });
 }
 
 void DebugUI::AddSphereToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
@@ -1277,10 +1296,8 @@ void DebugUI::AddSphereToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iM
     ImGui::InputScalar("Tessellation##AddSphereToMesh", ImGuiDataType_U64, &tessellation);
     ImGui::Checkbox("Invert normals##AddSphereToMesh", &invertNormal);
 
-    if (ImGui::Button("Add to mesh##AddSphereToMesh")) {
-        MeshFactory::AddSphere(iMesh, diameter, tessellation, invertNormal);
-        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
-    }
+    if (ImGui::Button("Add to mesh##AddSphereToMesh"))
+        g_queuedUpdates.push([&](){ MeshFactory::AddSphere(iMesh, diameter, tessellation, invertNormal); });
 }
 
 void DebugUI::AddGeoSphereToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
@@ -1290,10 +1307,8 @@ void DebugUI::AddGeoSphereToIMeshCreator(AssetBatch& batch, Model& model, IMesh&
     ImGui::InputFloat("Diameter##AddGeoSphereToMesh", &diameter);
     ImGui::InputScalar("Tessellation##AddGeoSphereToMesh", ImGuiDataType_U64, &tessellation);
 
-    if (ImGui::Button("Add to mesh##AddGeoSphereToMesh")) {
-        MeshFactory::AddGeoSphere(iMesh, diameter, tessellation);
-        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
-    }
+    if (ImGui::Button("Add to mesh##AddGeoSphereToMesh"))
+        g_queuedUpdates.push([&](){ MeshFactory::AddGeoSphere(iMesh, diameter, tessellation); });
 }
 
 void DebugUI::AddCylinderToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
@@ -1305,10 +1320,8 @@ void DebugUI::AddCylinderToIMeshCreator(AssetBatch& batch, Model& model, IMesh& 
     ImGui::InputFloat("Diameter##AddCylinderToMesh", &diameter);
     ImGui::InputScalar("Tessellation##AddCylinderToMesh", ImGuiDataType_U64, &tessellation);
 
-    if (ImGui::Button("Add to mesh##AddCylinderToMesh")) {
-        MeshFactory::AddCylinder(iMesh, height, diameter, tessellation);
-        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
-    }
+    if (ImGui::Button("Add to mesh##AddCylinderToMesh"))
+        g_queuedUpdates.push([&](){ MeshFactory::AddCylinder(iMesh, height, diameter, tessellation); });
 }
 
 void DebugUI::AddConeToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
@@ -1320,10 +1333,8 @@ void DebugUI::AddConeToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMes
     ImGui::InputFloat("Height##AddConeToMesh", &height);
     ImGui::InputScalar("Tessellation##AddConeToMesh", ImGuiDataType_U64, &tessellation);
 
-    if (ImGui::Button("Add to mesh##AddConeToMesh")) {
-        MeshFactory::AddCone(iMesh, diameter, height, tessellation);
-        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
-    }
+    if (ImGui::Button("Add to mesh##AddConeToMesh"))
+        g_queuedUpdates.push([&](){ MeshFactory::AddCone(iMesh, diameter, height, tessellation); });
 }
 
 void DebugUI::AddTorusToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
@@ -1335,10 +1346,8 @@ void DebugUI::AddTorusToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMe
     ImGui::InputFloat("Thickness##AddTorusToMesh", &thickness);
     ImGui::InputScalar("Tessellation##AddTorusToMesh", ImGuiDataType_U64, &tessellation);
 
-    if (ImGui::Button("Add to mesh##AddTorusToMesh")) {
-        MeshFactory::AddCone(iMesh, diameter, thickness, tessellation);
-        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
-    }
+    if (ImGui::Button("Add to mesh##AddTorusToMesh"))
+        g_queuedUpdates.push([&](){ MeshFactory::AddCone(iMesh, diameter, thickness, tessellation); });
 }
 
 void DebugUI::AddTetrahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
@@ -1346,10 +1355,8 @@ void DebugUI::AddTetrahedronToIMeshCreator(AssetBatch& batch, Model& model, IMes
 
     ImGui::InputFloat("Size##AddTetrahedronToMesh", &size);
 
-    if (ImGui::Button("Add to mesh##AddTetrahedronToMesh")) {
-        MeshFactory::AddTetrahedron(iMesh, size);
-        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
-    }
+    if (ImGui::Button("Add to mesh##AddTetrahedronToMesh"))
+        g_queuedUpdates.push([&](){ MeshFactory::AddTetrahedron(iMesh, size); });
 }
 
 void DebugUI::AddOctahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
@@ -1357,10 +1364,8 @@ void DebugUI::AddOctahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh
 
     ImGui::InputFloat("Size##AddOctahedronToMesh", &size);
 
-    if (ImGui::Button("Add to mesh##AddOctahedronToMesh")) {
-        MeshFactory::AddOctahedron(iMesh, size);
-        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
-    }
+    if (ImGui::Button("Add to mesh##AddOctahedronToMesh"))
+        g_queuedUpdates.push([&](){ MeshFactory::AddOctahedron(iMesh, size); });
 }
 
 void DebugUI::AddDodecahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
@@ -1368,10 +1373,8 @@ void DebugUI::AddDodecahedronToIMeshCreator(AssetBatch& batch, Model& model, IMe
 
     ImGui::InputFloat("Size##AddDodecahedronToMesh", &size);
 
-    if (ImGui::Button("Add to mesh##AddDodecahedronToMesh")) {
-        MeshFactory::AddDodecahedron(iMesh, size);
-        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
-    }
+    if (ImGui::Button("Add to mesh##AddDodecahedronToMesh"))
+        g_queuedUpdates.push([&](){ MeshFactory::AddDodecahedron(iMesh, size); });
 }
 
 void DebugUI::AddIcosahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
@@ -1379,10 +1382,8 @@ void DebugUI::AddIcosahedronToIMeshCreator(AssetBatch& batch, Model& model, IMes
 
     ImGui::InputFloat("Size##AddIcosahedronToMesh", &size);
 
-    if (ImGui::Button("Add to mesh##AddIcosahedronToMesh")) {
-        MeshFactory::AddIcosahedron(iMesh, size);
-        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
-    }
+    if (ImGui::Button("Add to mesh##AddIcosahedronToMesh"))
+        g_queuedUpdates.push([&](){ MeshFactory::AddIcosahedron(iMesh, size); });
 }
 
 void DebugUI::AddTeapotToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
@@ -1392,10 +1393,8 @@ void DebugUI::AddTeapotToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iM
     ImGui::InputFloat("Size##AddTeapotToMesh", &size);
     ImGui::InputScalar("Tessellation##AddTeapotToMesh", ImGuiDataType_U64, &tessellation);
 
-    if (ImGui::Button("Add to mesh##AddTeapotToMesh")) {
-        MeshFactory::AddTeapot(iMesh, size, tessellation);
-        batch.UpdateIMesh(model.GetGUID(), iMesh.GetGUID());
-    }
+    if (ImGui::Button("Add to mesh##AddTeapotToMesh"))
+        g_queuedUpdates.push([&](){ MeshFactory::AddTeapot(iMesh, size, tessellation); });
 }
 
 void DebugUI::AddGeoToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
@@ -1513,28 +1512,34 @@ void DebugUI::ModelCreator(AssetBatch& batch) {
     ImGui::Checkbox("Pack meshes##ModelCreator", &packed);
 
     if (ImGui::Button("Create new model##ModelCreator") && (baseMaterialGUID != Asset::INVALID_GUID)) {
-        std::shared_ptr<Model> pModel;
-
         if (validModel) {
-            pModel = AssetIO::ImportModel(filePath, batch.GetMaterial(baseMaterialGUID), skinned, packed);
+            g_queuedUpdates.push([&](){ 
+                std::shared_ptr<Model> pModel;
+                pModel = AssetIO::ImportModel(filePath, batch.GetMaterial(baseMaterialGUID), skinned, packed);
+                batch.Add(std::move(pModel)); 
+            });
         } else {
-            pModel = std::make_unique<Model>(
-                    batch.GetMaterial(baseMaterialGUID),
-                    std::string(name),
-                    visible);
+            g_queuedUpdates.push([&](){ 
+                std::shared_ptr<Model> pModel;
 
-            std::shared_ptr<IMesh> pIMesh;
-            if (skinned)
-                pIMesh = std::make_shared<SkinnedMesh>();
-            else
-                pIMesh = std::make_shared<Mesh>();
+                pModel = std::make_unique<Model>(
+                        batch.GetMaterial(baseMaterialGUID),
+                        std::string(name),
+                        visible);
 
-            MeshFactory::Add(geo, *pIMesh);
+                std::shared_ptr<IMesh> pIMesh;
+                if (skinned)
+                    pIMesh = std::make_shared<SkinnedMesh>();
+                else
+                    pIMesh = std::make_shared<Mesh>();
 
-            pModel->Add(std::move(pIMesh));
+                MeshFactory::Add(geo, *pIMesh);
+
+                pModel->Add(std::move(pIMesh));
+
+                batch.Add(std::move(pModel)); 
+            });
         }
-
-        batch.Add(std::move(pModel));
     }
 }
 
@@ -1608,7 +1613,7 @@ Outline::Type DebugUI::OutlineTypeSelector() {
 void DebugUI::OutlineCreator(AssetBatch& batch) {
     static char name[128] = "";
     static Outline::Type type = Outline::Type::Grid;
-    static float color[4] = { 0.f, 0.f, 0.f, 1.f };
+    static float color[4] = { 1.f, 1.f, 1.f, 1.f };
     static bool visible = true;
 
     ImGui::InputText("Name##OutlineCreator", name, std::size(name));
@@ -1617,51 +1622,53 @@ void DebugUI::OutlineCreator(AssetBatch& batch) {
     ImGui::Checkbox("Visible##OutlineCreator", &visible);
 
     if (ImGui::Button("Create new outline")) {
-        std::shared_ptr<Outline> pOutline;
-        DirectX::XMFLOAT4 C = { color[0], color[1], color[2], color[3] };
-        switch (type) {
-            case Outline::Type::Grid:
-                {
-                    DirectX::XMFLOAT3 xAxis = { 1.f, 0.f, 0.f };
-                    DirectX::XMFLOAT3 yAxis = { 0.f, 0.f, 1.f };
-                    DirectX::XMFLOAT3 origin = { 0.f, 0.f, 0.f };
-                    pOutline = std::make_shared<GridOutline>(name, 2, 2, xAxis, yAxis, origin, DirectX::XMLoadFloat4(&C), visible);
-                }
-                break; 
-            case Outline::Type::Ring:
-                {
-                    DirectX::XMFLOAT3 majorAxis = { .5f, 0.f, 0.f };
-                    DirectX::XMFLOAT3 minorAxis = { 0.f, 0.f, .5f };
-                    DirectX::XMFLOAT3 origin = { 0.f, 0.f, 0.f };
-                    pOutline = std::make_shared<RingOutline>(name, majorAxis, minorAxis, origin, DirectX::XMLoadFloat4(&C), visible);
-                }
-                break; 
-            case Outline::Type::Ray:
-                {
-                    DirectX::XMFLOAT3 direction = { 1.f, 0.f, 0.f };
-                    DirectX::XMFLOAT3 origin = { 0.f, 0.f, 0.f };
-                    pOutline = std::make_shared<RayOutline>(name, direction, origin, DirectX::XMLoadFloat4(&C), false, visible);
-                }
-                break; 
-            case Outline::Type::Triangle:
-                {
-                    DirectX::XMFLOAT3 pointA = { 0.f, 0.f, 0.f };
-                    DirectX::XMFLOAT3 pointB = { 1.f, 0.f, 0.f };
-                    DirectX::XMFLOAT3 pointC = { .5f, 1.f, 0.f };
-                    pOutline = std::make_shared<TriangleOutline>(name, pointA, pointB, pointC, DirectX::XMLoadFloat4(&C), visible);
-                }
-                break; 
-            default:
-                {
-                    DirectX::XMFLOAT3 pointA = { 0.f, 0.f, 0.f };
-                    DirectX::XMFLOAT3 pointB = { 0.f, 1.f, 0.f };
-                    DirectX::XMFLOAT3 pointC = { 1.f, 0.f, 0.f };
-                    DirectX::XMFLOAT3 pointD = { 1.f, 1.f, 0.f };
-                    pOutline = std::make_shared<QuadOutline>(name, pointA, pointB, pointC, pointD, DirectX::XMLoadFloat4(&C), visible);
-                }
-                break; 
-        }
-        batch.Add(std::move(pOutline));
+        g_queuedUpdates.push([&](){ 
+            std::shared_ptr<Outline> pOutline;
+            DirectX::XMFLOAT4 C = { color[0], color[1], color[2], color[3] };
+            switch (type) {
+                case Outline::Type::Grid:
+                    {
+                        DirectX::XMFLOAT3 xAxis = { 1.f, 0.f, 0.f };
+                        DirectX::XMFLOAT3 yAxis = { 0.f, 0.f, 1.f };
+                        DirectX::XMFLOAT3 origin = { 0.f, 0.f, 0.f };
+                        pOutline = std::make_shared<GridOutline>(name, 2, 2, xAxis, yAxis, origin, DirectX::XMLoadFloat4(&C), visible);
+                    }
+                    break; 
+                case Outline::Type::Ring:
+                    {
+                        DirectX::XMFLOAT3 majorAxis = { .5f, 0.f, 0.f };
+                        DirectX::XMFLOAT3 minorAxis = { 0.f, 0.f, .5f };
+                        DirectX::XMFLOAT3 origin = { 0.f, 0.f, 0.f };
+                        pOutline = std::make_shared<RingOutline>(name, majorAxis, minorAxis, origin, DirectX::XMLoadFloat4(&C), visible);
+                    }
+                    break; 
+                case Outline::Type::Ray:
+                    {
+                        DirectX::XMFLOAT3 direction = { 1.f, 0.f, 0.f };
+                        DirectX::XMFLOAT3 origin = { 0.f, 0.f, 0.f };
+                        pOutline = std::make_shared<RayOutline>(name, direction, origin, DirectX::XMLoadFloat4(&C), false, visible);
+                    }
+                    break; 
+                case Outline::Type::Triangle:
+                    {
+                        DirectX::XMFLOAT3 pointA = { 0.f, 0.f, 0.f };
+                        DirectX::XMFLOAT3 pointB = { 1.f, 0.f, 0.f };
+                        DirectX::XMFLOAT3 pointC = { .5f, 1.f, 0.f };
+                        pOutline = std::make_shared<TriangleOutline>(name, pointA, pointB, pointC, DirectX::XMLoadFloat4(&C), visible);
+                    }
+                    break; 
+                default:
+                    {
+                        DirectX::XMFLOAT3 pointA = { 0.f, 0.f, 0.f };
+                        DirectX::XMFLOAT3 pointB = { 0.f, 1.f, 0.f };
+                        DirectX::XMFLOAT3 pointC = { 1.f, 0.f, 0.f };
+                        DirectX::XMFLOAT3 pointD = { 1.f, 1.f, 0.f };
+                        pOutline = std::make_shared<QuadOutline>(name, pointA, pointB, pointC, pointD, DirectX::XMLoadFloat4(&C), visible);
+                    }
+                    break; 
+            }
+            batch.Add(std::move(pOutline)); 
+        });
     }
 }
 

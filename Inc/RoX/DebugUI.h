@@ -15,6 +15,10 @@ using ImGuiWindowFlags = int;
 // Contains helper function for the UI.
 // Is not indended for use in production code.
 namespace DebugUI {
+    // All updates made by **DebugUI** are queued.
+    // This function will apply all updates in the order they were called.
+    void Update();
+
     // Converting XMFLOAT to/from float*.
     void StoreFloat2(DirectX::XMFLOAT2& in, float* out);
     void StoreFloat3(DirectX::XMFLOAT3& in, float* out);

@@ -67,22 +67,22 @@ TEST_F(GeneralAssetBatchTest, Add_WithNewText_NumUniqueTexturesExceedsMaxNumUniq
     EXPECT_EQ(pBatch->GetNumUniqueTextures(), 1);
 }
 
-TEST_F(GeneralAssetBatchTest, RegisterAssetBatchObserver_WithValidObserver) {
+TEST_F(GeneralAssetBatchTest, Attach_WithValidObserver) {
     MockAssetBatchObserver observer;
-    EXPECT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    EXPECT_NO_THROW(pBatch->Attach(&observer));
 }
 
-TEST_F(GeneralAssetBatchTest, RegisterAssetBatchObserver_WithInvalidObserver) {
-    EXPECT_THROW(pBatch->RegisterAssetBatchObserver(nullptr), std::invalid_argument);
+TEST_F(GeneralAssetBatchTest, Attach_WithInvalidObserver) {
+    EXPECT_THROW(pBatch->Attach(nullptr), std::invalid_argument);
 }
 
 TEST_F(GeneralAssetBatchTest, DeregisterAssetBatchObserver_WithValidObserver) {
     MockAssetBatchObserver observer;
-    EXPECT_NO_THROW(pBatch->DeregisterAssetBatchObserver(&observer));
+    EXPECT_NO_THROW(pBatch->Detach(&observer));
 }
 
 TEST_F(GeneralAssetBatchTest, DeregisterAssetBatchObserver_WithInvalidObserver) {
-    EXPECT_NO_THROW(pBatch->DeregisterAssetBatchObserver(nullptr));
+    EXPECT_NO_THROW(pBatch->Detach(nullptr));
 }
 
 TEST_F(GeneralAssetBatchTest, FindGUID_ByName_WithInvalidName) {
@@ -97,7 +97,7 @@ TEST_F(GeneralAssetBatchTest, Add_WithInvalidMaterial) {
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pMaterial)   ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pMaterial)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_THROW(pBatch->Add(std::shared_ptr<Material>()), std::invalid_argument);
     EXPECT_EQ(pBatch->GetNumMaterials(), 0);
@@ -109,7 +109,7 @@ TEST_F(GeneralAssetBatchTest, Add_WithNewModelWithInvalidMaterial) {
     EXPECT_CALL(observer, OnAdd(pModel)      ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pMaterial)).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pModel)   ).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     pModel->GetMaterials() = { nullptr };
     EXPECT_THROW(pBatch->Add(pModel), std::invalid_argument);
@@ -121,7 +121,7 @@ TEST_F(GeneralAssetBatchTest, Add_WithInvalidModel) {
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pModel)   ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pModel)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_THROW(pBatch->Add(std::shared_ptr<Model>()), std::invalid_argument);
     EXPECT_EQ(pBatch->GetNumModels(), 0);
@@ -135,7 +135,7 @@ TEST_F(GeneralAssetBatchTest, Add_WithInvalidSprite) {
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pSprite)   ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pSprite)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_THROW(pBatch->Add(std::shared_ptr<Sprite>()), std::invalid_argument);
     EXPECT_EQ(pBatch->GetNumSprites(), 0);
@@ -145,7 +145,7 @@ TEST_F(GeneralAssetBatchTest, Add_WithInvalidText) {
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pText)   ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pText)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_THROW(pBatch->Add(std::shared_ptr<Text>()), std::invalid_argument);
     EXPECT_EQ(pBatch->GetNumTexts(), 0);
@@ -155,7 +155,7 @@ TEST_F(GeneralAssetBatchTest, Add_WithInvalidOutline) {
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pOutline)   ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pOutline)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_THROW(pBatch->Add(std::shared_ptr<Outline>()), std::invalid_argument);
     EXPECT_EQ(pBatch->GetNumOutlines(), 0);
@@ -173,7 +173,7 @@ TEST_F(GeneralAssetBatchTest, Remove_ByGUID_WithInvalidGUID) {
     EXPECT_CALL(observer, OnRemove(pSprite)  ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pText)    ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pOutline) ).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_THROW(pBatch->RemoveMaterial(Asset::INVALID_GUID), std::out_of_range);
     EXPECT_THROW(pBatch->RemoveModel(Asset::INVALID_GUID),    std::out_of_range);
@@ -194,7 +194,7 @@ TEST_F(GeneralAssetBatchTest, Remove_ByTypeAndGUID_WithInvalidGUID) {
     EXPECT_CALL(observer, OnRemove(pSprite)  ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pText)    ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pOutline) ).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Material, Asset::INVALID_GUID), std::out_of_range);
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Model, Asset::INVALID_GUID),    std::out_of_range);
@@ -215,7 +215,7 @@ TEST_F(GeneralAssetBatchTest, Remove_ByName_WithInvalidName) {
     EXPECT_CALL(observer, OnRemove(pSprite)  ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pText)    ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pOutline) ).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_THROW(pBatch->RemoveMaterial(INVALID_NAME), std::out_of_range);
     EXPECT_THROW(pBatch->RemoveModel(INVALID_NAME),    std::out_of_range);
@@ -236,29 +236,13 @@ TEST_F(GeneralAssetBatchTest, Remove_ByTypeAndName_WithInvalidName) {
     EXPECT_CALL(observer, OnRemove(pSprite)  ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pText)    ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pOutline) ).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Material, INVALID_NAME), std::out_of_range);
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Model, INVALID_NAME),    std::out_of_range);
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Sprite, INVALID_NAME),   std::out_of_range);
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Text, INVALID_NAME),     std::out_of_range);
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Outline, INVALID_NAME),  std::out_of_range);
-}
-
-TEST_F(GeneralAssetBatchTest, UpdateIMesh_WithInvalidModelGUIDAndValidIMeshGUID) {
-    MockAssetBatchObserver observer;
-    EXPECT_CALL(observer, OnUpdate(pModel->GetMeshes().front())).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
-
-    EXPECT_THROW(pBatch->UpdateIMesh(Asset::INVALID_GUID, pModel->GetMeshes().front()->GetGUID()), std::out_of_range);
-}
-
-TEST_F(GeneralAssetBatchTest, UpdateIMesh_WithInvalidModelGUIDAndInvalidIMeshGUID) {
-    MockAssetBatchObserver observer;
-    EXPECT_CALL(observer, OnUpdate(pModel->GetMeshes().front())).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
-
-    EXPECT_THROW(pBatch->UpdateIMesh(Asset::INVALID_GUID, Asset::INVALID_GUID), std::out_of_range);
 }
 
 TEST_F(GeneralAssetBatchTest, GetAsset_ByGUID_WithGUID) {
@@ -281,7 +265,7 @@ TEST_F(EmptyAssetBatchTest, Add_WithNewMaterial) {
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pMaterial)   ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pMaterial)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_NO_THROW(pBatch->Add(pMaterial));
     EXPECT_EQ(pBatch->GetNumMaterials(), 1);
@@ -293,7 +277,7 @@ TEST_F(EmptyAssetBatchTest, Add_WithNewModelWithNewMaterial) {
     EXPECT_CALL(observer, OnAdd(pModel)      ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pMaterial)).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pModel)   ).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_NO_THROW(pBatch->Add(pModel));
     EXPECT_EQ(pBatch->GetNumMaterials(), 1);
@@ -304,7 +288,7 @@ TEST_F(EmptyAssetBatchTest, Add_WithNewSprite) {
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pSprite)   ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pSprite)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_NO_THROW(pBatch->Add(pSprite));
     EXPECT_EQ(pBatch->GetNumSprites(), 1);
@@ -314,7 +298,7 @@ TEST_F(EmptyAssetBatchTest, Add_WithNewText) {
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pText)   ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pText)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_NO_THROW(pBatch->Add(pText));
     EXPECT_EQ(pBatch->GetNumTexts(), 1);
@@ -324,7 +308,7 @@ TEST_F(EmptyAssetBatchTest, Add_WithNewOutline) {
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pOutline)   ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pOutline)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_NO_THROW(pBatch->Add(pOutline));
     EXPECT_EQ(pBatch->GetNumOutlines(), 1);
@@ -342,7 +326,7 @@ TEST_F(EmptyAssetBatchTest, Remove_ByGUID_WithValidGUID) {
     EXPECT_CALL(observer, OnRemove(pSprite)  ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pText)    ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pOutline) ).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_THROW(pBatch->RemoveMaterial(MaterialGUID), std::out_of_range);
     EXPECT_THROW(pBatch->RemoveModel(ModelGUID),       std::out_of_range);
@@ -363,7 +347,7 @@ TEST_F(EmptyAssetBatchTest, Remove_ByTypeAndGUID_WithValidGUID) {
     EXPECT_CALL(observer, OnRemove(pSprite)  ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pText)    ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pOutline) ).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Material, MaterialGUID), std::out_of_range);
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Model, ModelGUID),       std::out_of_range);
@@ -384,7 +368,7 @@ TEST_F(EmptyAssetBatchTest, Remove_ByName_WithValidName) {
     EXPECT_CALL(observer, OnRemove(pSprite)  ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pText)    ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pOutline) ).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_THROW(pBatch->RemoveMaterial(MaterialName), std::out_of_range);
     EXPECT_THROW(pBatch->RemoveModel(ModelName),       std::out_of_range);
@@ -405,7 +389,7 @@ TEST_F(EmptyAssetBatchTest, Remove_ByTypeAndName_WithValidName) {
     EXPECT_CALL(observer, OnRemove(pSprite)  ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pText)    ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pOutline) ).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Material, MaterialName), std::out_of_range);
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Model, ModelName),      std::out_of_range);
@@ -467,7 +451,7 @@ TEST_F(FilledAssetBatchTest, Add_WithNewMaterial) {
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pNewMaterial)   ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pNewMaterial)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_NO_THROW(pBatch->Add(pNewMaterial));
     EXPECT_EQ(pBatch->GetNumMaterials(), 2);
@@ -477,7 +461,7 @@ TEST_F(FilledAssetBatchTest, Add_WithExistingMaterial) {
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pMaterial)   ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pMaterial)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_NO_THROW(pBatch->Add(pMaterial));
     EXPECT_EQ(pBatch->GetNumMaterials(), 1);
@@ -489,7 +473,7 @@ TEST_F(FilledAssetBatchTest, Add_WithExistingModel) {
     EXPECT_CALL(observer, OnAdd(pModel)      ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pMaterial)).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pModel)   ).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_NO_THROW(pBatch->Add(pModel));
     EXPECT_EQ(pBatch->GetNumMaterials(), 1);
@@ -507,7 +491,7 @@ TEST_F(FilledAssetBatchTest, Add_WithNewModelWithExistingMaterial) {
     EXPECT_CALL(observer, OnAdd(pNewModel)   ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pMaterial)).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pNewModel)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_NO_THROW(pBatch->Add(pNewModel));
     EXPECT_EQ(pBatch->GetNumMaterials(), 1);
@@ -528,7 +512,7 @@ TEST_F(FilledAssetBatchTest, Add_WithNewModelWithNewMaterial) {
     EXPECT_CALL(observer, OnAdd(pNewModel)      ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pNewMaterial)).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pNewModel)   ).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_NO_THROW(pBatch->Add(pNewModel));
     EXPECT_EQ(pBatch->GetNumMaterials(), 2);
@@ -541,7 +525,7 @@ TEST_F(FilledAssetBatchTest, Add_WithNewSprite) {
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pNewSprite)   ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pNewSprite)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_NO_THROW(pBatch->Add(pNewSprite));
     EXPECT_EQ(pBatch->GetNumSprites(), 2);
@@ -551,7 +535,7 @@ TEST_F(FilledAssetBatchTest, Add_WithExistingSprite) {
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pSprite)   ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pSprite)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_NO_THROW(pBatch->Add(pSprite));
     EXPECT_EQ(pBatch->GetNumSprites(), 1);
@@ -563,7 +547,7 @@ TEST_F(FilledAssetBatchTest, Add_WithNewText) {
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pNewText)   ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pNewText)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_NO_THROW(pBatch->Add(pNewText));
     EXPECT_EQ(pBatch->GetNumTexts(), 2);
@@ -573,7 +557,7 @@ TEST_F(FilledAssetBatchTest, Add_WithExistingText) {
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pText)   ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pText)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_NO_THROW(pBatch->Add(pText));
     EXPECT_EQ(pBatch->GetNumTexts(), 1);
@@ -585,7 +569,7 @@ TEST_F(FilledAssetBatchTest, Add_WithNewOutline) {
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pNewOutline)   ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pNewOutline)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_NO_THROW(pBatch->Add(pNewOutline));
     EXPECT_EQ(pBatch->GetNumOutlines(), 2);
@@ -595,7 +579,7 @@ TEST_F(FilledAssetBatchTest, Add_WithExistingOutline) {
     MockAssetBatchObserver observer;
     EXPECT_CALL(observer, OnAdd(pOutline)   ).Times(testing::Exactly(0));
     EXPECT_CALL(observer, OnRemove(pOutline)).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     EXPECT_NO_THROW(pBatch->Add(pOutline));
     EXPECT_EQ(pBatch->GetNumOutlines(), 1);
@@ -613,7 +597,7 @@ TEST_F(FilledAssetBatchTest, Remove_ByGUID_WithValidGUID) {
     EXPECT_CALL(observer, OnRemove(pSprite)  ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pText)    ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pOutline) ).Times(testing::Exactly(1));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     // Material still in use by pModel
     EXPECT_THROW(pBatch->RemoveMaterial(MaterialGUID), std::runtime_error);
@@ -648,7 +632,7 @@ TEST_F(FilledAssetBatchTest, Remove_ByTypeAndGUID_WithValidGUID) {
     EXPECT_CALL(observer, OnRemove(pSprite)  ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pText)    ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pOutline) ).Times(testing::Exactly(1));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     // Material still in use by pModel
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Material, MaterialGUID), std::runtime_error);
@@ -683,7 +667,7 @@ TEST_F(FilledAssetBatchTest, Remove_ByName_WithValidName) {
     EXPECT_CALL(observer, OnRemove(pSprite)  ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pText)    ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pOutline) ).Times(testing::Exactly(1));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     // Material still in use by pModel
     EXPECT_THROW(pBatch->RemoveMaterial(MaterialName), std::runtime_error);
@@ -718,7 +702,7 @@ TEST_F(FilledAssetBatchTest, Remove_ByTypeAndName_WithValidName) {
     EXPECT_CALL(observer, OnRemove(pSprite)  ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pText)    ).Times(testing::Exactly(1));
     EXPECT_CALL(observer, OnRemove(pOutline) ).Times(testing::Exactly(1));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
+    ASSERT_NO_THROW(pBatch->Attach(&observer));
 
     // Material still in use by pModel
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Material, MaterialName), std::runtime_error);
@@ -739,22 +723,6 @@ TEST_F(FilledAssetBatchTest, Remove_ByTypeAndName_WithValidName) {
 
     EXPECT_NO_THROW(pBatch->Remove(AssetBatch::AssetType::Outline, OutlineName));
     EXPECT_THROW(pBatch->GetOutline(OutlineGUID), std::out_of_range);
-}
-
-TEST_F(FilledAssetBatchTest, UpdateIMesh_WithValidModelGUIDAndValidIMeshGUID) {
-    MockAssetBatchObserver observer;
-    EXPECT_CALL(observer, OnUpdate(pModel->GetMeshes().front())).Times(testing::Exactly(1));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
-
-    EXPECT_NO_THROW(pBatch->UpdateIMesh(pModel->GetGUID(), pModel->GetMeshes().front()->GetGUID()));
-}
-
-TEST_F(FilledAssetBatchTest, UpdateIMesh_WithValidModelGUIDAndInvalidIMeshGUID) {
-    MockAssetBatchObserver observer;
-    EXPECT_CALL(observer, OnUpdate(pModel->GetMeshes().front())).Times(testing::Exactly(0));
-    ASSERT_NO_THROW(pBatch->RegisterAssetBatchObserver(&observer));
-
-    EXPECT_THROW(pBatch->UpdateIMesh(pModel->GetGUID(), Asset::INVALID_GUID), std::invalid_argument);
 }
 
 TEST_F(FilledAssetBatchTest, GetAsset_ByGUID_WithValidGUID) {

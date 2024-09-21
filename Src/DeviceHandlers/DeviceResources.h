@@ -35,9 +35,10 @@ class DeviceResources {
         void WaitForGpu() noexcept;
         void UpdateColorSpace();
 
+        void Attach(IDeviceObserver* pIDeviceObserver);
+        void Detach(IDeviceObserver* pIDeviceObserver) noexcept;
+
     public:
-        void RegisterDeviceObserver(IDeviceObserver* pDeviceObserver) noexcept;
-        void DeregisterDeviceObserver(IDeviceObserver* pDeviceObserver) noexcept;
         void SetWindow(HWND window, int width, int height) noexcept;
 
         RECT GetOutputSize() const noexcept;

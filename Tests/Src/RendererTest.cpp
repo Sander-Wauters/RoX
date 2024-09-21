@@ -28,7 +28,7 @@ class RendererTest : public testing::Test, public ValidAssetBatch {
         }
 
         ~RendererTest() {
-            g_pWindow->DeregisterWindowObserver(pRenderer.get());
+            g_pWindow->Detach(pRenderer.get());
         }
 
         std::unique_ptr<Renderer> pRenderer;
@@ -511,38 +511,6 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByTypeAndName_WithInvalidName) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
     EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Outline, INVALID_NAME),  std::out_of_range);
-    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
-}
-
-TEST_F(RendererTest, PostLoad_AssetBatch_UpdateIMesh_WithValidModelGUIDAndValidIMeshGUID) {
-    ASSERT_NO_THROW(pRenderer->Load(*pScene));
-    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
-
-    EXPECT_NO_THROW(pBatch->UpdateIMesh(pModel->GetGUID(), pModel->GetMeshes().front()->GetGUID()));
-    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
-}
-
-TEST_F(RendererTest, PostLoad_AssetBatch_UpdateIMesh_WithValidModelGUIDAndInvalidIMeshGUID) {
-    ASSERT_NO_THROW(pRenderer->Load(*pScene));
-    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
-
-    EXPECT_THROW(pBatch->UpdateIMesh(pModel->GetGUID(), Asset::INVALID_GUID), std::invalid_argument);
-    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
-}
-
-TEST_F(RendererTest, PostLoad_AssetBatch_UpdateIMesh_WithInvalidModelGUIDAndValidIMeshGUID) {
-    ASSERT_NO_THROW(pRenderer->Load(*pScene));
-    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
-
-    EXPECT_THROW(pBatch->UpdateIMesh(Asset::INVALID_GUID, pModel->GetMeshes().front()->GetGUID()), std::out_of_range);
-    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
-}
-
-TEST_F(RendererTest, PostLoad_AssetBatch_UpdateIMesh_WithInvalidModelGUIDAndInvalidIMeshGUID) {
-    ASSERT_NO_THROW(pRenderer->Load(*pScene));
-    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
-
-    EXPECT_THROW(pBatch->UpdateIMesh(Asset::INVALID_GUID, Asset::INVALID_GUID), std::out_of_range);
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 

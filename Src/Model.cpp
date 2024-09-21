@@ -125,6 +125,21 @@ Mesh::Mesh(std::string name, bool visible)
 
 void Mesh::Add(std::unique_ptr<Submesh> pSubmesh) noexcept {
     m_submeshes.push_back(std::move(pSubmesh));
+
+    for (IMeshObserver* pIMeshObserver : m_iMeshObservers) {
+        if (pIMeshObserver)
+            pIMeshObserver->OnAdd(pSubmesh);
+    }
+}
+
+void Mesh::Attach(IMeshObserver* pIMeshObserver) {
+    if (!pIMeshObserver)
+        throw std::invalid_argument("IMeshObserver is nullptr.");
+    m_iMeshObservers.insert(pIMeshObserver);
+}
+
+void Mesh::Detach(IMeshObserver* pIMeshObserver) noexcept {
+    m_iMeshObservers.erase(pIMeshObserver);
 }
 
 std::string Mesh::GetName() const noexcept {
@@ -195,6 +210,21 @@ SkinnedMesh::SkinnedMesh(std::string name, bool visible)
 
 void SkinnedMesh::Add(std::unique_ptr<Submesh> pSubmesh) noexcept {
     m_submeshes.push_back(std::move(pSubmesh));
+
+    for (IMeshObserver* pIMeshObserver : m_iMeshObservers) {
+        if (pIMeshObserver)
+            pIMeshObserver->OnAdd(pSubmesh);
+    }
+}
+
+void SkinnedMesh::Attach(IMeshObserver* pIMeshObserver) {
+    if (!pIMeshObserver)
+        throw std::invalid_argument("IMeshObserver is nullptr.");
+    m_iMeshObservers.insert(pIMeshObserver);
+}
+
+void SkinnedMesh::Detach(IMeshObserver* pIMeshObserver) noexcept {
+    m_iMeshObservers.erase(pIMeshObserver);
 }
 
 std::string SkinnedMesh::GetName() const noexcept {
@@ -285,10 +315,20 @@ Model::Model(Model& other) : Asset(other),
 
 void Model::Add(std::shared_ptr<Material> pMaterial) noexcept {
     m_materials.push_back(pMaterial); 
+
+    for (IModelObserver* pIModelObserver : m_modelObservers) {
+        if (pIModelObserver)
+            pIModelObserver->OnAdd(pMaterial);
+    }
 }
 
 void Model::Add(std::shared_ptr<IMesh> pMesh) noexcept {
     m_meshes.push_back(pMesh);
+
+    for (IModelObserver* pIModelObserver : m_modelObservers) {
+        if (pIModelObserver)
+            pIModelObserver->OnAdd(pMesh);
+    }
 }
 
 void Model::MakeBoneMatricesArray(std::uint64_t count) {
@@ -303,7 +343,13 @@ void Model::RemoveMaterial(std::uint8_t index) {
     if (m_materials.size() == 1)
         return;
 
+    for (IModelObserver* pIModelObserver : m_modelObservers) {
+        if (pIModelObserver)
+            pIModelObserver->OnAdd(m_materials[index]);
+    }
+
     m_materials.erase(m_materials.begin() + index);
+
     for (auto& pIMesh : m_meshes) {
         for (auto& pSubmesh : pIMesh->GetSubmeshes()) {
             if (pSubmesh->GetMaterialIndex() == index)
@@ -321,6 +367,17 @@ void Model::ApplyWorldTransform(DirectX::XMFLOAT3X4 W) {
         }
     }
 }
+
+void Model::Attach(IModelObserver* pIModelObserver) {
+    if (!pIModelObserver)
+        throw std::invalid_argument("IModelObserver is nullptr.");
+    m_modelObservers.insert(pIModelObserver);
+}
+
+void Model::Detach(IModelObserver* pIModelObserver) noexcept {
+    m_modelObservers.erase(pIModelObserver);
+}
+
 
 std::vector<std::shared_ptr<Material>>& Model::GetMaterials() noexcept {
     return m_materials;

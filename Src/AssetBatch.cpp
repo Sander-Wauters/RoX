@@ -65,8 +65,9 @@ void AssetBatch::Add(std::shared_ptr<Material> pMaterial) {
     std::shared_ptr<Material>& pMappedMaterial = m_materials[pMaterial->GetGUID()];
     if (!pMappedMaterial) {
         pMappedMaterial = pMaterial;
-        for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-            pAssetBatchObserver->OnAdd(pMaterial);
+        for (IAssetBatchObserver* pIAssetBatchObserver : m_assetBatchObservers) {
+            if (pIAssetBatchObserver)
+                pIAssetBatchObserver->OnAdd(pMaterial);
         }
     }
 }
@@ -90,8 +91,9 @@ void AssetBatch::Add(std::shared_ptr<Model> pModel) {
         }
 
         entry = pModel;
-        for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-            pAssetBatchObserver->OnAdd(entry);
+        for (IAssetBatchObserver* pIAssetBatchObserver : m_assetBatchObservers) {
+            if (pIAssetBatchObserver)
+                pIAssetBatchObserver->OnAdd(entry);
         }
     }
 }
@@ -105,8 +107,9 @@ void AssetBatch::Add(std::shared_ptr<Sprite> pSprite) {
     std::shared_ptr<Sprite>& entry = m_sprites[pSprite->GetGUID()];
     if (!entry) {
         entry = pSprite;
-        for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-            pAssetBatchObserver->OnAdd(entry);
+        for (IAssetBatchObserver* pIAssetBatchObserver : m_assetBatchObservers) {
+            if (pIAssetBatchObserver)
+                pIAssetBatchObserver->OnAdd(entry);
         }
     }
 }
@@ -120,8 +123,9 @@ void AssetBatch::Add(std::shared_ptr<Text> pText) {
     std::shared_ptr<Text>& entry = m_texts[pText->GetGUID()];
     if (!entry) {
         entry = pText;
-        for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-            pAssetBatchObserver->OnAdd(entry);
+        for (IAssetBatchObserver* pIAssetBatchObserver : m_assetBatchObservers) {
+            if (pIAssetBatchObserver)
+                pIAssetBatchObserver->OnAdd(entry);
         }
     }
 }
@@ -133,8 +137,9 @@ void AssetBatch::Add(std::shared_ptr<Outline> pOutline) {
     std::shared_ptr<Outline>& entry = m_outlines[pOutline->GetGUID()];
     if (!entry) {
         entry = pOutline;
-        for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-            pAssetBatchObserver->OnAdd(entry);
+        for (IAssetBatchObserver* pIAssetBatchObserver : m_assetBatchObservers) {
+            if (pIAssetBatchObserver)
+                pIAssetBatchObserver->OnAdd(entry);
         }
     }
 }
@@ -148,36 +153,42 @@ void AssetBatch::RemoveMaterial(std::uint64_t GUID) {
         }
     }
 
-    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-        pAssetBatchObserver->OnRemove(m_materials.at(GUID));
+    for (IAssetBatchObserver* pIAssetBatchObserver : m_assetBatchObservers) {
+        if (pIAssetBatchObserver)
+            pIAssetBatchObserver->OnRemove(m_materials.at(GUID));
     }
+
     m_materials.erase(GUID);
 }
 
 void AssetBatch::RemoveModel(std::uint64_t GUID) {
-    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-        pAssetBatchObserver->OnRemove(m_models.at(GUID));
+    for (IAssetBatchObserver* pIAssetBatchObserver : m_assetBatchObservers) {
+        if (pIAssetBatchObserver)
+            pIAssetBatchObserver->OnRemove(m_models.at(GUID));
     }
     m_models.erase(GUID);
 }
 
 void AssetBatch::RemoveSprite(std::uint64_t GUID) {
-    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-        pAssetBatchObserver->OnRemove(m_sprites.at(GUID));
+    for (IAssetBatchObserver* pIAssetBatchObserver : m_assetBatchObservers) {
+        if (pIAssetBatchObserver)
+            pIAssetBatchObserver->OnRemove(m_sprites.at(GUID));
     }
     m_sprites.erase(GUID);
 }
 
 void AssetBatch::RemoveText(std::uint64_t GUID) {
-    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-        pAssetBatchObserver->OnRemove(m_texts.at(GUID));
+    for (IAssetBatchObserver* pIAssetBatchObserver : m_assetBatchObservers) {
+        if (pIAssetBatchObserver)
+            pIAssetBatchObserver->OnRemove(m_texts.at(GUID));
     }
     m_texts.erase(GUID);
 }
 
 void AssetBatch::RemoveOutline(std::uint64_t GUID) {
-    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-        pAssetBatchObserver->OnRemove(m_outlines.at(GUID));
+    for (IAssetBatchObserver* pIAssetBatchObserver : m_assetBatchObservers) {
+        if (pIAssetBatchObserver)
+            pIAssetBatchObserver->OnRemove(m_outlines.at(GUID));
     }
     m_outlines.erase(GUID);
 }
@@ -247,22 +258,14 @@ void AssetBatch::Remove(AssetBatch::AssetType type, std::string name) {
     }
 }
 
-void AssetBatch::UpdateIMesh(std::uint64_t modelGUID, std::uint64_t meshGUID) {
-    for (IAssetBatchObserver* pAssetBatchObserver : m_assetBatchObservers) {
-        std::shared_ptr<Model>& pModel = m_models.at(modelGUID);
-        pAssetBatchObserver->OnUpdate(pModel->GetIMesh(meshGUID));
-    }
+void AssetBatch::Attach(IAssetBatchObserver* pIAssetBatchObserver) {
+    if (!pIAssetBatchObserver)
+        throw std::invalid_argument("IAssetBatchObserver is nullptr.");
+    m_assetBatchObservers.insert(pIAssetBatchObserver);
 }
 
-void AssetBatch::RegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) {
-    if (!assetBatchObserver)
-        throw std::invalid_argument("AssetBatchObserver is nullptr.");
-
-    m_assetBatchObservers.insert(assetBatchObserver);
-}
-
-void AssetBatch::DeregisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept {
-    m_assetBatchObservers.erase(assetBatchObserver);
+void AssetBatch::Detach(IAssetBatchObserver* pIAssetBatchObserver) noexcept {
+    m_assetBatchObservers.erase(pIAssetBatchObserver);
 }
 
 void AssetBatch::AddUniqueTexture(std::wstring texture) {

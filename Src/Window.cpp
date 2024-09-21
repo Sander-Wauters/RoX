@@ -80,53 +80,62 @@ float Window::GetAspectRatio() const noexcept {
     return (float)m_width / m_height;
 }
 
-void Window::RegisterWindowObserver(IWindowObserver* windowObserver) noexcept {
-    m_windowObservers.insert(windowObserver);
+void Window::Attach(IWindowObserver* pIWindowObserver) {
+    if (!pIWindowObserver)
+        throw std::invalid_argument("IWindowObserver is nullptr.");
+    m_windowObservers.insert(pIWindowObserver);
 }
 
-void Window::DeregisterWindowObserver(IWindowObserver* windowObserver) noexcept {
-    m_windowObservers.erase(windowObserver);
+void Window::Detach(IWindowObserver* pIWindowObserver) noexcept {
+    m_windowObservers.erase(pIWindowObserver);
 }
 
 void Window::HandleActivated() {
-    for (IWindowObserver* pWindowObserver : m_windowObservers) {
-        pWindowObserver->OnActivated();
+    for (IWindowObserver* pIWindowObserver : m_windowObservers) {
+        if (pIWindowObserver)
+            pIWindowObserver->OnActivated();
     }
 }
 
 void Window::HandleDeactivated() {
-    for (IWindowObserver* pWindowObserver : m_windowObservers) {
-        pWindowObserver->OnDeactivated();
+    for (IWindowObserver* pIWindowObserver : m_windowObservers) {
+        if (pIWindowObserver)
+            pIWindowObserver->OnDeactivated();
     }
 }
 
 void Window::HandleSuspending() {
-    for (IWindowObserver* pWindowObserver : m_windowObservers) {
-        pWindowObserver->OnSuspending();
+    for (IWindowObserver* pIWindowObserver : m_windowObservers) {
+        if (pIWindowObserver)
+            pIWindowObserver->OnSuspending();
     }
 }
 
 void Window::HandleResuming() {
-    for (IWindowObserver* pWindowObserver : m_windowObservers) {
-        pWindowObserver->OnResuming();
+    for (IWindowObserver* pIWindowObserver : m_windowObservers) {
+        if (pIWindowObserver)
+            pIWindowObserver->OnResuming();
     }
 }
 
 void Window::HandleWindowMoved() {
-    for (IWindowObserver* pWindowObserver : m_windowObservers) {
-        pWindowObserver->OnWindowMoved();
+    for (IWindowObserver* pIWindowObserver : m_windowObservers) {
+        if (pIWindowObserver)
+            pIWindowObserver->OnWindowMoved();
     }
 }
 
 void Window::HandleDisplayChanged() {
-    for (IWindowObserver* pWindowObserver : m_windowObservers) {
-        pWindowObserver->OnDisplayChanged();
+    for (IWindowObserver* pIWindowObserver : m_windowObservers) {
+        if (pIWindowObserver)
+            pIWindowObserver->OnDisplayChanged();
     }
 }
 
 void Window::HandleWindowSizeChanged(int width, int height) {
-    for (IWindowObserver* pWindowObserver : m_windowObservers) {
-        pWindowObserver->OnWindowSizeChanged(width, height);
+    for (IWindowObserver* pIWindowObserver : m_windowObservers) {
+        if (pIWindowObserver)
+            pIWindowObserver->OnWindowSizeChanged(width, height);
     }
 }
 

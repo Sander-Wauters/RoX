@@ -59,6 +59,10 @@ void MeshDeviceData::OnDeviceLost() noexcept {
     m_staticVertexBuffer.Reset();
 }
 
+void MeshDeviceData::OnDeviceRestored() {
+
+}
+
 void MeshDeviceData::PrepareForDraw(ID3D12GraphicsCommandList* pCommandList) const {
     if (!m_indexBufferSize || !m_vertexBufferSize) 
         throw std::runtime_error("Submesh is missing values for vertex and/or index buffer size: vertexBufferSize=" + std::to_string(m_vertexBufferSize) + "; indexBufferSize=" + std::to_string(m_indexBufferSize));

@@ -30,8 +30,6 @@ class IAssetBatchObserver {
         virtual void OnRemove(const std::shared_ptr<Sprite>& pSprite) = 0;
         virtual void OnRemove(const std::shared_ptr<Text>& pText) = 0;
         virtual void OnRemove(const std::shared_ptr<Outline>& pOutline) = 0;
-
-        virtual void OnUpdate(const std::shared_ptr<IMesh>& pIMesh) = 0;
 };
 
 // Contains data that will be rendered to the display.
@@ -81,10 +79,8 @@ class AssetBatch {
         void RemoveOutline(std::string name);
         void Remove(AssetBatch::AssetType type, std::string name);
 
-        void UpdateIMesh(std::uint64_t modelGUID, std::uint64_t meshGUID);
-
-        void RegisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver);
-        void DeregisterAssetBatchObserver(IAssetBatchObserver* assetBatchObserver) noexcept;
+        void Attach(IAssetBatchObserver* pIAssetBatchObserver);
+        void Detach(IAssetBatchObserver* pIAssetBatchObserver) noexcept;
 
     private:
         void AddUniqueTexture(std::wstring texture);
