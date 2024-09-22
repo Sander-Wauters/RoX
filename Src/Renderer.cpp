@@ -70,14 +70,13 @@ Renderer::Impl::Impl(Renderer* pOwner, HWND window, int width, int height)
 {
     m_pDeviceResources = std::make_unique<DeviceResources>();
     m_pDeviceResources->Attach(this);
-
-    m_pDeviceResourceData = std::make_unique<DeviceResourceData>(*m_pDeviceResources);
-
     m_pDeviceResources->SetWindow(window, width, height);
     m_pDeviceResources->CreateDeviceResources();
     m_pDeviceResources->CreateWindowSizeDependentResources();
 
     m_pGraphicsMemory = std::make_unique<DirectX::GraphicsMemory>(m_pDeviceResources->GetDevice());
+
+    m_pDeviceResourceData = std::make_unique<DeviceResourceData>(*m_pDeviceResources);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -157,7 +156,7 @@ void Renderer::Impl::Render(const std::function<void()>& renderImGui) {
         // ImGui doesn't support MSAA.
         ID3D12DescriptorHeap* heaps[] = { 
             m_pDeviceResourceData->GetImGuiDescriptorHeap()->Heap(),
-            m_pDeviceResourceData->GetImGuiStates()->Heap()
+            m_pDeviceResourceData->GetCommonStates()->Heap()
         };
         pCommandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
 
@@ -263,7 +262,7 @@ void Renderer::Impl::RenderBatch(const DeviceDataBatch& batch, std::uint8_t batc
     if (batch.HasTextures()) {
         ID3D12DescriptorHeap* heaps[] = { 
             batch.GetDescriptorHeap()->Heap(), 
-            batch.GetStates()->Heap() 
+            m_pDeviceResourceData->GetCommonStates()->Heap()
         };
         pCommandList->SetDescriptorHeaps(static_cast<UINT>(std::size(heaps)), heaps);
     }
@@ -484,7 +483,7 @@ void Renderer::Impl::RenderText(const DeviceDataBatch& batch, std::uint8_t batch
         if (!textPair.first->IsVisible()) 
             continue;
 
-        textPair.second->GetSpriteFont()->DrawString(
+        textPair.second->GetSpriteFont().DrawString(
                 pSpriteBatch,
                 textPair.first->GetContent().c_str(),
                 textPair.first->GetOffset(),
@@ -517,7 +516,7 @@ void Renderer::Impl::CreateDeviceDependentResources() {
 
 void Renderer::Impl::CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
     if (m_pDeviceResourceData->SceneLoaded())
-        m_pDeviceResourceData->CreateRenderTargetDependentResources(resourceUploadBatch);
+        m_pDeviceResourceData->CreateRenderTargetDependentResources(resourceUploadBatch, m_msaaEnabled);
 }
 
 void Renderer::Impl::CreateWindowSizeDependentResources() {

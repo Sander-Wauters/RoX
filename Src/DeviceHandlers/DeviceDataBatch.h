@@ -9,21 +9,26 @@
 #include "RoX/Sprite.h"
 
 #include "DeviceResources.h"
-#include "ModelDeviceData.h"
+#include "MaterialDeviceData.h"
 #include "MeshDeviceData.h"
+#include "ModelDeviceData.h"
 #include "TextureDeviceData.h"
 #include "TextDeviceData.h"
 
-using MaterialPair = std::pair<const std::shared_ptr<Material>, std::unique_ptr<DirectX::IEffect>>;
+using MaterialPair = std::pair<const std::shared_ptr<Material>, std::unique_ptr<MaterialDeviceData>>;
 using ModelPair    = std::pair<const std::shared_ptr<Model>,    std::unique_ptr<ModelDeviceData>>;
 using MeshPair     = std::pair<const std::shared_ptr<IMesh>,    std::shared_ptr<MeshDeviceData>>; 
-using TexturePair  = std::pair<const std::wstring,              std::unique_ptr<TextureDeviceData>>;
+using TexturePair  = std::pair<const std::wstring,              std::shared_ptr<TextureDeviceData>>;
 using SpritePair   = std::pair<const std::shared_ptr<Sprite>,   std::unique_ptr<TextureDeviceData>>;
 using TextPair     = std::pair<const std::shared_ptr<Text>,     std::unique_ptr<TextDeviceData>>;
 
 class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
     public:
-        DeviceDataBatch(DeviceResources& deviceResources, std::uint8_t descriptorHeapSize, const bool& msaaEnabled) noexcept;
+        DeviceDataBatch(
+                DeviceResources& deviceResources, 
+                DirectX::CommonStates& commonStates,
+                DirectX::RenderTargetState& rtState,
+                std::uint8_t descriptorHeapSize) noexcept;
         ~DeviceDataBatch() noexcept;
 
         DeviceDataBatch(DeviceDataBatch& other) noexcept;
@@ -59,32 +64,13 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
 
         void CreateDescriptorHeapResources();
         void CreateSpriteBatchResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
-
-        void CreateSpriteResource(const std::shared_ptr<Sprite>& pSprite, std::unique_ptr<TextureDeviceData>& pSpriteData, DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void CreateTextResource(const std::shared_ptr<Text>& pText, std::unique_ptr<TextDeviceData>& pTextData, DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void CreateTextureResource(const std::wstring& fileName, std::unique_ptr<TextureDeviceData>& pTextureData, DirectX::ResourceUploadBatch& resourceUploadBatch);
-        void CreateIEffect(Material& material, std::unique_ptr<DirectX::IEffect>& pIEffect) const;
         void CreateOutlineBatchResources();
-
-        void BindTexturesToEffect(Material& material, DirectX::IEffect& iEffect);
-
-        DirectX::RenderTargetState RenderTargetState() const noexcept;
-
-        D3D12_INPUT_LAYOUT_DESC InputLayoutDesc(std::uint32_t flags) const;
-        D3D12_BLEND_DESC BlendDesc(std::uint32_t flags) const noexcept;
-        D3D12_DEPTH_STENCIL_DESC DepthStencilDesc(std::uint32_t flags) const noexcept;
-        D3D12_RASTERIZER_DESC RasterizerDesc(std::uint32_t flags) const noexcept;
-        D3D12_GPU_DESCRIPTOR_HANDLE SamplerDesc(std::uint32_t flags) const noexcept;
-
-        bool CompareFileExtension(std::wstring filePath, std::wstring valid);
-        void CreateTextureFromFile(std::wstring filePath, ID3D12Resource** ppTexture, DirectX::ResourceUploadBatch& resourceUploadBatch);
 
     public:
         bool HasMaterials() const noexcept;
         bool HasTextures() const noexcept;
 
         DirectX::DescriptorHeap* GetDescriptorHeap() const noexcept;
-        DirectX::CommonStates* GetStates() const noexcept;
         DirectX::SpriteBatch* GetSpriteBatch() const noexcept;
 
         DirectX::BasicEffect* GetOutlineEffect() const noexcept;
@@ -98,25 +84,25 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
 
     private:
         DeviceResources& m_deviceResources;
-        const bool& m_msaaEnabled;
+        DirectX::CommonStates& m_commonStates;
+        DirectX::RenderTargetState& m_rtState;
 
         const std::uint8_t m_descriptorHeapSize;
         std::uint8_t m_nextDescriptorHeapIndex;
         std::queue<std::uint8_t> m_openDescriptorHeapIndices;
 
         std::unique_ptr<DirectX::DescriptorHeap> m_pDescriptorHeap;
-        std::unique_ptr<DirectX::CommonStates> m_pStates;
 
         std::unique_ptr<DirectX::SpriteBatch> m_pSpriteBatch;
 
         std::unique_ptr<DirectX::BasicEffect> m_pOutlineEffect;
         std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>> m_pOutlinePrimitiveBatch;
 
-        std::unordered_map<std::shared_ptr<Material>, std::unique_ptr<DirectX::IEffect>>  m_materialData;
-        std::unordered_map<std::shared_ptr<Model>,    std::unique_ptr<ModelDeviceData>>   m_modelData;
-        std::unordered_map<std::shared_ptr<IMesh>,    std::shared_ptr<MeshDeviceData>>    m_meshData;
-        std::unordered_map<std::wstring,              std::unique_ptr<TextureDeviceData>> m_textureData;
-        std::unordered_map<std::shared_ptr<Sprite>,   std::unique_ptr<TextureDeviceData>> m_spriteData;
-        std::unordered_map<std::shared_ptr<Text>,     std::unique_ptr<TextDeviceData>>    m_textData;  
+        std::unordered_map<std::shared_ptr<Material>, std::unique_ptr<MaterialDeviceData>>  m_materialData;
+        std::unordered_map<std::shared_ptr<Model>,    std::unique_ptr<ModelDeviceData>>     m_modelData;
+        std::unordered_map<std::shared_ptr<IMesh>,    std::shared_ptr<MeshDeviceData>>      m_meshData;
+        std::unordered_map<std::wstring,              std::shared_ptr<TextureDeviceData>>   m_textureData;
+        std::unordered_map<std::shared_ptr<Sprite>,   std::unique_ptr<TextureDeviceData>>   m_spriteData;
+        std::unordered_map<std::shared_ptr<Text>,     std::unique_ptr<TextDeviceData>>      m_textData;  
 };
 

@@ -3,22 +3,35 @@
 #include "../Util/pch.h"
 #include "../Util/dxtk12pch.h"
 
-class TextDeviceData {
+#include "DeviceResources.h"
+
+class TextDeviceData : public IDeviceObserver {
     public:
-        TextDeviceData(std::uint32_t heapIndex) noexcept :
-            m_descriptorHeapIndex(heapIndex),
-            m_pSpriteFont(nullptr) {}
-
-        void OnDeviceLost() noexcept { m_pSpriteFont.reset(); }
+        TextDeviceData(
+                DeviceResources& deviceResources, 
+                DirectX::DescriptorHeap& descriptorHeap,
+                std::uint32_t heapIndex,
+                std::wstring filePath);
+        ~TextDeviceData();
 
     public:
-        std::uint8_t GetHeapIndex() const noexcept { return m_descriptorHeapIndex; }
-        DirectX::SpriteFont* GetSpriteFont() noexcept { return m_pSpriteFont.get(); }
-
-        void SetHeapIndex(std::uint8_t heapIndex) noexcept { m_descriptorHeapIndex = heapIndex; }
-        void SetSpriteFont(std::unique_ptr<DirectX::SpriteFont> pSpriteFont) noexcept { m_pSpriteFont = std::move(pSpriteFont); }
+        void OnDeviceLost() override;
+        void OnDeviceRestored() override;
 
     private:
+        std::future<void> CreateSpriteFont();
+
+    public:
+        std::uint8_t GetHeapIndex() const noexcept;
+
+        const DirectX::SpriteFont& GetSpriteFont() const noexcept;
+
+    private:
+        const std::wstring m_filePath;
+
+        DeviceResources& m_deviceResources;
+        DirectX::DescriptorHeap& m_descriptorHeap;
+
         std::uint8_t m_descriptorHeapIndex;
         std::unique_ptr<DirectX::SpriteFont> m_pSpriteFont;
 };

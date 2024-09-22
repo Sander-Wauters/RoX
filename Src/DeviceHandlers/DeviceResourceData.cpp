@@ -5,6 +5,10 @@ DeviceResourceData::DeviceResourceData(DeviceResources& deviceResources)
     m_deviceResources(deviceResources)
 {
     m_deviceResources.Attach(this);
+    m_pRenderTartgetState = std::make_unique<DirectX::RenderTargetState>(
+            m_deviceResources.GetBackBufferFormat(), 
+            m_deviceResources.GetDepthBufferFormat());
+    CreateDeviceDependentResources();
 }
 
 DeviceResourceData::~DeviceResourceData() noexcept {
@@ -13,11 +17,11 @@ DeviceResourceData::~DeviceResourceData() noexcept {
 
 void DeviceResourceData::OnDeviceLost() {
     m_pImGuiDescriptorHeap.reset();
-    m_pImGuiStates.reset();
+    m_pCommonStates.reset();
 }
 
 void DeviceResourceData::OnDeviceRestored() {
-
+    CreateDeviceDependentResources();
 }
 
 void DeviceResourceData::Load(Scene& scene, bool& msaaEnabled) {
@@ -37,10 +41,21 @@ void DeviceResourceData::Update() {
 }
 
 void DeviceResourceData::CreateDeviceDependentResources() {
+    ID3D12Device* pDevice = m_deviceResources.GetDevice();
+
+    m_pCommonStates = std::make_unique<DirectX::CommonStates>(pDevice);
     CreateImGuiResources();
 }
 
-void DeviceResourceData::CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
+void DeviceResourceData::CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch, bool msaaEnabled) {
+    if (msaaEnabled) {
+        m_pRenderTartgetState->sampleDesc.Count = DeviceResources::MSAA_COUNT;
+        m_pRenderTartgetState->sampleDesc.Quality = DeviceResources::MSAA_QUALITY;
+    } else {
+        m_pRenderTartgetState->sampleDesc.Count = 1;
+        m_pRenderTartgetState->sampleDesc.Quality = 0;
+    }
+
     for (std::unique_ptr<DeviceDataBatch>& pBatch : m_dataBatches) {
         pBatch->CreateRenderTargetDependentResources(resourceUploadBatch);
     }
@@ -60,7 +75,6 @@ void DeviceResourceData::CreateImGuiResources() {
             D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
             D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
             1);
-    m_pImGuiStates = std::make_unique<DirectX::CommonStates>(pDevice);
 }
 
 void DeviceResourceData::FreshLoad(Scene& scene, bool& msaaEnabled) {
@@ -69,7 +83,11 @@ void DeviceResourceData::FreshLoad(Scene& scene, bool& msaaEnabled) {
     for (std::uint8_t i = 0; i < m_pScene->GetNumAssetBatches(); ++i) {
         auto pAssetBatch = m_pScene->GetAssetBatches()[i];
 
-        auto pDataBatch = std::make_unique<DeviceDataBatch>(m_deviceResources, pAssetBatch->GetMaxNumUniqueTextures(), msaaEnabled);
+        auto pDataBatch = std::make_unique<DeviceDataBatch>(
+                m_deviceResources, 
+                *m_pCommonStates,
+                *m_pRenderTartgetState,
+                pAssetBatch->GetMaxNumUniqueTextures());
 
         pDataBatch->Add(*m_pScene->GetAssetBatches()[i]);
 
@@ -107,7 +125,11 @@ void DeviceResourceData::DirtyLoad(Scene& scene, bool& msaaEnabled) {
             pAssetBatch->Attach(currentlyLoadedDataBatches[pos].get());
             m_dataBatches.push_back(std::move(currentlyLoadedDataBatches[pos]));
         } else {
-            auto pDataBatch = std::make_unique<DeviceDataBatch>(m_deviceResources, scene.GetAssetBatches()[i]->GetMaxNumUniqueTextures(), msaaEnabled);
+        auto pDataBatch = std::make_unique<DeviceDataBatch>(
+                m_deviceResources, 
+                *m_pCommonStates,
+                *m_pRenderTartgetState,
+                pAssetBatch->GetMaxNumUniqueTextures());
             pDataBatch->Add(*scene.GetAssetBatches()[i]);
 
             pAssetBatch->Attach(pDataBatch.get());
@@ -133,8 +155,8 @@ DirectX::DescriptorHeap* DeviceResourceData::GetImGuiDescriptorHeap() noexcept {
     return m_pImGuiDescriptorHeap.get();
 }
 
-DirectX::CommonStates* DeviceResourceData::GetImGuiStates() noexcept {
-    return m_pImGuiStates.get();
+DirectX::CommonStates* DeviceResourceData::GetCommonStates() noexcept {
+    return m_pCommonStates.get();
 }
 
 bool DeviceResourceData::SceneLoaded() const noexcept {

@@ -21,13 +21,17 @@ set(SOURCE
     Src/DeviceHandlers/DeviceResourceData.h
     Src/DeviceHandlers/DeviceResources.cpp
     Src/DeviceHandlers/DeviceResources.h
+    Src/DeviceHandlers/MaterialDeviceData.cpp
+    Src/DeviceHandlers/MaterialDeviceData.h
     Src/DeviceHandlers/MeshDeviceData.cpp
     Src/DeviceHandlers/MeshDeviceData.h
     Src/DeviceHandlers/ModelDeviceData.cpp
     Src/DeviceHandlers/ModelDeviceData.h
     Src/DeviceHandlers/SubmeshDeviceData.cpp
     Src/DeviceHandlers/SubmeshDeviceData.h
+    Src/DeviceHandlers/TextDeviceData.cpp
     Src/DeviceHandlers/TextDeviceData.h
+    Src/DeviceHandlers/TextureDeviceData.cpp
     Src/DeviceHandlers/TextureDeviceData.h
 
     Src/Exceptions/DXException.cpp

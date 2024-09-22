@@ -21,7 +21,7 @@ class DeviceResourceData : public IDeviceObserver {
         void Update();
 
         void CreateDeviceDependentResources();
-        void CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch, bool msaaEnabled);
         void CreateWindowSizeDependentResources();
 
         void CreateImGuiResources();
@@ -37,7 +37,7 @@ class DeviceResourceData : public IDeviceObserver {
 
         const std::vector<std::unique_ptr<DeviceDataBatch>>& GetDataBatches() const noexcept;
         DirectX::DescriptorHeap* GetImGuiDescriptorHeap() noexcept;
-        DirectX::CommonStates* GetImGuiStates() noexcept;
+        DirectX::CommonStates* GetCommonStates() noexcept;
 
         bool SceneLoaded() const noexcept;
 
@@ -48,5 +48,6 @@ class DeviceResourceData : public IDeviceObserver {
         std::vector<std::unique_ptr<DeviceDataBatch>> m_dataBatches;
 
         std::unique_ptr<DirectX::DescriptorHeap> m_pImGuiDescriptorHeap;
-        std::unique_ptr<DirectX::CommonStates> m_pImGuiStates;
+        std::unique_ptr<DirectX::CommonStates> m_pCommonStates;
+        std::unique_ptr<DirectX::RenderTargetState> m_pRenderTartgetState;
 };

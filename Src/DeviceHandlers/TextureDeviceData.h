@@ -1,30 +1,36 @@
 #pragma once
 
 #include "../Util/pch.h"
+#include "../Util/dxtk12pch.h"
 
-class TextureDeviceData {
+#include "DeviceResources.h"
+
+class TextureDeviceData : public IDeviceObserver {
     public:
-        TextureDeviceData(std::uint32_t heapIndex) noexcept :
-            m_numReferences(1),
-            m_desciptorHeapIndex(heapIndex),
-            m_pTexture(nullptr) {}
-
-        void OnDeviceLost() noexcept { m_pTexture.Reset(); }
-
-        void IncreaseRefCount() noexcept { ++m_numReferences; }
-        void DecreaseRefCount() noexcept { --m_numReferences; }
+        TextureDeviceData(
+                DeviceResources& deviceResources, 
+                DirectX::DescriptorHeap& descriptorHeap,
+                std::uint32_t heapIndex, 
+                std::wstring filePath);
+        ~TextureDeviceData();
 
     public:
-        bool HasReferences() const noexcept { return m_numReferences != 0; }
-
-        std::uint8_t GetHeapIndex() const noexcept { return m_desciptorHeapIndex; }
-
-        Microsoft::WRL::ComPtr<ID3D12Resource>& GetTexture() noexcept { return m_pTexture; }
-
-        void SetHeapIndex(std::uint8_t heapIndex) noexcept { m_desciptorHeapIndex = heapIndex; }
+        void OnDeviceLost() override;
+        void OnDeviceRestored() override;
 
     private:
-        std::uint8_t m_numReferences;
+        std::future<void> CreateTextureResource();
+
+    public:
+        std::uint8_t GetHeapIndex() const noexcept;
+
+        Microsoft::WRL::ComPtr<ID3D12Resource>& GetTexture() noexcept;
+
+    private:
+        const std::wstring m_filePath;
+
+        DeviceResources& m_deviceResources;
+        DirectX::DescriptorHeap& m_descriptorHeap;
 
         std::uint8_t m_desciptorHeapIndex;
         Microsoft::WRL::ComPtr<ID3D12Resource> m_pTexture;        
