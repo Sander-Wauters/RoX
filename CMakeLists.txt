@@ -21,6 +21,7 @@ set(SOURCE
     Src/DeviceHandlers/DeviceResourceData.h
     Src/DeviceHandlers/DeviceResources.cpp
     Src/DeviceHandlers/DeviceResources.h
+    Src/DeviceHandlers/IDeviceDataSupplier.h
     Src/DeviceHandlers/MaterialDeviceData.cpp
     Src/DeviceHandlers/MaterialDeviceData.h
     Src/DeviceHandlers/MeshDeviceData.cpp

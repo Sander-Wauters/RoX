@@ -1,18 +1,34 @@
 #include "ModelDeviceData.h"
 
-ModelDeviceData::ModelDeviceData(ID3D12Device* pDevice, Model* pModel, 
-        std::unordered_map<std::shared_ptr<IMesh>, std::shared_ptr<MeshDeviceData>>& sharedMeshes) 
+ModelDeviceData::ModelDeviceData(IDeviceDataSupplier& deviceDataSupplier, Model& model) 
+    : m_deviceDataSupplier(deviceDataSupplier)
 {
-    m_meshes.reserve(pModel->GetNumMeshes()); 
-    for (std::uint64_t i = 0; i < pModel->GetNumMeshes(); ++i) {
-        std::shared_ptr<IMesh>& pIMesh = pModel->GetMeshes()[i];
-        std::shared_ptr<MeshDeviceData>& pMeshData = sharedMeshes[pIMesh];
-        if (!pMeshData) {
-            pMeshData = std::make_unique<MeshDeviceData>(pDevice, pModel->GetMeshes()[i].get());
-        }
-        m_meshes.push_back(pMeshData);
+    m_meshes.reserve(model.GetNumMeshes()); 
+    for (std::uint8_t i = 0; i < model.GetNumMeshes(); ++i) {
+        std::shared_ptr<IMesh>& pIMesh = model.GetMeshes()[i];
+        m_meshes.push_back(m_deviceDataSupplier.GetMeshDeviceData(pIMesh));
+    }
+    for (std::uint8_t i = 0; i < model.GetNumMaterials(); ++i) {
+        m_materials.push_back(m_deviceDataSupplier.GetMaterialDeviceData(model.GetMaterials()[i]));
     }
     m_meshes.shrink_to_fit();
+}
+
+void ModelDeviceData::OnAdd(const std::shared_ptr<Material>& pMaterial) {
+    m_materials.push_back(m_deviceDataSupplier.GetMaterialDeviceData(pMaterial));
+}
+
+void ModelDeviceData::OnAdd(const std::shared_ptr<IMesh>& pIMesh) {
+    m_meshes.push_back(m_deviceDataSupplier.GetMeshDeviceData(pIMesh));
+}
+
+void ModelDeviceData::OnRemoveMaterial(std::uint8_t index) {
+    m_materials.erase(m_materials.begin() + index);
+}
+
+void ModelDeviceData::OnRemoveIMesh(std::uint8_t index) {
+    m_meshes.erase(m_meshes.begin() + index);
+    m_deviceDataSupplier.SignalMeshRemoved();
 }
 
 void ModelDeviceData::DrawSkinned(ID3D12GraphicsCommandList* pCommandList, Model* pModel) {
@@ -22,11 +38,11 @@ void ModelDeviceData::DrawSkinned(ID3D12GraphicsCommandList* pCommandList, Model
     for (std::uint64_t meshIndex = 0; meshIndex < pModel->GetNumMeshes(); ++meshIndex) {
         IMesh* pMesh = pModel->GetMeshes()[meshIndex].get();
 
-        m_meshes[meshIndex]->PrepareForDraw(pCommandList);
+        m_meshes[meshIndex]->PrepareForDraw();
 
         for (std::uint64_t submeshIndex = 0; submeshIndex < pMesh->GetNumSubmeshes(); ++submeshIndex) {
             Submesh* pSubmesh = pMesh->GetSubmeshes()[submeshIndex].get();
-            DirectX::IEffect* pIEffect = m_effects[pSubmesh->GetMaterialIndex()]->get();
+            DirectX::IEffect* pIEffect = m_materials[pSubmesh->GetMaterialIndex()]->GetIEffect();
 
             auto pIMatrices = dynamic_cast<DirectX::IEffectMatrices*>(pIEffect);
             if (pIMatrices)
@@ -150,8 +166,8 @@ void ModelDeviceData::LoadStaticBuffers(ID3D12Device* pDevice, DirectX::Resource
     }
 }
 
-std::vector<std::unique_ptr<DirectX::IEffect>*>& ModelDeviceData::GetEffects() noexcept {
-    return m_effects;
+std::vector<std::shared_ptr<MaterialDeviceData>>& ModelDeviceData::GetMaterials() noexcept {
+    return m_materials;
 }
 
 std::vector<std::shared_ptr<MeshDeviceData>>& ModelDeviceData::GetMeshes() noexcept {

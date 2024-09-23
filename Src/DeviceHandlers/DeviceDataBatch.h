@@ -14,15 +14,16 @@
 #include "ModelDeviceData.h"
 #include "TextureDeviceData.h"
 #include "TextDeviceData.h"
+#include "IDeviceDataSupplier.h"
 
-using MaterialPair = std::pair<const std::shared_ptr<Material>, std::unique_ptr<MaterialDeviceData>>;
+using MaterialPair = std::pair<const std::shared_ptr<Material>, std::shared_ptr<MaterialDeviceData>>;
 using ModelPair    = std::pair<const std::shared_ptr<Model>,    std::unique_ptr<ModelDeviceData>>;
 using MeshPair     = std::pair<const std::shared_ptr<IMesh>,    std::shared_ptr<MeshDeviceData>>; 
 using TexturePair  = std::pair<const std::wstring,              std::shared_ptr<TextureDeviceData>>;
 using SpritePair   = std::pair<const std::shared_ptr<Sprite>,   std::unique_ptr<TextureDeviceData>>;
 using TextPair     = std::pair<const std::shared_ptr<Text>,     std::unique_ptr<TextDeviceData>>;
 
-class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
+class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver, public IDeviceDataSupplier {
     public:
         DeviceDataBatch(
                 DeviceResources& deviceResources, 
@@ -48,6 +49,11 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
         void OnRemove(const std::shared_ptr<Sprite>& pSprite) override;
         void OnRemove(const std::shared_ptr<Text>& pText) override;
         void OnRemove(const std::shared_ptr<Outline>& pOutline) override;
+
+        std::shared_ptr<MaterialDeviceData> GetMaterialDeviceData(const std::shared_ptr<Material>& pMaterial) override;
+        std::shared_ptr<MeshDeviceData> GetMeshDeviceData(const std::shared_ptr<IMesh>& pIMesh) override;
+
+        void SignalMeshRemoved() override;
 
     public:
         // Used when loading in a new Scene.
@@ -98,7 +104,7 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver {
         std::unique_ptr<DirectX::BasicEffect> m_pOutlineEffect;
         std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>> m_pOutlinePrimitiveBatch;
 
-        std::unordered_map<std::shared_ptr<Material>, std::unique_ptr<MaterialDeviceData>>  m_materialData;
+        std::unordered_map<std::shared_ptr<Material>, std::shared_ptr<MaterialDeviceData>>  m_materialData;
         std::unordered_map<std::shared_ptr<Model>,    std::unique_ptr<ModelDeviceData>>     m_modelData;
         std::unordered_map<std::shared_ptr<IMesh>,    std::shared_ptr<MeshDeviceData>>      m_meshData;
         std::unordered_map<std::wstring,              std::shared_ptr<TextureDeviceData>>   m_textureData;

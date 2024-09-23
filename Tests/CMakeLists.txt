@@ -12,9 +12,19 @@ add_subdirectory(Lib/googletest)
 set(TESTS
     Src/PredefinedObjects/ValidAssetBatch.cpp
     Src/PredefinedObjects/ValidAssetBatch.h
+    Src/PredefinedObjects/ValidMaterial.cpp
+    Src/PredefinedObjects/ValidMaterial.h
+    Src/PredefinedObjects/ValidMesh.cpp
+    Src/PredefinedObjects/ValidMesh.h
+    Src/PredefinedObjects/ValidModel.cpp
+    Src/PredefinedObjects/ValidModel.h
 
     Src/AssetBatchTest.cpp 
+    Src/MeshTest.cpp
     Src/MockAssetBatchObserver.h
+    Src/MockMeshObserver.h
+    Src/MockModelObserver.h
+    Src/ModelTest.cpp
     Src/RendererTest.cpp
 )
 

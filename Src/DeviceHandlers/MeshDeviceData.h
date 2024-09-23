@@ -1,22 +1,31 @@
 #pragma once
 
+#include "../Util/pch.h"
 #include "../Util/dxtk12pch.h"
 
 #include "RoX/Model.h"
 
 #include "SubmeshDeviceData.h"
+#include "DeviceResources.h"
 
-class MeshDeviceData {
+class MeshDeviceData : public IDeviceObserver, public IMeshObserver {
     public:
-        MeshDeviceData(ID3D12Device* pDevice, IMesh* pIMesh);
+        MeshDeviceData(DeviceResources& deviceResources, IMesh& iMesh);
+        ~MeshDeviceData();
 
-        void LoadVertexBuffer(ID3D12Device* pDevice, IMesh* pIMesh);
-        void LoadIndexBuffer(ID3D12Device* pDevice, IMesh* pIMesh);
+    public:
+        void OnDeviceLost() override;
+        void OnDeviceRestored() override;
 
-        void OnDeviceLost() noexcept;
-        void OnDeviceRestored();
+        void OnAdd(const std::unique_ptr<Submesh>& pSubmesh) override;
 
-        void PrepareForDraw(ID3D12GraphicsCommandList* pCommandList) const;
+        void OnRemoveSubmesh(std::uint8_t index) override;
+    
+    public:
+        void LoadIndexBuffer(IMesh* pIMesh);
+        void LoadVertexBuffer(IMesh* pIMesh);
+
+        void PrepareForDraw() const;
 
     public:
         std::vector<std::unique_ptr<SubmeshDeviceData>>& GetSubmeshes() noexcept;
@@ -37,6 +46,8 @@ class MeshDeviceData {
         void SetStaticVertexBuffer(ID3D12Resource* pVertexBuffer);
 
     private:
+        DeviceResources& m_deviceResources;
+
         std::vector<std::unique_ptr<SubmeshDeviceData>> m_submeshes;
 
         std::uint32_t m_vertexStride;
@@ -49,4 +60,9 @@ class MeshDeviceData {
         DirectX::SharedGraphicsResource m_vertexBuffer;
         Microsoft::WRL::ComPtr<ID3D12Resource> m_staticIndexBuffer;
         Microsoft::WRL::ComPtr<ID3D12Resource> m_staticVertexBuffer;
+
+        // Used as temporary storage for vertices and indices when restoring the device.
+        // Outside of this use case these vectors should NOT store any data.
+        std::vector<char> m_vertexData;
+        std::vector<char> m_indexData;
 };

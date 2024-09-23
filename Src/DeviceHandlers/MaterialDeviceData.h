@@ -40,7 +40,7 @@ class MaterialDeviceData : public IDeviceObserver {
         D3D12_GPU_DESCRIPTOR_HANDLE SamplerDesc(std::uint32_t flags) const noexcept;
 
     public:
-        std::unique_ptr<DirectX::IEffect>* GetAddressOfIEffect();
+        DirectX::IEffect* GetIEffect();
 
     private:
         DeviceResources& m_deviceResources;

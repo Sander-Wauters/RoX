@@ -91,7 +91,7 @@ class IMeshObserver {
     public:
         virtual void OnAdd(const std::unique_ptr<Submesh>& pSubmesh) = 0;
 
-        virtual void OnRemove(const std::unique_ptr<Submesh>& pSubmesh) = 0;
+        virtual void OnRemoveSubmesh(std::uint8_t index) = 0;
 };
 
 // Abstract interface representing any mesh which can be used by the **Renderer**.
@@ -105,7 +105,9 @@ class IMesh {
     public:
         virtual ~IMesh() = default;
 
-        virtual void Add(std::unique_ptr<Submesh> pSubmesh) noexcept = 0;
+        virtual void Add(std::unique_ptr<Submesh> pSubmesh) = 0;
+
+        virtual void RemoveSubmesh(std::uint8_t index) = 0;
 
         virtual void Attach(IMeshObserver* pIMeshObserver) = 0;
         virtual void Detach(IMeshObserver* pIMeshObserver) noexcept = 0;
@@ -136,7 +138,9 @@ class Mesh : public IMesh, public Asset {
         Mesh(std::string name = "", bool visible = true) noexcept; 
 
     public:
-        void Add(std::unique_ptr<Submesh> pSubmesh) noexcept override;
+        void Add(std::unique_ptr<Submesh> pSubmesh) override;
+
+        void RemoveSubmesh(std::uint8_t index) override;
 
         void Attach(IMeshObserver* pIMeshObserver) override;
         void Detach(IMeshObserver* pIMeshObserver) noexcept override;
@@ -180,7 +184,9 @@ class SkinnedMesh : public IMesh, public Asset {
         SkinnedMesh(std::string name = "", bool visible = true) noexcept; 
 
     public:
-        void Add(std::unique_ptr<Submesh> pSubmesh) noexcept override;
+        void Add(std::unique_ptr<Submesh> pSubmesh) override;
+
+        void RemoveSubmesh(std::uint8_t index) override;
 
         void Attach(IMeshObserver* pIMeshObserver) override;
         void Detach(IMeshObserver* pIMeshObserver) noexcept override;
@@ -223,8 +229,8 @@ class IModelObserver {
         virtual void OnAdd(const std::shared_ptr<Material>& pMaterial) = 0;
         virtual void OnAdd(const std::shared_ptr<IMesh>& pIMesh) = 0;
 
-        virtual void OnRemove(const std::shared_ptr<Material>& pMaterial) = 0;
-        virtual void OnRemove(const std::shared_ptr<IMesh>& pIMesh) = 0;
+        virtual void OnRemoveMaterial(std::uint8_t index) = 0;
+        virtual void OnRemoveIMesh(std::uint8_t index) = 0;
 };
 
 // Contains 1 or more meshes, all the materials used by there submeshes and a collection of tranformations to animate the model.
@@ -237,15 +243,15 @@ class Model : public Asset {
 
         Model(Model& other);
 
-        void Add(std::shared_ptr<Material> pMaterial) noexcept;
-        void Add(std::shared_ptr<IMesh> pMesh) noexcept;
+        void Add(std::shared_ptr<Material> pMaterial);
+        void Add(std::shared_ptr<IMesh> pMesh);
 
         void MakeBoneMatricesArray(std::uint64_t count);
         void MakeInverseBoneMatricesArray(std::uint64_t count);
 
-        // Removes the material at the given index if there is more than one material.
-        // Any submeshes than pointed to the removed material will now point to index 0.
+        // Removes at the given index, only if there is more than one element.
         void RemoveMaterial(std::uint8_t index);
+        void RemoveIMesh(std::uint8_t index);
 
         // Sets every instance of every submesh of every mesh to the given matrix.
         // Should only be used on models that don't use GPU instancing.

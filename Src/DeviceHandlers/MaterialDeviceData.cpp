@@ -142,7 +142,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE MaterialDeviceData::SamplerDesc(std::uint32_t flags)
     return m_commonStates.AnisotropicWrap();
 }
 
-std::unique_ptr<DirectX::IEffect>* MaterialDeviceData::GetAddressOfIEffect() {
-    return &m_pIEffect;
+DirectX::IEffect* MaterialDeviceData::GetIEffect() {
+    return m_pIEffect.get();
 }
 

@@ -4,21 +4,32 @@
 
 #include "RoX/Model.h"
 
+#include "MaterialDeviceData.h"
 #include "MeshDeviceData.h"
+#include "IDeviceDataSupplier.h"
 
-class ModelDeviceData {
+class ModelDeviceData : public IModelObserver {
     public:
-        ModelDeviceData(ID3D12Device* pDevice, Model* pModel, 
-            std::unordered_map<std::shared_ptr<IMesh>, std::shared_ptr<MeshDeviceData>>& sharedMeshes);
+        ModelDeviceData(IDeviceDataSupplier& deviceDataSupplier, Model& model);
 
+    public:
+        void OnAdd(const std::shared_ptr<Material>& pMaterial) override;
+        void OnAdd(const std::shared_ptr<IMesh>& pIMesh) override;
+
+        void OnRemoveMaterial(std::uint8_t index) override;
+        void OnRemoveIMesh(std::uint8_t index) override;
+
+    public:
         void DrawSkinned(ID3D12GraphicsCommandList* pCommandList, Model* pModel);
         void LoadStaticBuffers(ID3D12Device* pDevice, DirectX::ResourceUploadBatch& resourceUploadBatch, bool keepMemory = false);
 
     public:
-        std::vector<std::unique_ptr<DirectX::IEffect>*>& GetEffects() noexcept;
+        std::vector<std::shared_ptr<MaterialDeviceData>>& GetMaterials() noexcept;
         std::vector<std::shared_ptr<MeshDeviceData>>& GetMeshes() noexcept;
 
     private:
-        std::vector<std::unique_ptr<DirectX::IEffect>*> m_effects; 
+        IDeviceDataSupplier& m_deviceDataSupplier;
+
+        std::vector<std::shared_ptr<MaterialDeviceData>> m_materials; 
         std::vector<std::shared_ptr<MeshDeviceData>> m_meshes;
 };

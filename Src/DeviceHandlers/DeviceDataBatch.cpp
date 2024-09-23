@@ -64,7 +64,7 @@ void DeviceDataBatch::OnAdd(const std::shared_ptr<Material>& pMaterial) {
     if (!pNormData)
         pNormData = std::make_unique<TextureDeviceData>(m_deviceResources, *m_pDescriptorHeap, NextHeapIndex(), pMaterial->GetNormalMapFilePath());
 
-    std::unique_ptr<MaterialDeviceData>& pMaterialData = m_materialData[pMaterial];
+    std::shared_ptr<MaterialDeviceData>& pMaterialData = m_materialData[pMaterial];
     if (!pMaterialData)
         pMaterialData = std::make_unique<MaterialDeviceData>(
                 m_deviceResources,
@@ -77,28 +77,9 @@ void DeviceDataBatch::OnAdd(const std::shared_ptr<Material>& pMaterial) {
 }
 
 void DeviceDataBatch::OnAdd(const std::shared_ptr<Model>& pModel) {
-    ID3D12Device* pDevice = m_deviceResources.GetDevice();
-
     std::unique_ptr<ModelDeviceData>& pModelData = m_modelData[pModel];
-    if (!pModelData) {
-        DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
-        resourceUploadBatch.Begin();
-
-        pModelData = std::make_unique<ModelDeviceData>(pDevice, pModel.get(), m_meshData);
-        //pModelData->LoadStaticBuffers(pDevice, resourceUploadBatch);
-        
-        std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
-
-        pModelData->GetEffects().reserve(pModel->GetNumMaterials());
-        for (std::uint8_t i = 0; i < pModel->GetNumMaterials(); ++i) {
-            std::shared_ptr<Material> pMaterial = pModel->GetMaterials()[i];
-            OnAdd(pMaterial); // Material should already be added by now but the redundancy doesn't effect performance much.
-            pModelData->GetEffects().push_back(m_materialData.at(pMaterial)->GetAddressOfIEffect());
-        }
-        pModelData->GetEffects().shrink_to_fit();
-
-        uploadResourceFinished.wait();
-    }
+    if (!pModelData)
+        pModelData = std::make_unique<ModelDeviceData>(*this, *pModel);
 }
 
 void DeviceDataBatch::OnAdd(const std::shared_ptr<Sprite>& pSprite) {
@@ -168,6 +149,30 @@ void DeviceDataBatch::OnRemove(const std::shared_ptr<Text>& pText) {
 
 void DeviceDataBatch::OnRemove(const std::shared_ptr<Outline>& pOutline) {
 
+}
+
+std::shared_ptr<MaterialDeviceData> DeviceDataBatch::GetMaterialDeviceData(const std::shared_ptr<Material>& pMaterial) {
+    OnAdd(pMaterial);
+    return m_materialData.at(pMaterial);
+}
+
+std::shared_ptr<MeshDeviceData> DeviceDataBatch::GetMeshDeviceData(const std::shared_ptr<IMesh>& pIMesh) {
+    auto& pMeshDeviceData = m_meshData[pIMesh]; 
+    if (!pMeshDeviceData)
+        pMeshDeviceData = std::make_shared<MeshDeviceData>(m_deviceResources, *pIMesh);
+
+    return pMeshDeviceData;
+}
+
+void DeviceDataBatch::SignalMeshRemoved() {
+    m_deviceResources.WaitForGpu();
+
+    for (auto it = m_meshData.begin(); it != m_meshData.end();) {
+        if (it->second.unique())
+            it = m_meshData.erase(it);
+        else
+            ++it;
+    }
 }
 
 void DeviceDataBatch::Add(const AssetBatch& batch) {

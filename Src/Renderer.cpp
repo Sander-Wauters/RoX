@@ -300,7 +300,7 @@ void Renderer::Impl::RenderMeshes(const DeviceDataBatch& batch, std::uint8_t bat
             if (!pMesh->IsVisible())
                 continue;
 
-            pMeshData->PrepareForDraw(pCommandList);
+            pMeshData->PrepareForDraw();
 
             for (std::uint64_t submeshIndex = 0; submeshIndex < pMesh->GetNumSubmeshes(); ++submeshIndex) {
                 Submesh* pSubmesh = pMesh->GetSubmeshes()[submeshIndex].get();
@@ -309,7 +309,7 @@ void Renderer::Impl::RenderMeshes(const DeviceDataBatch& batch, std::uint8_t bat
                 if (!pSubmesh->IsVisible())
                     continue;
 
-                DirectX::IEffect* pEffect = modelPair.second->GetEffects()[pSubmesh->GetMaterialIndex()]->get();
+                DirectX::IEffect* pEffect = modelPair.second->GetMaterials()[pSubmesh->GetMaterialIndex()]->GetIEffect();
 
                 std::uint32_t flags = pSubmesh->GetMaterial(*modelPair.first)->GetFlags();
 

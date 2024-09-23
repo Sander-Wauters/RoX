@@ -1,21 +1,78 @@
 #include "MeshDeviceData.h"
 
-MeshDeviceData::MeshDeviceData(ID3D12Device* pDevice, IMesh* pIMesh) :
+MeshDeviceData::MeshDeviceData(DeviceResources& deviceResources, IMesh& iMesh) 
+    : m_deviceResources(deviceResources),
     m_indexBufferSize(0),
     m_vertexBufferSize(0),
     m_primitiveType(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST),
     m_indexFormat(DXGI_FORMAT_R16_UINT)
 {
-    m_submeshes.reserve(pIMesh->GetNumSubmeshes());
-    for (std::uint64_t i = 0; i < pIMesh->GetNumSubmeshes(); ++i) {
-        m_submeshes.push_back(std::make_unique<SubmeshDeviceData>(pDevice, pIMesh->GetSubmeshes()[i].get()));
+    m_deviceResources.Attach(this);
+
+    ID3D12Device* pDevice = m_deviceResources.GetDevice();
+
+    m_submeshes.reserve(iMesh.GetNumSubmeshes());
+    for (std::uint64_t i = 0; i < iMesh.GetNumSubmeshes(); ++i) {
+        m_submeshes.push_back(std::make_unique<SubmeshDeviceData>(pDevice, iMesh.GetSubmeshes()[i].get()));
     }
 
-    LoadVertexBuffer(pDevice, pIMesh);
-    LoadIndexBuffer(pDevice, pIMesh);
+    LoadIndexBuffer(&iMesh);
+    LoadVertexBuffer(&iMesh);
 }
 
-void MeshDeviceData::LoadVertexBuffer(ID3D12Device* pDevice, IMesh* pIMesh) {
+MeshDeviceData::~MeshDeviceData() {
+    m_deviceResources.Detach(this);
+}
+
+void MeshDeviceData::OnDeviceLost() {
+    m_indexData.resize(m_indexBufferSize);
+    memcpy(m_indexData.data(), m_indexBuffer.Memory(), m_indexBufferSize);
+
+    m_vertexData.resize(m_vertexBufferSize);
+    memcpy(m_vertexData.data(), m_vertexBuffer.Memory(), m_vertexBufferSize);
+
+    m_indexBuffer.Reset();
+    m_vertexBuffer.Reset();
+    m_staticIndexBuffer.Reset();
+    m_staticVertexBuffer.Reset();
+}
+
+void MeshDeviceData::OnDeviceRestored() {
+    ID3D12Device* pDevice = m_deviceResources.GetDevice();
+
+    m_indexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_indexBufferSize, 16, DirectX::GraphicsMemory::TAG_INDEX);
+    memcpy(m_indexData.data(), m_indexBuffer.Memory(), m_indexBufferSize);
+    m_indexData.clear();
+
+    m_vertexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_vertexBufferSize, 16, DirectX::GraphicsMemory::TAG_VERTEX);
+    memcpy(m_vertexData.data(), m_vertexBuffer.Memory(), m_vertexBufferSize);
+    m_vertexData.clear();
+}
+
+void MeshDeviceData::OnAdd(const std::unique_ptr<Submesh>& pSubmesh) {
+    ID3D12Device* pDevice = m_deviceResources.GetDevice();
+    m_submeshes.push_back(std::make_unique<SubmeshDeviceData>(pDevice, pSubmesh.get()));
+}
+
+void MeshDeviceData::OnRemoveSubmesh(std::uint8_t index) {
+    m_submeshes.erase(m_submeshes.begin() + index);
+}
+
+void MeshDeviceData::LoadIndexBuffer(IMesh* pIMesh) {
+    ID3D12Device* pDevice = m_deviceResources.GetDevice();
+
+    std::uint32_t sizeInBytes = static_cast<std::uint32_t>(pIMesh->GetNumIndices()) * sizeof(std::uint16_t);
+    if (sizeInBytes > static_cast<std::uint32_t>(D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u))
+        throw std::invalid_argument("IB too large for DirectX 12");
+
+    m_indexBufferSize = sizeInBytes;
+    m_indexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(sizeInBytes, 16, DirectX::GraphicsMemory::TAG_INDEX);
+    memcpy(m_indexBuffer.Memory(), pIMesh->GetIndices().data(), sizeInBytes);
+}
+
+void MeshDeviceData::LoadVertexBuffer(IMesh* pIMesh) {
+    ID3D12Device* pDevice = m_deviceResources.GetDevice();
+
     void* vertexData;
 
     if (auto pMesh = dynamic_cast<Mesh*>(pIMesh)) {
@@ -42,28 +99,9 @@ void MeshDeviceData::LoadVertexBuffer(ID3D12Device* pDevice, IMesh* pIMesh) {
     memcpy(m_vertexBuffer.Memory(), vertexData, sizeInBytes);
 }
 
-void MeshDeviceData::LoadIndexBuffer(ID3D12Device* pDevice, IMesh* pIMesh) {
-    std::uint32_t sizeInBytes = static_cast<std::uint32_t>(pIMesh->GetNumIndices()) * sizeof(std::uint16_t);
-    if (sizeInBytes > static_cast<std::uint32_t>(D3D12_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u))
-        throw std::invalid_argument("IB too large for DirectX 12");
+void MeshDeviceData::PrepareForDraw() const {
+    ID3D12GraphicsCommandList* pCommandList = m_deviceResources.GetCommandList();
 
-    m_indexBufferSize = sizeInBytes;
-    m_indexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(sizeInBytes, 16, DirectX::GraphicsMemory::TAG_INDEX);
-    memcpy(m_indexBuffer.Memory(), pIMesh->GetIndices().data(), sizeInBytes);
-}
-
-void MeshDeviceData::OnDeviceLost() noexcept {
-    m_indexBuffer.Reset();
-    m_vertexBuffer.Reset();
-    m_staticIndexBuffer.Reset();
-    m_staticVertexBuffer.Reset();
-}
-
-void MeshDeviceData::OnDeviceRestored() {
-
-}
-
-void MeshDeviceData::PrepareForDraw(ID3D12GraphicsCommandList* pCommandList) const {
     if (!m_indexBufferSize || !m_vertexBufferSize) 
         throw std::runtime_error("Submesh is missing values for vertex and/or index buffer size: vertexBufferSize=" + std::to_string(m_vertexBufferSize) + "; indexBufferSize=" + std::to_string(m_indexBufferSize));
     if (!m_staticIndexBuffer && !m_indexBuffer)

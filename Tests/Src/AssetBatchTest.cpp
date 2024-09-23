@@ -752,7 +752,7 @@ TEST_F(FilledAssetBatchTest, GetStats) {
 
     EXPECT_EQ(pBatch->GetNumSubmeshInstances(),         1);
     EXPECT_EQ(pBatch->GetNumRenderedSubmeshInstances(), 1);
-    EXPECT_EQ(pBatch->GetNumLoadedVertices(),           24);
-    EXPECT_EQ(pBatch->GetNumRenderedVertices(),         24);
+    EXPECT_EQ(pBatch->GetNumLoadedVertices(),           1);
+    EXPECT_EQ(pBatch->GetNumRenderedVertices(),         1);
 }
 
