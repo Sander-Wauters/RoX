@@ -394,9 +394,9 @@ void DebugUI::AssetRemover(AssetBatch::AssetType type, AssetBatch& batch) {
     static char name[128] = "";
     static bool nameNotFound = false;
 
-    ImGui::InputScalar(GUIDLabel("GUID", "MaterialRemover").c_str(), ImGuiDataType_U64, &GUID);
+    ImGui::InputScalar(GUIDLabel("GUID", "AssetRemover").c_str(), ImGuiDataType_U64, &GUID);
     ImGui::SameLine();
-    if (ImGui::SmallButton(GUIDLabel("Remove", "MaterialRemover_GUID").c_str())) {
+    if (ImGui::SmallButton(GUIDLabel("Remove", "AssetRemover_GUID").c_str())) {
         GUIDnotFound = false;
         g_queuedUpdates.push([&, type](){ 
             try {
@@ -408,9 +408,9 @@ void DebugUI::AssetRemover(AssetBatch::AssetType type, AssetBatch& batch) {
     }
     Error(GUIDnotFound, "GUID not found."); 
 
-    ImGui::InputText(GUIDLabel("Name", "MaterialRemover").c_str(), name, std::size(name));
+    ImGui::InputText(GUIDLabel("Name", "AssetRemover").c_str(), name, std::size(name));
     ImGui::SameLine();
-    if (ImGui::SmallButton(GUIDLabel("Remove", "MaterialRemover_Name").c_str())) {
+    if (ImGui::SmallButton(GUIDLabel("Remove", "AssetRemover_Name").c_str())) {
         nameNotFound = false;
         g_queuedUpdates.push([&, type](){ 
             try {
@@ -772,6 +772,13 @@ void DebugUI::MaterialCreator(AssetBatch& batch) {
     }
 }
 
+void DebugUI::MaterialRemover(Model& model) {
+    std::uint32_t selected = std::uint32_t(-1);
+    MaterialSelector(selected, model.GetMaterials());
+    if (selected != std::uint32_t(-1))
+        g_queuedUpdates.push([&, selected](){ model.RemoveMaterial(selected); });
+}
+
 void DebugUI::MaterialMenu(Material& material) {
     std::uint32_t renderFlags = material.GetFlags();
 
@@ -824,7 +831,7 @@ void DebugUI::MaterialAdderPopupMenu(Model& model, const Materials& availableMat
         std::uint64_t selected = Asset::INVALID_GUID;
         MaterialSelector(selected, availableMaterials);
         if (selected != Asset::INVALID_GUID)
-            g_queuedUpdates.push([&](){ model.Add(availableMaterials.at(selected)); });
+            g_queuedUpdates.push([&, selected](){ model.Add(availableMaterials.at(selected)); });
         ImGui::EndPopup();
     }
 }
@@ -833,10 +840,7 @@ void DebugUI::MaterialRemoverPopupMenu(Model& model) {
     if (ImGui::Button(GUIDLabel("-", "MaterialRemoverPopupMenu").c_str())) 
         ImGui::OpenPopup("MaterialRemoverPopupMenu");
     if (ImGui::BeginPopup("MaterialRemoverPopupMenu")) {
-        std::uint32_t selected = std::uint32_t(-1);
-        MaterialSelector(selected, model.GetMaterials());
-        if (selected != std::uint32_t(-1))
-            g_queuedUpdates.push([&](){ model.RemoveMaterial(selected); });
+        MaterialRemover(model);
         ImGui::EndPopup();
     }
 }
@@ -1129,6 +1133,13 @@ void DebugUI::SubmeshVertexIndexing(Submesh& submesh) {
     ImGui::PopItemWidth();
 }
 
+void DebugUI::SubmeshSelector(std::uint32_t& index, const std::vector<std::unique_ptr<Submesh>>& submeshes) {
+    for (std::uint32_t i = 0; i < submeshes.size(); ++i) {
+        if (ImGui::Selectable(GUIDLabel(submeshes[i]->GetName(), submeshes[i]->GetGUID()).c_str(), index == i, ImGuiSelectableFlags_DontClosePopups))
+            index = i;
+    }
+}
+
 void DebugUI::SubmeshCreator(IMesh& iMesh, std::vector<std::shared_ptr<Material>>& availableMaterials) {
     static char name[128] = "";
     static std::uint32_t materialIndex = 0;
@@ -1141,6 +1152,13 @@ void DebugUI::SubmeshCreator(IMesh& iMesh, std::vector<std::shared_ptr<Material>
     MaterialSelector(materialIndex, availableMaterials);
     if (ImGui::Button("Create new submesh##SubmeshCreator"))
         g_queuedUpdates.push([&](){ iMesh.Add(std::make_unique<Submesh>(name, materialIndex, visible)); });
+}
+
+void DebugUI::SubmeshRemover(IMesh& iMesh) {
+    std::uint32_t selected = std::uint32_t(-1);
+    SubmeshSelector(selected, iMesh.GetSubmeshes());
+    if (selected != std::uint32_t(-1))
+        g_queuedUpdates.push([&, selected](){ iMesh.RemoveSubmesh(selected); });
 }
 
 void DebugUI::SubmeshMenu(Submesh& submesh, std::vector<std::shared_ptr<Material>>& availableMaterials) {
@@ -1164,9 +1182,26 @@ void DebugUI::SubmeshMenu(Submesh& submesh, std::vector<std::shared_ptr<Material
         SubmeshVertexIndexing(submesh);
 }
 
+void DebugUI::SubmeshRemoverPopupMenu(IMesh& iMesh) {
+    if (ImGui::Button(GUIDLabel("-", "SubmeshRemoverPopupMenu").c_str())) 
+        ImGui::OpenPopup("SubmeshRemoverPopupMenu");
+    if (ImGui::BeginPopup("SubmeshRemoverPopupMenu")) {
+        ImGui::SeparatorText("Remove submesh");
+        SubmeshRemover(iMesh);
+        ImGui::EndPopup();
+    }
+}
+
 // ---------------------------------------------------------------- //
 //                          Meshes.
 // ---------------------------------------------------------------- //
+
+void DebugUI::IMeshSelector(std::uint32_t& index, std::vector<std::shared_ptr<IMesh>>& meshes) {
+    for (std::uint32_t i = 0; i < meshes.size(); ++i) {
+        if (ImGui::Selectable(GUIDLabel(meshes[i]->GetName(), meshes[i]->GetGUID()).c_str(), index == i, ImGuiSelectableFlags_DontClosePopups))
+            index = i;
+    }
+}
 
 void DebugUI::IMeshCreator(Model& model) {
     static char name[128] = "";
@@ -1188,6 +1223,13 @@ void DebugUI::IMeshCreator(Model& model) {
             model.Add(std::move(pIMesh)); 
         });
     }
+}
+
+void DebugUI::IMeshRemover(Model& model) {
+    std::uint32_t selected = std::uint32_t(-1);
+    IMeshSelector(selected, model.GetMeshes());
+    if (selected != std::uint32_t(-1))
+        g_queuedUpdates.push([&, selected](){ model.RemoveIMesh(selected); });
 }
 
 void DebugUI::IMeshMenu(IMesh& iMesh) {
@@ -1240,6 +1282,16 @@ void DebugUI::IMeshAddGeoOrSubmeshPopupMenu(AssetBatch& batch, Model& model, IMe
             }
             ImGui::EndMenuBar();
         }
+        ImGui::EndPopup();
+    }
+}
+
+void DebugUI::IMeshRemoverPopupMenu(Model& model) {
+    if (ImGui::Button(GUIDLabel("-", "IMeshRemoverPopupMenu").c_str()))
+        ImGui::OpenPopup("IMeshRemoverPopupMenu");
+    if (ImGui::BeginPopup("IMeshRemoverPopupMenu")) {
+        ImGui::SeparatorText("Remove mesh");
+        IMeshRemover(model);
         ImGui::EndPopup();
     }
 }
@@ -2005,10 +2057,14 @@ void DebugUI::AssetBatchMenu(AssetBatch& batch) {
         else if (pSelectedIMesh) {
             IMeshAddGeoOrSubmeshPopupMenu(batch, *pSelectedModel, *pSelectedIMesh);
             ImGui::SameLine();
+            SubmeshRemoverPopupMenu(*pSelectedIMesh);
+            ImGui::SameLine();
             IMeshMenu(*pSelectedIMesh);
         }
         else if (pSelectedModel) {
             IMeshCreatorPopupMenu(*pSelectedModel);
+            ImGui::SameLine();
+            IMeshRemoverPopupMenu(*pSelectedModel);
             ImGui::SameLine();
             ModelMenu(*pSelectedModel, batch.GetMaterials());
         }

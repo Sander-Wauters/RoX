@@ -87,6 +87,7 @@ namespace DebugUI {
     void MaterialColors(Material& material);
 
     void MaterialCreator(AssetBatch& batch);
+    void MaterialRemover(Model& model);
 
     void MaterialMenu(Material& material);
     void MaterialMenu(std::vector<std::shared_ptr<Material>>& materials);
@@ -123,19 +124,26 @@ namespace DebugUI {
     void SubmeshInstances(Submesh& submesh);
     void SubmeshVertexIndexing(Submesh& submesh);
 
+    void SubmeshSelector(std::uint32_t& index, const std::vector<std::unique_ptr<Submesh>>& submeshes);
+
     void SubmeshCreator(IMesh& iMesh, std::vector<std::shared_ptr<Material>>& availableMaterials);
+    void SubmeshRemover(IMesh& iMesh);
 
     void SubmeshMenu(Submesh& submesh, std::vector<std::shared_ptr<Material>>& availableMaterials);
 
-    void IMeshAddGeoOrSubmeshPopupMenu(IMesh& iMesh, std::vector<std::shared_ptr<Material>>& availableMaterials);
+    void SubmeshRemoverPopupMenu(IMesh& iMesh);
 
     // Meshes.
+    void IMeshSelector(std::uint32_t& index, std::vector<std::shared_ptr<IMesh>>& meshes);
+
     void IMeshCreator(Model& model);
+    void IMeshRemover(Model& model);
 
     void IMeshMenu(IMesh& iMesh);
 
     void IMeshCreatorPopupMenu(Model& model);
     void IMeshAddGeoOrSubmeshPopupMenu(AssetBatch& batch, Model& model, IMesh& iMesh);
+    void IMeshRemoverPopupMenu(Model& model);
 
     // Mesh factory.
     void GeoSelector(MeshFactory::Geometry& geo);
