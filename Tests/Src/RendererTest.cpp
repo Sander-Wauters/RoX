@@ -527,106 +527,188 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByTypeAndName_WithInvalidName) {
 // ---------------------------------------------------------------- //
 
 TEST_F(RendererTest, PostLoad_Mesh_Add_WithNewSubmesh) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
     auto pNewSubmesh = NewValidSubmesh();
 
     EXPECT_NO_THROW(pMesh->Add(std::move(pNewSubmesh)));
     EXPECT_EQ(pMesh->GetNumSubmeshes(), 2);
+
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
 TEST_F(RendererTest, PostLoad_Mesh_Add_WithInvalidSubmesh) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
     EXPECT_THROW(pMesh->Add(std::unique_ptr<Submesh>()), std::invalid_argument);
     EXPECT_EQ(pMesh->GetNumSubmeshes(), 1);
+
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
 TEST_F(RendererTest, PostLoad_Mesh_RemoveSubmesh_WithValidIndex) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
     pMesh->Add(NewValidSubmesh());
     EXPECT_NO_THROW(pMesh->RemoveSubmesh(0));
     EXPECT_EQ(pMesh->GetNumSubmeshes(), 1);
+
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
 TEST_F(RendererTest, PostLoad_Mesh_RemoveSubmesh_WithInvalidIndex) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
     EXPECT_NO_THROW(pMesh->RemoveSubmesh(-1));
     EXPECT_EQ(pMesh->GetNumSubmeshes(), 1);
+
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
 TEST_F(RendererTest, PostLoad_SkinnedMesh_Add_WithNewSubmesh) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
     auto pNewSubmesh = NewValidSubmesh();
 
     EXPECT_NO_THROW(pSkinnedMesh->Add(std::move(pNewSubmesh)));
     EXPECT_EQ(pSkinnedMesh->GetNumSubmeshes(), 2);
+
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
 TEST_F(RendererTest, PostLoad_SkinnedMesh_Add_WithInvalidSubmesh) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
     EXPECT_THROW(pSkinnedMesh->Add(std::unique_ptr<Submesh>()), std::invalid_argument);
     EXPECT_EQ(pSkinnedMesh->GetNumSubmeshes(), 1);
+
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
 TEST_F(RendererTest, PostLoad_SkinnedMesh_RemoveSubmesh_WithValidIndex) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
     pSkinnedMesh->Add(NewValidSubmesh());
 
     EXPECT_NO_THROW(pSkinnedMesh->RemoveSubmesh(0));
     EXPECT_EQ(pSkinnedMesh->GetNumSubmeshes(), 1);
+
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
 TEST_F(RendererTest, PostLoad_SkinnedMesh_RemoveSubmesh_WithInvalidIndex) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
     EXPECT_NO_THROW(pSkinnedMesh->RemoveSubmesh(-1));
     EXPECT_EQ(pSkinnedMesh->GetNumSubmeshes(), 1);
+
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_Model_Add_WithNewMaterial) {
-    auto pNewMaterial = NewValidMaterial();
+// ---------------------------------------------------------------- //
+//                          Model
+// ---------------------------------------------------------------- //
 
+TEST_F(RendererTest, PostLoad_Model_Add_WithNewMaterial) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
+    auto pNewMaterial = NewValidMaterial();
     EXPECT_NO_THROW(pModel->Add(pNewMaterial));
     EXPECT_EQ(pModel->GetNumMaterials(), 2);
 
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
 TEST_F(RendererTest, PostLoad_Model_Add_WithInvalidMaterial) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
     EXPECT_THROW(pModel->Add(std::shared_ptr<Material>()), std::invalid_argument);
     EXPECT_EQ(pModel->GetNumMaterials(), 1);
+
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
 TEST_F(RendererTest, PostLoad_Model_Add_WithNewMesh) {
-    std::shared_ptr<IMesh> pNewMesh = NewValidMesh();
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
+    std::shared_ptr<IMesh> pNewMesh = NewValidMesh();
     EXPECT_NO_THROW(pModel->Add(pNewMesh));
     EXPECT_EQ(pModel->GetNumMeshes(), 2);
+
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
 TEST_F(RendererTest, PostLoad_Model_Add_WithInvalidMesh) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
     EXPECT_THROW(pModel->Add(std::shared_ptr<Mesh>()), std::invalid_argument);
     EXPECT_EQ(pModel->GetNumMeshes(), 1);
+
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
 TEST_F(RendererTest, PostLoad_Model_RemoveMaterial_WithValidIndex) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
     auto pNewMaterial = NewValidMaterial();
+
     ASSERT_NO_THROW(pModel->Add(pNewMaterial));
 
     EXPECT_NO_THROW(pModel->RemoveMaterial(1));
     EXPECT_EQ(pModel->GetNumMaterials(), 1);
+
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
 TEST_F(RendererTest, PostLoad_Model_RemoveMaterial_WithInalidIndex) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
     auto pNewMaterial = NewValidMaterial();
     ASSERT_NO_THROW(pModel->Add(pNewMaterial));
 
     EXPECT_NO_THROW(pModel->RemoveMaterial(-1));
     EXPECT_EQ(pModel->GetNumMaterials(), 2);
+
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
 TEST_F(RendererTest, PostLoad_Model_RemoveIMesh_WithValidIndex) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
     auto pNewMesh = NewValidMesh();
     ASSERT_NO_THROW(pModel->Add(pNewMesh));
 
     EXPECT_NO_THROW(pModel->RemoveIMesh(1));
     EXPECT_EQ(pModel->GetNumMeshes(), 1);
+
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
 TEST_F(RendererTest, PostLoad_Model_RemoveIMesh_WithInalidIndex) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+
     auto pNewMesh = NewValidMesh();
     ASSERT_NO_THROW(pModel->Add(pNewMesh));
 
     EXPECT_NO_THROW(pModel->RemoveIMesh(-1));
     EXPECT_EQ(pModel->GetNumMeshes(), 2);
+
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 

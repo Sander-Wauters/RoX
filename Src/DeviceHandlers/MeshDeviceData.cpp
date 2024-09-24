@@ -9,11 +9,9 @@ MeshDeviceData::MeshDeviceData(DeviceResources& deviceResources, IMesh& iMesh)
 {
     m_deviceResources.Attach(this);
 
-    ID3D12Device* pDevice = m_deviceResources.GetDevice();
-
     m_submeshes.reserve(iMesh.GetNumSubmeshes());
     for (std::uint64_t i = 0; i < iMesh.GetNumSubmeshes(); ++i) {
-        m_submeshes.push_back(std::make_unique<SubmeshDeviceData>(pDevice, iMesh.GetSubmeshes()[i].get()));
+        OnAdd(iMesh.GetSubmeshes()[i]);
     }
 
     LoadIndexBuffer(&iMesh);

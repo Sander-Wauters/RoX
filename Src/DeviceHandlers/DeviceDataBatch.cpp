@@ -78,8 +78,10 @@ void DeviceDataBatch::OnAdd(const std::shared_ptr<Material>& pMaterial) {
 
 void DeviceDataBatch::OnAdd(const std::shared_ptr<Model>& pModel) {
     std::unique_ptr<ModelDeviceData>& pModelData = m_modelData[pModel];
-    if (!pModelData)
+    if (!pModelData) {
         pModelData = std::make_unique<ModelDeviceData>(*this, *pModel);
+        pModel->Attach(pModelData.get());
+    }
 }
 
 void DeviceDataBatch::OnAdd(const std::shared_ptr<Sprite>& pSprite) {
@@ -125,6 +127,7 @@ void DeviceDataBatch::OnRemove(const std::shared_ptr<Material>& pMaterial) {
 
 void DeviceDataBatch::OnRemove(const std::shared_ptr<Model>& pModel) {
     m_deviceResources.WaitForGpu();
+    pModel->Detach(m_modelData.at(pModel).get());
     m_modelData.erase(pModel);
 
     for (auto it = m_meshData.begin(); it != m_meshData.end();) {
@@ -158,8 +161,10 @@ std::shared_ptr<MaterialDeviceData> DeviceDataBatch::GetMaterialDeviceData(const
 
 std::shared_ptr<MeshDeviceData> DeviceDataBatch::GetMeshDeviceData(const std::shared_ptr<IMesh>& pIMesh) {
     auto& pMeshDeviceData = m_meshData[pIMesh]; 
-    if (!pMeshDeviceData)
+    if (!pMeshDeviceData) {
         pMeshDeviceData = std::make_shared<MeshDeviceData>(m_deviceResources, *pIMesh);
+        pIMesh->Attach(pMeshDeviceData.get());
+    }
 
     return pMeshDeviceData;
 }
@@ -168,9 +173,10 @@ void DeviceDataBatch::SignalMeshRemoved() {
     m_deviceResources.WaitForGpu();
 
     for (auto it = m_meshData.begin(); it != m_meshData.end();) {
-        if (it->second.unique())
+        if (it->second.unique()) {
+            it->first->Detach(it->second.get());
             it = m_meshData.erase(it);
-        else
+        } else
             ++it;
     }
 }
