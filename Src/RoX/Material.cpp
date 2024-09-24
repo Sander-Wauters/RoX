@@ -1,5 +1,7 @@
 #include "RoX/Material.h"
 
+#include "../Exceptions/ThrowIfFailed.h"
+
 Material::Material(
         const std::wstring diffuseMapFilePath,
         const std::wstring normalMapFilePath,
@@ -17,6 +19,23 @@ Material::Material(
     DirectX::XMStoreFloat4(&m_emissiveColor, emissiveColor);
     DirectX::XMStoreFloat4(&m_specularColor, specularColor);
 }
+
+Material::Material(
+        const std::string diffuseMapFilePath,
+        const std::string normalMapFilePath,
+        std::string name,
+        std::uint32_t flags,
+        DirectX::XMVECTOR diffuseColor,
+        DirectX::XMVECTOR emissiveColor,
+        DirectX::XMVECTOR specularColor) 
+noexcept : Material(
+        AnsiToWString(diffuseMapFilePath), 
+        AnsiToWString(normalMapFilePath),
+        name, flags,
+        diffuseColor,
+        emissiveColor,
+        specularColor)
+{}
 
 Material::~Material() noexcept {
 }

@@ -1,7 +1,7 @@
 #include "RoX/MeshFactory.h"
 
-#include "Util/pch.h"
-#include "Util/dxtk12pch.h"
+#include "../Util/pch.h"
+#include "../Util/dxtk12pch.h"
 
 void AppendToMesh(
         std::vector<DirectX::VertexPositionNormalTexture>& verticesIn,

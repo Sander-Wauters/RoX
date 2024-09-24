@@ -1,6 +1,6 @@
 #include "RoX/AssetIO.h"
 
-#include "Util/pch.h"
+#include "../Util/pch.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>

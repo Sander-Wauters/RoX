@@ -4,12 +4,12 @@
 #include <ImGuiBackends/imgui_impl_dx12.h>
 #include <ImGuiBackends/imgui_impl_win32.h>
 
-#include "Util/pch.h"
+#include "../Util/pch.h"
 
-#include "DebugDraw.h"
-#include "DeviceHandlers/DeviceDataBatch.h"
-#include "DeviceHandlers/DeviceResources.h"
-#include "DeviceHandlers/DeviceResourceData.h"
+#include "../DebugDraw.h"
+#include "../DeviceHandlers/DeviceDataBatch.h"
+#include "../DeviceHandlers/DeviceResources.h"
+#include "../DeviceHandlers/DeviceResourceData.h"
 
 class Renderer::Impl : public IDeviceObserver {
     public:

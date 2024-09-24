@@ -95,6 +95,14 @@ class Material : public Asset {
                 DirectX::XMVECTOR diffuseColor = DirectX::Colors::White,
                 DirectX::XMVECTOR emissiveColor = DirectX::Colors::Black,
                 DirectX::XMVECTOR specularColor = DirectX::Colors::White) noexcept;
+        Material(
+                const std::string diffuseMapFilePath,
+                const std::string normalMapFilePath,
+                std::string name = "",
+                std::uint32_t flags = RenderFlags::Default,
+                DirectX::XMVECTOR diffuseColor = DirectX::Colors::White,
+                DirectX::XMVECTOR emissiveColor = DirectX::Colors::Black,
+                DirectX::XMVECTOR specularColor = DirectX::Colors::White) noexcept;
         ~Material() noexcept;
 
     public:

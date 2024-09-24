@@ -1,5 +1,7 @@
 #include "RoX/Sprite.h"
 
+#include "../Exceptions/ThrowIfFailed.h"
+
 // ---------------------------------------------------------------- //
 //                          Sprite
 // ---------------------------------------------------------------- //
@@ -25,6 +27,23 @@ Sprite::Sprite(
 {
     DirectX::XMStoreFloat4(&m_color, color);
 }
+
+Sprite::Sprite(const std::string filePath,
+        std::string name,
+        DirectX::XMFLOAT2 origin,
+        DirectX::XMFLOAT2 offset, 
+        DirectX::XMFLOAT2 scale,
+        float layer, 
+        float angle,
+        DirectX::XMVECTOR color,
+        bool visible) 
+    noexcept : Sprite(
+            AnsiToWString(filePath),
+            name,
+            origin, offset, scale,
+            layer, angle,
+            color, visible)
+{}
 
 std::wstring Sprite::GetFilePath() const noexcept {
     return m_filePath;
@@ -88,11 +107,33 @@ Text::Text(const std::wstring filePath,
     m_content(content)
 {}
 
+Text::Text(const std::string filePath,
+        std::string content,
+        std::string name,
+        DirectX::XMFLOAT2 origin,
+        DirectX::XMFLOAT2 offset, 
+        DirectX::XMFLOAT2 scale,
+        float layer, 
+        float angle,
+        DirectX::XMVECTOR color,
+        bool visible) 
+    noexcept : Text(
+            AnsiToWString(filePath), 
+            AnsiToWString(content),
+            name,
+            origin, offset, scale,
+            layer, angle, color, visible)
+{}
+
 std::wstring Text::GetContent() const noexcept {
     return m_content;
 }
 
 void Text::SetContent(std::wstring content) noexcept {
     m_content = content;
+}
+
+void Text::SetContent(std::string content) noexcept {
+    SetContent(AnsiToWString(content));
 }
 

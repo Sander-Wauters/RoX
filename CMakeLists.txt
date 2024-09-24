@@ -12,7 +12,7 @@ set(ASSIMP_INSTALL OFF CACHE BOOL "Assimp install" FORCE)
 add_subdirectory(Lib/assimp)
 add_subdirectory(Lib/DirectXTK12)
 add_subdirectory(Lib/ImGui)
-add_subdirectory(Tests/)
+add_subdirectory(Tests)
 
 set(SOURCE
     Src/DeviceHandlers/DeviceDataBatch.cpp
@@ -38,39 +38,59 @@ set(SOURCE
     Src/Exceptions/DXException.cpp
     Src/Exceptions/ThrowIfFailed.h
 
+    Src/RoX/Animation.cpp
+    Src/RoX/Asset.cpp
+    Src/RoX/AssetBatch.cpp
+    Src/RoX/AssetIO.cpp
+    Src/RoX/Camera.cpp
+    Src/RoX/Material.cpp
+    Src/RoX/MeshFactory.cpp
+    Src/RoX/Model.cpp
+    Src/RoX/Outline.cpp
+    Src/RoX/Renderer.cpp
+    Src/RoX/Scene.cpp
+    Src/RoX/Sprite.cpp
+    Src/RoX/Timer.cpp
+    Src/RoX/Window.cpp
+
     Src/Util/d3dx12.h
     Src/Util/DebugPrint.h
     Src/Util/dxtk12Pch.h
     Src/Util/Logger.h
     Src/Util/pch.h
 
-    Src/Animation.cpp
-    Src/Asset.cpp
-    Src/AssetBatch.cpp
-    Src/AssetIO.cpp
-    Src/Camera.cpp
     Src/DebugDraw.cpp
     Src/DebugDraw.h
-    Src/DebugUI.cpp
-    Src/Material.cpp
-    Src/MeshFactory.cpp
-    Src/Model.cpp
-    Src/Outline.cpp
-    Src/Renderer.cpp
-    Src/Scene.cpp
-    Src/Sprite.cpp
-    Src/Timer.cpp
-    Src/Window.cpp
+)
+
+set(DEBUGUI_SOURCE
+    Src/DebugUI/AssetBatchUI.cpp
+    Src/DebugUI/AssetUI.cpp
+    Src/DebugUI/BoneUI.cpp
+    Src/DebugUI/CameraUI.cpp
+    Src/DebugUI/GeneralUI.cpp
+    Src/DebugUI/IMeshUI.cpp
+    Src/DebugUI/MaterialUI.cpp
+    Src/DebugUI/MathUI.cpp
+    Src/DebugUI/MeshFactoryUI.cpp
+    Src/DebugUI/ModelUI.cpp
+    Src/DebugUI/OutlineUI.cpp
+    Src/DebugUI/SceneUI.cpp
+    Src/DebugUI/SpriteUI.cpp
+    Src/DebugUI/SubmeshUI.cpp
+    Src/DebugUI/TextUI.cpp
+    Src/DebugUI/UpdateScheduler.cpp
+    Src/DebugUI/Util.cpp
 )
 
 include_directories(
-    Inc 
+    Inc
     Lib/assimp/include
     Lib/DirectXTK12/Inc
     Lib/ImGui/Inc
 )
 
-add_library(${PROJECT_NAME} STATIC ${SOURCE})
+add_library(${PROJECT_NAME} STATIC ${SOURCE} ${DEBUGUI_SOURCE})
 target_link_libraries(${PROJECT_NAME} PRIVATE 
     d3d12.lib dxgi.lib dxguid.lib uuid.lib
     kernel32.lib user32.lib

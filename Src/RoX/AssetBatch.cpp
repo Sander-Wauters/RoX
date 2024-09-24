@@ -1,6 +1,6 @@
 #include "RoX/AssetBatch.h"
 
-#include "Util/pch.h"
+#include "../Util/pch.h"
 
 AssetBatch::AssetBatch(const std::string name, std::uint8_t maxNumUniqueTextures, bool visible) 
     noexcept : m_name(name),

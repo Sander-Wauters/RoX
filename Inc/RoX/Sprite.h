@@ -25,6 +25,16 @@ class Sprite : public Asset {
                 DirectX::XMVECTOR color = DirectX::Colors::White,
                 bool visible = true
               ) noexcept;
+        Sprite(const std::string filePath,
+                std::string name = "",
+                DirectX::XMFLOAT2 origin = { 0.f, 0.f },
+                DirectX::XMFLOAT2 offset = { 0.f, 0.f }, 
+                DirectX::XMFLOAT2 scale = { 1.f, 1.f },
+                float layer = 0.f, 
+                float angle = 0.f,
+                DirectX::XMVECTOR color = DirectX::Colors::White,
+                bool visible = true
+              ) noexcept;
         virtual ~Sprite() noexcept = default;
 
     public:
@@ -73,11 +83,23 @@ class Text : public Sprite {
                 DirectX::XMVECTOR color = DirectX::Colors::Black,
                 bool visible = true
             ) noexcept;
+        Text(const std::string filePath,
+                std::string content,
+                std::string name = "",
+                DirectX::XMFLOAT2 origin = { 0.f, 0.f },
+                DirectX::XMFLOAT2 offset = { 0.f, 0.f }, 
+                DirectX::XMFLOAT2 scale = { 1.f, 1.f },
+                float layer = 0.f, 
+                float angle = 0.f,
+                DirectX::XMVECTOR color = DirectX::Colors::Black,
+                bool visible = true
+            ) noexcept;
 
     public:
         std::wstring GetContent() const noexcept;
 
         void SetContent(std::wstring content) noexcept;
+        void SetContent(std::string content) noexcept;
 
     private:
         std::wstring m_content;

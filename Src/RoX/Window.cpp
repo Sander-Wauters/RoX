@@ -1,9 +1,9 @@
 #include "RoX/Window.h"
 
-#include "Util/pch.h"
-#include "Util/dxtk12pch.h"
-
 #include "ImGuiBackends/imgui_impl_win32.h"
+
+#include "../Util/pch.h"
+#include "../Util/dxtk12pch.h"
 
 Window::Window(PCWSTR windowName, HINSTANCE hInstance,
         DWORD style, DWORD exStyle,

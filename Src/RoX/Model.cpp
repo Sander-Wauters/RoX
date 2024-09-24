@@ -1,6 +1,6 @@
 #include "RoX/Model.h"
 
-#include "Util/pch.h"
+#include "../Util/pch.h"
 
 // ---------------------------------------------------------------- //
 //                          Bone
