@@ -97,17 +97,9 @@ void ModelDeviceData::LoadStaticBuffers(ID3D12Device* pDevice, DirectX::Resource
             if (!pMeshData->GetVertexBuffer())
                 std::runtime_error("Mesh is missing vertex buffer");
 
-            pMeshData->SetVertexBufferSize(static_cast<std::uint32_t>(pMeshData->GetVertexBuffer().Size()));
+            pMeshData->LoadStaticIndexBuffer(keepMemory);
 
-            auto const desc = CD3DX12_RESOURCE_DESC::Buffer(pMeshData->GetVertexBuffer().Size());
-            ThrowIfFailed(pDevice->CreateCommittedResource(
-                        &heapProperties, D3D12_HEAP_FLAG_NONE, &desc, DirectX::c_initialCopyTargetState, nullptr,
-                        IID_GRAPHICS_PPV_ARGS(pMeshData->GetStaticVertexBuffer().GetAddressOf())));
-
-            resourceUploadBatch.Upload(pMeshData->GetStaticVertexBuffer().Get(), pMeshData->GetVertexBuffer());
-            resourceUploadBatch.Transition(pMeshData->GetStaticVertexBuffer().Get(),
-                    D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-
+            // Scan for any other part with the same index buffer for sharing
             for (auto sit = std::next(it); sit != uniqueMeshes.cend(); ++sit) {
                 MeshDeviceData* pSharedMesh = *sit;
                 assert(pSharedMesh != pMeshData);
@@ -132,16 +124,7 @@ void ModelDeviceData::LoadStaticBuffers(ID3D12Device* pDevice, DirectX::Resource
             if (!pMeshData->GetIndexBuffer())
                 std::runtime_error("Submesh is missing index buffer");
 
-            pMeshData->SetIndexBufferSize(static_cast<std::uint32_t>(pMeshData->GetIndexBuffer().Size()));
-            auto const desc = CD3DX12_RESOURCE_DESC::Buffer(pMeshData->GetIndexBuffer().Size());
-
-            ThrowIfFailed(pDevice->CreateCommittedResource(
-                &heapProperties, D3D12_HEAP_FLAG_NONE, &desc, DirectX::c_initialCopyTargetState, nullptr,
-                IID_GRAPHICS_PPV_ARGS(pMeshData->GetStaticIndexBuffer().GetAddressOf())));
-
-            resourceUploadBatch.Upload(pMeshData->GetStaticIndexBuffer().Get(), pMeshData->GetIndexBuffer());
-            resourceUploadBatch.Transition(pMeshData->GetStaticIndexBuffer().Get(),
-                D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
+            pMeshData->LoadStaticIndexBuffer(keepMemory);
 
             // Scan for any other part with the same index buffer for sharing
             for (auto sit = std::next(it); sit != uniqueMeshes.cend(); ++sit) {

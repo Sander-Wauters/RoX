@@ -38,13 +38,29 @@ void MeshDeviceData::OnDeviceLost() {
 void MeshDeviceData::OnDeviceRestored() {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
-    m_indexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_indexBufferSize, 16, DirectX::GraphicsMemory::TAG_INDEX);
-    memcpy(m_indexData.data(), m_indexBuffer.Memory(), m_indexBufferSize);
-    m_indexData.clear();
+    if (m_indexBuffer) {
+        m_indexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_indexBufferSize, 16, DirectX::GraphicsMemory::TAG_INDEX);
+        memcpy(m_indexBuffer.Memory(), m_indexData.data(), m_indexBufferSize);
+        m_indexData.clear();
+    }
+    if (m_staticIndexBuffer) {
+        m_indexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_indexBufferSize, 16, DirectX::GraphicsMemory::TAG_INDEX);
+        memcpy(m_indexBuffer.Memory(), m_indexData.data(), m_indexBufferSize);
+        LoadStaticIndexBuffer(!!m_indexBuffer);
+        m_indexData.clear();
+    }
 
-    m_vertexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_vertexBufferSize, 16, DirectX::GraphicsMemory::TAG_VERTEX);
-    memcpy(m_vertexData.data(), m_vertexBuffer.Memory(), m_vertexBufferSize);
-    m_vertexData.clear();
+    if (m_vertexBuffer) {
+        m_vertexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_vertexBufferSize, 16, DirectX::GraphicsMemory::TAG_VERTEX);
+        memcpy(m_vertexBuffer.Memory(), m_vertexData.data(), m_vertexBufferSize);
+        m_vertexData.clear();
+    }
+    if (m_staticVertexBuffer) {
+        m_vertexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_vertexBufferSize, 16, DirectX::GraphicsMemory::TAG_VERTEX);
+        memcpy(m_vertexBuffer.Memory(), m_vertexData.data(), m_vertexBufferSize);
+        LoadStaticVertexBuffer(!!m_vertexBuffer);
+        m_vertexData.clear();
+    }
 }
 
 void MeshDeviceData::OnAdd(const std::unique_ptr<Submesh>& pSubmesh) {
@@ -95,6 +111,51 @@ void MeshDeviceData::LoadVertexBuffer(IMesh* pIMesh) {
     m_vertexBufferSize = sizeInBytes;      
     m_vertexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(sizeInBytes, 16, DirectX::GraphicsMemory::TAG_VERTEX);
     memcpy(m_vertexBuffer.Memory(), vertexData, sizeInBytes);
+}
+
+std::future<void> MeshDeviceData::LoadStaticIndexBuffer(bool keepMemory) {
+    ID3D12Device* pDevice = m_deviceResources.GetDevice();
+
+    DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
+    resourceUploadBatch.Begin();
+
+    const CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
+    auto const desc = CD3DX12_RESOURCE_DESC::Buffer(m_indexBufferSize);
+
+    ThrowIfFailed(pDevice->CreateCommittedResource(
+                &heapProperties, D3D12_HEAP_FLAG_NONE, &desc, DirectX::c_initialCopyTargetState, nullptr,
+                IID_GRAPHICS_PPV_ARGS(m_staticIndexBuffer.GetAddressOf())));
+
+    resourceUploadBatch.Upload(m_staticIndexBuffer.Get(), m_indexBuffer);
+    resourceUploadBatch.Transition(m_staticIndexBuffer.Get(),
+            D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
+
+    if (!keepMemory)
+        m_indexBuffer.Reset();
+
+    return resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
+}
+
+std::future<void> MeshDeviceData::LoadStaticVertexBuffer(bool keepMemory) {
+    ID3D12Device* pDevice = m_deviceResources.GetDevice();
+
+    DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
+    resourceUploadBatch.Begin();
+
+    const CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
+    auto const desc = CD3DX12_RESOURCE_DESC::Buffer(m_vertexBufferSize);
+    ThrowIfFailed(pDevice->CreateCommittedResource(
+                &heapProperties, D3D12_HEAP_FLAG_NONE, &desc, DirectX::c_initialCopyTargetState, nullptr,
+                IID_GRAPHICS_PPV_ARGS(m_staticVertexBuffer.GetAddressOf())));
+
+    resourceUploadBatch.Upload(m_staticVertexBuffer.Get(), m_vertexBuffer);
+    resourceUploadBatch.Transition(m_staticVertexBuffer.Get(),
+            D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+
+    if (!keepMemory)
+        m_vertexBuffer.Reset();
+
+    return resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
 }
 
 void MeshDeviceData::PrepareForDraw() const {

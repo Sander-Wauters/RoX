@@ -25,6 +25,9 @@ class MeshDeviceData : public IDeviceObserver, public IMeshObserver {
         void LoadIndexBuffer(IMesh* pIMesh);
         void LoadVertexBuffer(IMesh* pIMesh);
 
+        std::future<void> LoadStaticIndexBuffer(bool keepMemory);
+        std::future<void> LoadStaticVertexBuffer(bool keepMemory);
+
         void PrepareForDraw() const;
 
     public:
