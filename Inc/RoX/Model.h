@@ -132,10 +132,10 @@ class IMesh {
         virtual void SetVisible(bool visible) noexcept = 0;
 };
 
-// Used in models that do not require skinned animations.
-class Mesh : public IMesh, public Asset {
-    public:
-        Mesh(std::string name = "", bool visible = true) noexcept; 
+// Abstract class of a mesh with shared functionality.
+class BaseMesh : public IMesh, public Asset {
+    protected:
+        BaseMesh(std::string name = "", bool visible = true) noexcept; 
 
     public:
         void Add(std::unique_ptr<Submesh> pSubmesh) override;
@@ -151,12 +151,10 @@ class Mesh : public IMesh, public Asset {
 
         std::uint32_t GetBoneIndex() const noexcept override;
         std::uint32_t GetNumSubmeshes() const noexcept override;
-        std::uint32_t GetNumVertices() const noexcept override;
         std::uint32_t GetNumIndices() const noexcept override;
 
         std::vector<std::uint32_t>& GetBoneInfluences() noexcept override;
         std::vector<std::unique_ptr<Submesh>>& GetSubmeshes() noexcept override;
-        std::vector<VertexPositionNormalTexture>& GetVertices() noexcept;
         std::vector<std::uint16_t>& GetIndices() noexcept override;
 
         bool IsVisible() const noexcept override;
@@ -172,56 +170,37 @@ class Mesh : public IMesh, public Asset {
 
         std::vector<std::uint32_t> m_boneInfluences;
         std::vector<std::unique_ptr<Submesh>> m_submeshes;
-        std::vector<VertexPositionNormalTexture> m_vertices;
         std::vector<std::uint16_t> m_indices;
 
         bool m_visible;
 };
 
-// Used in models that require skinned animations.
-class SkinnedMesh : public IMesh, public Asset {
+// Mesh used for rendering normal geometry.
+class Mesh : public BaseMesh {
     public:
-        SkinnedMesh(std::string name = "", bool visible = true) noexcept; 
-
+        Mesh(std::string name = "", bool visible = true) noexcept; 
+        
     public:
-        void Add(std::unique_ptr<Submesh> pSubmesh) override;
+        std::vector<VertexPositionNormalTexture>& GetVertices() noexcept;
 
-        void RemoveSubmesh(std::uint8_t index) override;
-
-        void Attach(IMeshObserver* pIMeshObserver) override;
-        void Detach(IMeshObserver* pIMeshObserver) noexcept override;
-
-    public:
-        std::string GetName() const noexcept override;
-        std::uint64_t GetGUID() const noexcept override;
-
-        std::uint32_t GetBoneIndex() const noexcept override;
-        std::uint32_t GetNumSubmeshes() const noexcept override;
         std::uint32_t GetNumVertices() const noexcept override;
-        std::uint32_t GetNumIndices() const noexcept override;
-
-        std::vector<std::uint32_t>& GetBoneInfluences() noexcept override;
-        std::vector<std::unique_ptr<Submesh>>& GetSubmeshes() noexcept override;
-        std::vector<VertexPositionNormalTextureSkinning>& GetVertices() noexcept;
-        std::vector<std::uint16_t>& GetIndices() noexcept override;
-
-        bool IsVisible() const noexcept override;
-
-        void SetName(std::string name) noexcept override;
-        void SetBoneIndex(std::uint32_t boneIndex) noexcept override;
-        void SetVisible(bool visible) noexcept override;
 
     private:
-        std::unordered_set<IMeshObserver*> m_iMeshObservers;
+        std::vector<VertexPositionNormalTexture> m_vertices;
+};
 
-        std::uint32_t m_boneIndex;
+// Mesh used with skinned animations.
+class SkinnedMesh : public BaseMesh {
+    public:
+        SkinnedMesh(std::string name = "", bool visible = true) noexcept; 
+        
+    public:
+        std::vector<VertexPositionNormalTextureSkinning>& GetVertices() noexcept;
 
-        std::vector<std::uint32_t> m_boneInfluences;
-        std::vector<std::unique_ptr<Submesh>> m_submeshes;
+        std::uint32_t GetNumVertices() const noexcept override;
+
+    private:
         std::vector<VertexPositionNormalTextureSkinning> m_vertices;
-        std::vector<std::uint16_t> m_indices;
-
-        bool m_visible;
 };
 
 class IModelObserver {

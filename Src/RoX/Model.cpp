@@ -114,16 +114,16 @@ void Submesh::SetVisible(bool visible) noexcept {
 }
 
 // ---------------------------------------------------------------- //
-//                          Mesh
+//                          BaseMesh
 // ---------------------------------------------------------------- //
 
-Mesh::Mesh(std::string name, bool visible) 
+BaseMesh::BaseMesh(std::string name, bool visible) 
     noexcept : Asset("mesh", name),
     m_boneIndex(Bone::INVALID_INDEX),
     m_visible(visible)
 {}
 
-void Mesh::Add(std::unique_ptr<Submesh> pSubmesh) {
+void BaseMesh::Add(std::unique_ptr<Submesh> pSubmesh) {
     if (!pSubmesh)
         throw std::invalid_argument("Submesh is nullptr");
 
@@ -135,7 +135,7 @@ void Mesh::Add(std::unique_ptr<Submesh> pSubmesh) {
     }
 }
 
-void Mesh::RemoveSubmesh(std::uint8_t index) {
+void BaseMesh::RemoveSubmesh(std::uint8_t index) {
     if (m_submeshes.size() == 1 || index >= m_submeshes.size())
         return;
 
@@ -146,70 +146,78 @@ void Mesh::RemoveSubmesh(std::uint8_t index) {
     m_submeshes.erase(m_submeshes.begin() + index);
 }
 
-void Mesh::Attach(IMeshObserver* pIMeshObserver) {
+void BaseMesh::Attach(IMeshObserver* pIMeshObserver) {
     if (!pIMeshObserver)
         throw std::invalid_argument("IMeshObserver is nullptr.");
     m_iMeshObservers.insert(pIMeshObserver);
 }
 
-void Mesh::Detach(IMeshObserver* pIMeshObserver) noexcept {
+void BaseMesh::Detach(IMeshObserver* pIMeshObserver) noexcept {
     m_iMeshObservers.erase(pIMeshObserver);
 }
 
-std::string Mesh::GetName() const noexcept {
+std::string BaseMesh::GetName() const noexcept {
     return Asset::GetName();
 }
 
-std::uint64_t Mesh::GetGUID() const noexcept {
+std::uint64_t BaseMesh::GetGUID() const noexcept {
     return Asset::GetGUID();
 }
 
-std::uint32_t Mesh::GetBoneIndex() const noexcept {
+std::uint32_t BaseMesh::GetBoneIndex() const noexcept {
     return m_boneIndex;
 }
 
-std::uint32_t Mesh::GetNumSubmeshes() const noexcept {
+std::uint32_t BaseMesh::GetNumSubmeshes() const noexcept {
     return m_submeshes.size();
 }
 
-std::uint32_t Mesh::GetNumVertices() const noexcept {
-    return m_vertices.size();
-}
-
-std::uint32_t Mesh::GetNumIndices() const noexcept {
+std::uint32_t BaseMesh::GetNumIndices() const noexcept {
     return m_indices.size();
 }
 
-std::vector<std::uint32_t>& Mesh::GetBoneInfluences() noexcept {
+std::vector<std::uint32_t>& BaseMesh::GetBoneInfluences() noexcept {
     return m_boneInfluences;
 }
 
-std::vector<std::unique_ptr<Submesh>>& Mesh::GetSubmeshes() noexcept {
+std::vector<std::unique_ptr<Submesh>>& BaseMesh::GetSubmeshes() noexcept {
     return m_submeshes;
 }
+
+std::vector<std::uint16_t>& BaseMesh::GetIndices() noexcept {
+    return m_indices;
+}
+
+bool BaseMesh::IsVisible() const noexcept {
+    return m_visible;
+}
+
+void BaseMesh::SetName(std::string name) noexcept {
+    Asset::SetName(name);
+}
+
+void BaseMesh::SetBoneIndex(std::uint32_t boneIndex) noexcept {
+    m_boneIndex = boneIndex;
+}
+
+void BaseMesh::SetVisible(bool visible) noexcept {
+    m_visible = visible;
+}
+
+// ---------------------------------------------------------------- //
+//                          Mesh
+// ---------------------------------------------------------------- //
+
+Mesh::Mesh(std::string name, bool visible) 
+    noexcept : BaseMesh(name, visible)
+{}
 
 std::vector<VertexPositionNormalTexture>& Mesh::GetVertices() noexcept {
     return m_vertices;
 }
 
-std::vector<std::uint16_t>& Mesh::GetIndices() noexcept {
-    return m_indices;
-}
-
-bool Mesh::IsVisible() const noexcept {
-    return m_visible;
-}
-
-void Mesh::SetName(std::string name) noexcept {
-    Asset::SetName(name);
-}
-
-void Mesh::SetBoneIndex(std::uint32_t boneIndex) noexcept {
-    m_boneIndex = boneIndex;
-}
-
-void Mesh::SetVisible(bool visible) noexcept {
-    m_visible = visible;
+std::uint32_t Mesh::GetNumVertices() const noexcept {
+    return m_vertices.size();
 }
 
 // ---------------------------------------------------------------- //
@@ -217,98 +225,15 @@ void Mesh::SetVisible(bool visible) noexcept {
 // ---------------------------------------------------------------- //
 
 SkinnedMesh::SkinnedMesh(std::string name, bool visible) 
-    noexcept : Asset("skinned_mesh", name),
-    m_boneIndex(Bone::INVALID_INDEX),
-    m_visible(visible)
+    noexcept : BaseMesh(name, visible)
 {}
-
-void SkinnedMesh::Add(std::unique_ptr<Submesh> pSubmesh) {
-    if (!pSubmesh)
-        throw std::invalid_argument("Submesh is nullptr");
-
-    m_submeshes.push_back(std::move(pSubmesh));
-
-    for (IMeshObserver* pIMeshObserver : m_iMeshObservers) {
-        if (pIMeshObserver)
-            pIMeshObserver->OnAdd(m_submeshes.back());
-    }
-}
-
-void SkinnedMesh::RemoveSubmesh(std::uint8_t index) {
-    if (m_submeshes.size() == 1 || index >= m_submeshes.size())
-        return;
-
-    for (IMeshObserver* pIMeshObserver : m_iMeshObservers) {
-        if (pIMeshObserver)
-            pIMeshObserver->OnRemoveSubmesh(index);
-    }
-    m_submeshes.erase(m_submeshes.begin() + index);
-}
-
-void SkinnedMesh::Attach(IMeshObserver* pIMeshObserver) {
-    if (!pIMeshObserver)
-        throw std::invalid_argument("IMeshObserver is nullptr.");
-    m_iMeshObservers.insert(pIMeshObserver);
-}
-
-void SkinnedMesh::Detach(IMeshObserver* pIMeshObserver) noexcept {
-    m_iMeshObservers.erase(pIMeshObserver);
-}
-
-std::string SkinnedMesh::GetName() const noexcept {
-    return Asset::GetName();
-}
-
-std::uint64_t SkinnedMesh::GetGUID() const noexcept {
-    return Asset::GetGUID();
-}
-
-std::uint32_t SkinnedMesh::GetBoneIndex() const noexcept {
-    return m_boneIndex;
-}
-
-std::uint32_t SkinnedMesh::GetNumSubmeshes() const noexcept {
-    return m_submeshes.size();
-}
 
 std::uint32_t SkinnedMesh::GetNumVertices() const noexcept {
     return m_vertices.size();
 }
 
-std::uint32_t SkinnedMesh::GetNumIndices() const noexcept {
-    return m_indices.size();
-}
-
-std::vector<std::uint32_t>& SkinnedMesh::GetBoneInfluences() noexcept {
-    return m_boneInfluences;
-}
-
-std::vector<std::unique_ptr<Submesh>>& SkinnedMesh::GetSubmeshes() noexcept {
-    return m_submeshes;
-}
-
 std::vector<VertexPositionNormalTextureSkinning>& SkinnedMesh::GetVertices() noexcept {
     return m_vertices;
-}
-
-std::vector<std::uint16_t>& SkinnedMesh::GetIndices() noexcept {
-    return m_indices;
-}
-
-bool SkinnedMesh::IsVisible() const noexcept {
-    return m_visible;
-}
-
-void SkinnedMesh::SetName(std::string name) noexcept {
-    Asset::SetName(name);
-}
-
-void SkinnedMesh::SetBoneIndex(std::uint32_t boneIndex) noexcept {
-    m_boneIndex = boneIndex;
-}
-
-void SkinnedMesh::SetVisible(bool visible) noexcept {
-    m_visible = visible;
 }
 
 // ---------------------------------------------------------------- //
