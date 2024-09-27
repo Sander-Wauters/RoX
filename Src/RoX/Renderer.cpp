@@ -317,7 +317,7 @@ void Renderer::Impl::RenderMeshes(const DeviceDataBatch& batch, std::uint8_t bat
                 std::uint32_t flags = pSubmesh->GetMaterial(*modelPair.first)->GetFlags();
 
                 if (flags & RenderFlags::Effect::Instanced) {
-                    const size_t instBytes = pSubmesh->GetNumVisibleInstances() * sizeof(DirectX::XMFLOAT3X4);
+                    const size_t instBytes = pSubmesh->GetNumInstances() * sizeof(DirectX::XMFLOAT3X4);
                     DirectX::GraphicsResource inst = m_pGraphicsMemory->Allocate(instBytes);
                     memcpy(inst.Memory(), pSubmesh->GetInstances().data(), instBytes);
 

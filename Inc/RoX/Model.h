@@ -75,7 +75,7 @@ class Submesh : public Asset {
         void SetVisible(bool visible) noexcept;
 
     private:
-        // The last m_numberCulled instances in m_instances will not be sent to the GPU.
+        // The first **m_numCulled** instances in **m_instances** will not be rendered.
         std::uint32_t m_numCulled;
         std::vector<DirectX::XMFLOAT3X4> m_instances;
 
