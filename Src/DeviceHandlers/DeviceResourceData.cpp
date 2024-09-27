@@ -125,11 +125,11 @@ void DeviceResourceData::DirtyLoad(Scene& scene, bool& msaaEnabled) {
             pAssetBatch->Attach(currentlyLoadedDataBatches[pos].get());
             m_dataBatches.push_back(std::move(currentlyLoadedDataBatches[pos]));
         } else {
-        auto pDataBatch = std::make_unique<DeviceDataBatch>(
-                m_deviceResources, 
-                *m_pCommonStates,
-                *m_pRenderTartgetState,
-                pAssetBatch->GetMaxNumUniqueTextures());
+            auto pDataBatch = std::make_unique<DeviceDataBatch>(
+                    m_deviceResources, 
+                    *m_pCommonStates,
+                    *m_pRenderTartgetState,
+                    pAssetBatch->GetMaxNumUniqueTextures());
             pDataBatch->Add(*scene.GetAssetBatches()[i]);
 
             pAssetBatch->Attach(pDataBatch.get());

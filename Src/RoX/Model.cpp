@@ -117,11 +117,28 @@ void Submesh::SetVisible(bool visible) noexcept {
 //                          BaseMesh
 // ---------------------------------------------------------------- //
 
-BaseMesh::BaseMesh(std::string name, bool visible) 
+BaseMesh::BaseMesh(std::string name, bool useStaticBuffers, bool visible) 
     noexcept : Asset("mesh", name),
     m_boneIndex(Bone::INVALID_INDEX),
+    m_usingStaticBuffers(useStaticBuffers),
     m_visible(visible)
 {}
+
+void BaseMesh::UseStaticBuffers(bool useStaticBuffers) {
+    m_usingStaticBuffers = useStaticBuffers;
+
+    for (IMeshObserver* pIMeshObserver : m_iMeshObservers) {
+        if (pIMeshObserver)
+            pIMeshObserver->OnUseStaticBuffers(this, useStaticBuffers);
+    }
+}
+
+void BaseMesh::UpdateBuffers() {
+    for (IMeshObserver* pIMeshObserver : m_iMeshObservers) {
+        if (pIMeshObserver)
+            pIMeshObserver->OnUpdateBuffers(this);
+    }
+}
 
 void BaseMesh::Add(std::unique_ptr<Submesh> pSubmesh) {
     if (!pSubmesh)
@@ -188,6 +205,10 @@ std::vector<std::uint16_t>& BaseMesh::GetIndices() noexcept {
     return m_indices;
 }
 
+bool BaseMesh::IsUsingStaticBuffers() const noexcept {
+    return m_usingStaticBuffers;
+}
+
 bool BaseMesh::IsVisible() const noexcept {
     return m_visible;
 }
@@ -208,8 +229,8 @@ void BaseMesh::SetVisible(bool visible) noexcept {
 //                          Mesh
 // ---------------------------------------------------------------- //
 
-Mesh::Mesh(std::string name, bool visible) 
-    noexcept : BaseMesh(name, visible)
+Mesh::Mesh(std::string name, bool useStaticBuffers, bool visible) 
+    noexcept : BaseMesh(name, useStaticBuffers, visible)
 {}
 
 std::vector<VertexPositionNormalTexture>& Mesh::GetVertices() noexcept {
@@ -224,8 +245,8 @@ std::uint32_t Mesh::GetNumVertices() const noexcept {
 //                          SkinnedMesh
 // ---------------------------------------------------------------- //
 
-SkinnedMesh::SkinnedMesh(std::string name, bool visible) 
-    noexcept : BaseMesh(name, visible)
+SkinnedMesh::SkinnedMesh(std::string name, bool useStaticBuffers, bool visible) 
+    noexcept : BaseMesh(name, useStaticBuffers, visible)
 {}
 
 std::uint32_t SkinnedMesh::GetNumVertices() const noexcept {
@@ -263,6 +284,12 @@ Model::Model(Model& other) : Asset(other),
             m_boneMatrices = std::move(other.GetBoneMatrices());
         if (other.GetInverseBindPoseMatrices())
             m_inverseBindPoseMatrices = std::move(other.GetInverseBindPoseMatrices());
+    }
+}
+
+void Model::UseStaticBuffers(bool useStaticBuffers) {
+    for (std::shared_ptr<IMesh>& pIMesh : m_meshes) {
+        pIMesh->UseStaticBuffers(useStaticBuffers);
     }
 }
 
@@ -388,6 +415,14 @@ Bone::TransformArray& Model::GetInverseBindPoseMatrices() noexcept {
 
 bool Model::IsVisible() const noexcept {
     return m_visible;
+}
+
+bool Model::IsUsingStaticBuffers() const noexcept {
+    std::uint8_t usingStaticBuffers = 0;
+    for (const std::shared_ptr<IMesh>& pIMesh : m_meshes) {
+        usingStaticBuffers += pIMesh->IsUsingStaticBuffers();
+    }
+    return usingStaticBuffers == m_meshes.size();
 }
 
 bool Model::IsSkinned() const noexcept {

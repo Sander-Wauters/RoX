@@ -17,6 +17,9 @@ class MeshDeviceData : public IDeviceObserver, public IMeshObserver {
         void OnDeviceLost() override;
         void OnDeviceRestored() override;
 
+        void OnUseStaticBuffers(IMesh* pIMesh, bool useStaticBuffers) override;
+        void OnUpdateBuffers(IMesh* pIMesh) override;
+
         void OnAdd(const std::unique_ptr<Submesh>& pSubmesh) override;
 
         void OnRemoveSubmesh(std::uint8_t index) override;
@@ -47,6 +50,8 @@ class MeshDeviceData : public IDeviceObserver, public IMeshObserver {
 
         void SetStaticIndexBuffer(ID3D12Resource* pIndexBuffer);
         void SetStaticVertexBuffer(ID3D12Resource* pVertexBuffer);
+
+        std::uint32_t GetNumSubmeshes() const noexcept;
 
     private:
         DeviceResources& m_deviceResources;

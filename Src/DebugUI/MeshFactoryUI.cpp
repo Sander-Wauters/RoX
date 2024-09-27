@@ -1,9 +1,12 @@
 #include "DebugUI/MeshFactoryUI.h"
 
+#include <stdexcept>
+
 #include <ImGui/imgui.h>
 
 #include "DebugUI/Util.h"
 #include "DebugUI/UpdateScheduler.h"
+#include "DebugUI/GeneralUI.h"
 
 void MeshFactoryUI::GeoSelector(MeshFactory::Geometry& geo) {
     static std::uint8_t selected = 0;
@@ -25,26 +28,29 @@ void MeshFactoryUI::GeoSelector(MeshFactory::Geometry& geo) {
     ImGui::Text("Geometry");
 }
 
-void MeshFactoryUI::AddCubeToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
+void MeshFactoryUI::AddCubeToIMeshCreator(IMesh& iMesh) {
     static float size = 1; 
 
     ImGui::InputFloat("Size##AddCubeToMesh", &size);
-    if (ImGui::Button("Add to mesh##AddCubeToMesh"))
+
+    GeneralUI::Error(iMesh.IsUsingStaticBuffers(), "Can't add goemetry to a mesh with static buffers.");
+    if (ImGui::Button("Add to mesh##AddCubeToMesh") && !iMesh.IsUsingStaticBuffers())
         UpdateScheduler::Get().Add([&](){ MeshFactory::AddCube(iMesh, size); });
 }
 
-void MeshFactoryUI::AddBoxToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
+void MeshFactoryUI::AddBoxToIMeshCreator(IMesh& iMesh) {
     static float size[3] = { 1.f, 1.f, 1.f };
     static bool invertNormal = false;
 
     ImGui::InputFloat3("Size##AddBoxToMesh", size);
     ImGui::Checkbox("Invert normals##AddBoxToMesh", &invertNormal);
 
-    if (ImGui::Button("Add to mesh##AddBoxToMesh"))
+    GeneralUI::Error(iMesh.IsUsingStaticBuffers(), "Can't add goemetry to a mesh with static buffers.");
+    if (ImGui::Button("Add to mesh##AddBoxToMesh") && !iMesh.IsUsingStaticBuffers())
         UpdateScheduler::Get().Add([&](){ MeshFactory::AddBox(iMesh, { size[0], size[1], size[2] }, invertNormal); });
 }
 
-void MeshFactoryUI::AddSphereToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
+void MeshFactoryUI::AddSphereToIMeshCreator(IMesh& iMesh) {
     static float diameter = 1.f;
     static std::uint64_t tessellation = 16;
     static bool invertNormal = false;
@@ -53,22 +59,24 @@ void MeshFactoryUI::AddSphereToIMeshCreator(AssetBatch& batch, Model& model, IMe
     ImGui::InputScalar("Tessellation##AddSphereToMesh", ImGuiDataType_U64, &tessellation);
     ImGui::Checkbox("Invert normals##AddSphereToMesh", &invertNormal);
 
-    if (ImGui::Button("Add to mesh##AddSphereToMesh"))
+    GeneralUI::Error(iMesh.IsUsingStaticBuffers(), "Can't add goemetry to a mesh with static buffers.");
+    if (ImGui::Button("Add to mesh##AddSphereToMesh") && !iMesh.IsUsingStaticBuffers())
         UpdateScheduler::Get().Add([&](){ MeshFactory::AddSphere(iMesh, diameter, tessellation, invertNormal); });
 }
 
-void MeshFactoryUI::AddGeoSphereToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
+void MeshFactoryUI::AddGeoSphereToIMeshCreator(IMesh& iMesh) {
     static float diameter = 1.f;
     static std::uint64_t tessellation = 3;
 
     ImGui::InputFloat("Diameter##AddGeoSphereToMesh", &diameter);
     ImGui::InputScalar("Tessellation##AddGeoSphereToMesh", ImGuiDataType_U64, &tessellation);
 
-    if (ImGui::Button("Add to mesh##AddGeoSphereToMesh"))
+    GeneralUI::Error(iMesh.IsUsingStaticBuffers(), "Can't add goemetry to a mesh with static buffers.");
+    if (ImGui::Button("Add to mesh##AddGeoSphereToMesh") && !iMesh.IsUsingStaticBuffers())
         UpdateScheduler::Get().Add([&](){ MeshFactory::AddGeoSphere(iMesh, diameter, tessellation); });
 }
 
-void MeshFactoryUI::AddCylinderToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
+void MeshFactoryUI::AddCylinderToIMeshCreator(IMesh& iMesh) {
     static float height = 1.f;
     static float diameter = 1.f;
     static std::uint64_t tessellation = 32;
@@ -77,11 +85,12 @@ void MeshFactoryUI::AddCylinderToIMeshCreator(AssetBatch& batch, Model& model, I
     ImGui::InputFloat("Diameter##AddCylinderToMesh", &diameter);
     ImGui::InputScalar("Tessellation##AddCylinderToMesh", ImGuiDataType_U64, &tessellation);
 
-    if (ImGui::Button("Add to mesh##AddCylinderToMesh"))
+    GeneralUI::Error(iMesh.IsUsingStaticBuffers(), "Can't add goemetry to a mesh with static buffers.");
+    if (ImGui::Button("Add to mesh##AddCylinderToMesh") && !iMesh.IsUsingStaticBuffers())
         UpdateScheduler::Get().Add([&](){ MeshFactory::AddCylinder(iMesh, height, diameter, tessellation); });
 }
 
-void MeshFactoryUI::AddConeToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
+void MeshFactoryUI::AddConeToIMeshCreator(IMesh& iMesh) {
     static float diameter = 1.f;
     static float height = 1.f;
     static std::uint64_t tessellation = 32;
@@ -90,11 +99,12 @@ void MeshFactoryUI::AddConeToIMeshCreator(AssetBatch& batch, Model& model, IMesh
     ImGui::InputFloat("Height##AddConeToMesh", &height);
     ImGui::InputScalar("Tessellation##AddConeToMesh", ImGuiDataType_U64, &tessellation);
 
-    if (ImGui::Button("Add to mesh##AddConeToMesh"))
+    GeneralUI::Error(iMesh.IsUsingStaticBuffers(), "Can't add goemetry to a mesh with static buffers.");
+    if (ImGui::Button("Add to mesh##AddConeToMesh") && !iMesh.IsUsingStaticBuffers())
         UpdateScheduler::Get().Add([&](){ MeshFactory::AddCone(iMesh, diameter, height, tessellation); });
 }
 
-void MeshFactoryUI::AddTorusToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
+void MeshFactoryUI::AddTorusToIMeshCreator(IMesh& iMesh) {
     static float diameter = 1.f;
     static float thickness = .333f;
     static std::uint64_t tessellation = 32;
@@ -103,86 +113,92 @@ void MeshFactoryUI::AddTorusToIMeshCreator(AssetBatch& batch, Model& model, IMes
     ImGui::InputFloat("Thickness##AddTorusToMesh", &thickness);
     ImGui::InputScalar("Tessellation##AddTorusToMesh", ImGuiDataType_U64, &tessellation);
 
-    if (ImGui::Button("Add to mesh##AddTorusToMesh"))
+    GeneralUI::Error(iMesh.IsUsingStaticBuffers(), "Can't add goemetry to a mesh with static buffers.");
+    if (ImGui::Button("Add to mesh##AddTorusToMesh") && !iMesh.IsUsingStaticBuffers())
         UpdateScheduler::Get().Add([&](){ MeshFactory::AddCone(iMesh, diameter, thickness, tessellation); });
 }
 
-void MeshFactoryUI::AddTetrahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
+void MeshFactoryUI::AddTetrahedronToIMeshCreator(IMesh& iMesh) {
     static float size = 1; 
 
     ImGui::InputFloat("Size##AddTetrahedronToMesh", &size);
 
-    if (ImGui::Button("Add to mesh##AddTetrahedronToMesh"))
+    GeneralUI::Error(iMesh.IsUsingStaticBuffers(), "Can't add goemetry to a mesh with static buffers.");
+    if (ImGui::Button("Add to mesh##AddTetrahedronToMesh") && !iMesh.IsUsingStaticBuffers())
         UpdateScheduler::Get().Add([&](){ MeshFactory::AddTetrahedron(iMesh, size); });
 }
 
-void MeshFactoryUI::AddOctahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
+void MeshFactoryUI::AddOctahedronToIMeshCreator(IMesh& iMesh) {
     static float size = 1; 
 
     ImGui::InputFloat("Size##AddOctahedronToMesh", &size);
 
-    if (ImGui::Button("Add to mesh##AddOctahedronToMesh"))
+    GeneralUI::Error(iMesh.IsUsingStaticBuffers(), "Can't add goemetry to a mesh with static buffers.");
+    if (ImGui::Button("Add to mesh##AddOctahedronToMesh") && !iMesh.IsUsingStaticBuffers())
         UpdateScheduler::Get().Add([&](){ MeshFactory::AddOctahedron(iMesh, size); });
 }
 
-void MeshFactoryUI::AddDodecahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
+void MeshFactoryUI::AddDodecahedronToIMeshCreator(IMesh& iMesh) {
     static float size = 1; 
 
+    GeneralUI::Error(iMesh.IsUsingStaticBuffers(), "Can't add goemetry to a mesh with static buffers.");
     ImGui::InputFloat("Size##AddDodecahedronToMesh", &size);
 
-    if (ImGui::Button("Add to mesh##AddDodecahedronToMesh"))
+    if (ImGui::Button("Add to mesh##AddDodecahedronToMesh") && !iMesh.IsUsingStaticBuffers())
         UpdateScheduler::Get().Add([&](){ MeshFactory::AddDodecahedron(iMesh, size); });
 }
 
-void MeshFactoryUI::AddIcosahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
+void MeshFactoryUI::AddIcosahedronToIMeshCreator(IMesh& iMesh) {
     static float size = 1; 
 
     ImGui::InputFloat("Size##AddIcosahedronToMesh", &size);
 
-    if (ImGui::Button("Add to mesh##AddIcosahedronToMesh"))
+    GeneralUI::Error(iMesh.IsUsingStaticBuffers(), "Can't add goemetry to a mesh with static buffers.");
+    if (ImGui::Button("Add to mesh##AddIcosahedronToMesh") && !iMesh.IsUsingStaticBuffers())
         UpdateScheduler::Get().Add([&](){ MeshFactory::AddIcosahedron(iMesh, size); });
 }
 
-void MeshFactoryUI::AddTeapotToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
+void MeshFactoryUI::AddTeapotToIMeshCreator(IMesh& iMesh) {
     static float size = 1; 
     static std::uint64_t tessellation = 8;
 
     ImGui::InputFloat("Size##AddTeapotToMesh", &size);
     ImGui::InputScalar("Tessellation##AddTeapotToMesh", ImGuiDataType_U64, &tessellation);
 
-    if (ImGui::Button("Add to mesh##AddTeapotToMesh"))
+    GeneralUI::Error(iMesh.IsUsingStaticBuffers(), "Can't add goemetry to a mesh with static buffers.");
+    if (ImGui::Button("Add to mesh##AddTeapotToMesh") && !iMesh.IsUsingStaticBuffers())
         UpdateScheduler::Get().Add([&](){ MeshFactory::AddTeapot(iMesh, size, tessellation); });
 }
 
-void MeshFactoryUI::AddGeoToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh) {
+void MeshFactoryUI::AddGeoToIMeshCreator(IMesh& iMesh) {
     static MeshFactory::Geometry geo;
     GeoSelector(geo);
 
     switch (geo) {
         case MeshFactory::Geometry::Cube:
-            AddCubeToIMeshCreator(batch, model, iMesh); break;
+            AddCubeToIMeshCreator(iMesh); break;
         case MeshFactory::Geometry::Box:
-            AddBoxToIMeshCreator(batch, model, iMesh); break;
+            AddBoxToIMeshCreator(iMesh); break;
         case MeshFactory::Geometry::Sphere:
-            AddSphereToIMeshCreator(batch, model, iMesh); break;
+            AddSphereToIMeshCreator(iMesh); break;
         case MeshFactory::Geometry::GeoSphere:
-            AddGeoSphereToIMeshCreator(batch, model, iMesh); break;
+            AddGeoSphereToIMeshCreator(iMesh); break;
         case MeshFactory::Geometry::Cylinder:
-            AddCylinderToIMeshCreator(batch, model, iMesh); break;
+            AddCylinderToIMeshCreator(iMesh); break;
         case MeshFactory::Geometry::Cone:
-            AddConeToIMeshCreator(batch, model, iMesh); break;
+            AddConeToIMeshCreator(iMesh); break;
         case MeshFactory::Geometry::Torus:
-            AddTorusToIMeshCreator(batch, model, iMesh); break;
+            AddTorusToIMeshCreator(iMesh); break;
         case MeshFactory::Geometry::Tetrahedron:
-            AddTetrahedronToIMeshCreator(batch, model, iMesh); break;
+            AddTetrahedronToIMeshCreator(iMesh); break;
         case MeshFactory::Geometry::Octahedron:
-            AddOctahedronToIMeshCreator(batch, model, iMesh); break;
+            AddOctahedronToIMeshCreator(iMesh); break;
         case MeshFactory::Geometry::Dodecahedron:
-            AddDodecahedronToIMeshCreator(batch, model, iMesh); break;
+            AddDodecahedronToIMeshCreator(iMesh); break;
         case MeshFactory::Geometry::Icosahedron:
-            AddIcosahedronToIMeshCreator(batch, model, iMesh); break;
+            AddIcosahedronToIMeshCreator(iMesh); break;
         case MeshFactory::Geometry::Teapot:
-            AddTeapotToIMeshCreator(batch, model, iMesh); break;
+            AddTeapotToIMeshCreator(iMesh); break;
     }
 }
 

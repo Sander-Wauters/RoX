@@ -12,7 +12,7 @@ namespace IMeshUI {
     void Menu(IMesh& iMesh);
 
     void CreatorPopupMenu(Model& model);
-    void AddGeoOrSubmeshPopupMenu(AssetBatch& batch, Model& model, IMesh& iMesh);
+    void AddGeoOrSubmeshPopupMenu(Model& model, IMesh& iMesh);
     void RemoverPopupMenu(Model& model);
 }
 

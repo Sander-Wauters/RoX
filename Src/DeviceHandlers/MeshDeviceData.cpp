@@ -8,6 +8,7 @@ MeshDeviceData::MeshDeviceData(DeviceResources& deviceResources, IMesh& iMesh)
     m_indexFormat(DXGI_FORMAT_R16_UINT)
 {
     m_deviceResources.Attach(this);
+    iMesh.Attach(this);
 
     m_submeshes.reserve(iMesh.GetNumSubmeshes());
     for (std::uint64_t i = 0; i < iMesh.GetNumSubmeshes(); ++i) {
@@ -60,6 +61,32 @@ void MeshDeviceData::OnDeviceRestored() {
         memcpy(m_vertexBuffer.Memory(), m_vertexData.data(), m_vertexBufferSize);
         LoadStaticVertexBuffer(!!m_vertexBuffer);
         m_vertexData.clear();
+    }
+}
+
+void MeshDeviceData::OnUseStaticBuffers(IMesh* pIMesh, bool useStaticBuffers) {
+    m_deviceResources.WaitForGpu();
+
+    if (!m_indexBuffer && !m_vertexBuffer) {
+        LoadIndexBuffer(pIMesh);
+        LoadVertexBuffer(pIMesh);
+    }
+
+    if (useStaticBuffers && !m_staticIndexBuffer && !m_staticVertexBuffer) {
+        LoadStaticIndexBuffer(false);
+        LoadStaticVertexBuffer(false);
+    } else {
+        m_staticIndexBuffer.Reset();
+        m_staticVertexBuffer.Reset();
+    }
+}
+
+void MeshDeviceData::OnUpdateBuffers(IMesh* pIMesh) {
+    m_deviceResources.WaitForGpu();
+
+    if (m_indexBuffer && m_vertexBuffer) {
+        LoadIndexBuffer(pIMesh);
+        LoadVertexBuffer(pIMesh);
     }
 }
 
@@ -225,5 +252,9 @@ void MeshDeviceData::SetStaticIndexBuffer(ID3D12Resource* pIndexBuffer) {
 
 void MeshDeviceData::SetStaticVertexBuffer(ID3D12Resource* pVertexBuffer) {
     m_staticVertexBuffer = pVertexBuffer;
+}
+
+std::uint32_t MeshDeviceData::GetNumSubmeshes() const noexcept {
+    return m_submeshes.size();
 }
 

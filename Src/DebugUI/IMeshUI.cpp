@@ -46,26 +46,27 @@ void IMeshUI::Remover(Model& model) {
 }
 
 void IMeshUI::Menu(IMesh& iMesh) {
-    if (auto pMesh = dynamic_cast<Mesh*>(&iMesh)) {
-        bool visible = iMesh.IsVisible();
-        if (ImGui::Checkbox(Util::GUIDLabel("Visible", iMesh.GetGUID()).c_str(), &visible))
-            iMesh.SetVisible(visible);
+    bool visible = iMesh.IsVisible();
+    if (ImGui::Checkbox(Util::GUIDLabel("Visible", iMesh.GetGUID()).c_str(), &visible))
+        iMesh.SetVisible(visible);
+    ImGui::SameLine();
+    bool usingStaticBuffers = iMesh.IsUsingStaticBuffers();
+    if (ImGui::Checkbox(Util::GUIDLabel("Using static buffers", iMesh.GetGUID()).c_str(), &usingStaticBuffers))
+        UpdateScheduler::Get().Add([&, usingStaticBuffers](){ iMesh.UseStaticBuffers(usingStaticBuffers); });
 
+    if (auto pMesh = dynamic_cast<Mesh*>(&iMesh)) {
         ImGui::SeparatorText("Identifiers");
         AssetUI::Menu(*pMesh);
 
         if (ImGui::CollapsingHeader("Vertices")) 
             MathUI::Vertices(pMesh->GetVertices());
     } else if (auto pSkinnedMesh = dynamic_cast<SkinnedMesh*>(&iMesh)) {
-        bool visible = iMesh.IsVisible();
-        if (ImGui::Checkbox(Util::GUIDLabel("Visible", iMesh.GetGUID()).c_str(), &visible))
-            iMesh.SetVisible(visible);
-
         ImGui::SeparatorText("Identifiers");
         AssetUI::Menu(*pSkinnedMesh);
 
         if (ImGui::CollapsingHeader("Vertices")) 
             MathUI::Vertices(pSkinnedMesh->GetVertices());
+
     }
     if (ImGui::CollapsingHeader("Indices"))
         MathUI::Indices(iMesh.GetIndices(), iMesh.GetNumVertices());
@@ -80,7 +81,7 @@ void IMeshUI::CreatorPopupMenu(Model& model) {
     }
 }
 
-void IMeshUI::AddGeoOrSubmeshPopupMenu(AssetBatch& batch, Model& model, IMesh& iMesh) {
+void IMeshUI::AddGeoOrSubmeshPopupMenu(Model& model, IMesh& iMesh) {
     if (ImGui::Button(Util::GUIDLabel("+", "IMeshAddGeoOrSubmeshPopupMenu").c_str()))
         ImGui::OpenPopup("IMeshAddGeoOrSubmeshPopupMenu");
     if (ImGui::BeginPopup("IMeshAddGeoOrSubmeshPopupMenu", ImGuiWindowFlags_MenuBar)) {
@@ -90,7 +91,7 @@ void IMeshUI::AddGeoOrSubmeshPopupMenu(AssetBatch& batch, Model& model, IMesh& i
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu(Util::GUIDLabel("Add geometry", "IMeshAddGeoOrSubmeshPopupMenu").c_str())) {
-                MeshFactoryUI::AddGeoToIMeshCreator(batch, model, iMesh);
+                MeshFactoryUI::AddGeoToIMeshCreator(iMesh);
                 ImGui::EndMenu();
             }
             ImGui::EndMenuBar();

@@ -7,19 +7,19 @@
 namespace MeshFactoryUI {
     void GeoSelector(MeshFactory::Geometry& geo);
 
-    void AddCubeToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
-    void AddBoxToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
-    void AddSphereToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
-    void AddGeoSphereToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
-    void AddCylinderToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
-    void AddConeToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
-    void AddTorusToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
-    void AddTetrahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
-    void AddOctahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
-    void AddDodecahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
-    void AddIcosahedronToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
-    void AddTeapotToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
+    void AddCubeToIMeshCreator(IMesh& iMesh);
+    void AddBoxToIMeshCreator(IMesh& iMesh);
+    void AddSphereToIMeshCreator(IMesh& iMesh);
+    void AddGeoSphereToIMeshCreator(IMesh& iMesh);
+    void AddCylinderToIMeshCreator(IMesh& iMesh);
+    void AddConeToIMeshCreator(IMesh& iMesh);
+    void AddTorusToIMeshCreator(IMesh& iMesh);
+    void AddTetrahedronToIMeshCreator(IMesh& iMesh);
+    void AddOctahedronToIMeshCreator(IMesh& iMesh);
+    void AddDodecahedronToIMeshCreator(IMesh& iMesh);
+    void AddIcosahedronToIMeshCreator(IMesh& iMesh);
+    void AddTeapotToIMeshCreator(IMesh& iMesh);
 
-    void AddGeoToIMeshCreator(AssetBatch& batch, Model& model, IMesh& iMesh);
+    void AddGeoToIMeshCreator(IMesh& iMesh);
 }
 

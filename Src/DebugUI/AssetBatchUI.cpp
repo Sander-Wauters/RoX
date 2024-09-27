@@ -76,7 +76,7 @@ void AssetBatchUI::Menu(AssetBatch& batch) {
         if (pSelectedSubmesh)
             SubmeshUI::Menu(*pSelectedSubmesh, pSelectedModel->GetMaterials());
         else if (pSelectedIMesh) {
-            IMeshUI::AddGeoOrSubmeshPopupMenu(batch, *pSelectedModel, *pSelectedIMesh);
+            IMeshUI::AddGeoOrSubmeshPopupMenu(*pSelectedModel, *pSelectedIMesh);
             ImGui::SameLine();
             SubmeshUI::RemoverPopupMenu(*pSelectedIMesh);
             ImGui::SameLine();

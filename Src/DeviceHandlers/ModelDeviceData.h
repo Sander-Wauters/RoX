@@ -27,6 +27,9 @@ class ModelDeviceData : public IModelObserver {
         std::vector<std::shared_ptr<MaterialDeviceData>>& GetMaterials() noexcept;
         std::vector<std::shared_ptr<MeshDeviceData>>& GetMeshes() noexcept;
 
+        std::uint32_t GetNumMaterials() const noexcept;
+        std::uint32_t GetNumMeshes() const noexcept;
+
     private:
         IDeviceDataSupplier& m_deviceDataSupplier;
 

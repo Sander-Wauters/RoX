@@ -3,6 +3,8 @@
 ModelDeviceData::ModelDeviceData(IDeviceDataSupplier& deviceDataSupplier, Model& model) 
     : m_deviceDataSupplier(deviceDataSupplier)
 {
+    model.Attach(this);
+
     m_meshes.reserve(model.GetNumMeshes()); 
     for (std::uint8_t i = 0; i < model.GetNumMeshes(); ++i) {
         std::shared_ptr<IMesh>& pIMesh = model.GetMeshes()[i];
@@ -156,3 +158,12 @@ std::vector<std::shared_ptr<MaterialDeviceData>>& ModelDeviceData::GetMaterials(
 std::vector<std::shared_ptr<MeshDeviceData>>& ModelDeviceData::GetMeshes() noexcept {
     return m_meshes;
 }
+
+std::uint32_t ModelDeviceData::GetNumMaterials() const noexcept {
+    return m_materials.size();
+}
+
+std::uint32_t ModelDeviceData::GetNumMeshes() const noexcept {
+    return m_meshes.size();
+}
+

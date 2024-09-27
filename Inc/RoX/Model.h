@@ -87,8 +87,13 @@ class Submesh : public Asset {
         bool m_visible;
 };
 
+class IMesh;
+
 class IMeshObserver {
     public:
+        virtual void OnUseStaticBuffers(IMesh* pIMesh, bool useStaticBuffers) = 0;
+        virtual void OnUpdateBuffers(IMesh* pIMesh) = 0;
+
         virtual void OnAdd(const std::unique_ptr<Submesh>& pSubmesh) = 0;
 
         virtual void OnRemoveSubmesh(std::uint8_t index) = 0;
@@ -104,6 +109,10 @@ class IMesh {
         
     public:
         virtual ~IMesh() = default;
+
+        virtual void UseStaticBuffers(bool useStaticBuffers) = 0;
+        // Only when using dynamic buffers.
+        virtual void UpdateBuffers() = 0;
 
         virtual void Add(std::unique_ptr<Submesh> pSubmesh) = 0;
 
@@ -125,6 +134,7 @@ class IMesh {
         virtual std::vector<std::unique_ptr<Submesh>>& GetSubmeshes() noexcept = 0;
         virtual std::vector<std::uint16_t>& GetIndices() noexcept = 0;
 
+        virtual bool IsUsingStaticBuffers() const noexcept = 0;
         virtual bool IsVisible() const noexcept = 0;
 
         virtual void SetName(std::string name) noexcept = 0;
@@ -135,9 +145,12 @@ class IMesh {
 // Abstract class of a mesh with shared functionality.
 class BaseMesh : public IMesh, public Asset {
     protected:
-        BaseMesh(std::string name = "", bool visible = true) noexcept; 
+        BaseMesh(std::string name = "", bool useStaticBuffers = false, bool visible = true) noexcept; 
 
     public:
+        void UseStaticBuffers(bool useStaticBuffers) override;
+        void UpdateBuffers() override;
+
         void Add(std::unique_ptr<Submesh> pSubmesh) override;
 
         void RemoveSubmesh(std::uint8_t index) override;
@@ -157,6 +170,7 @@ class BaseMesh : public IMesh, public Asset {
         std::vector<std::unique_ptr<Submesh>>& GetSubmeshes() noexcept override;
         std::vector<std::uint16_t>& GetIndices() noexcept override;
 
+        bool IsUsingStaticBuffers() const noexcept override;
         bool IsVisible() const noexcept override;
 
         void SetName(std::string name) noexcept override;
@@ -172,13 +186,14 @@ class BaseMesh : public IMesh, public Asset {
         std::vector<std::unique_ptr<Submesh>> m_submeshes;
         std::vector<std::uint16_t> m_indices;
 
+        bool m_usingStaticBuffers;
         bool m_visible;
 };
 
 // Mesh used for rendering normal geometry.
 class Mesh : public BaseMesh {
     public:
-        Mesh(std::string name = "", bool visible = true) noexcept; 
+        Mesh(std::string name = "", bool useStaticBuffers = false, bool visible = true) noexcept; 
         
     public:
         std::vector<VertexPositionNormalTexture>& GetVertices() noexcept;
@@ -192,7 +207,7 @@ class Mesh : public BaseMesh {
 // Mesh used with skinned animations.
 class SkinnedMesh : public BaseMesh {
     public:
-        SkinnedMesh(std::string name = "", bool visible = true) noexcept; 
+        SkinnedMesh(std::string name = "", bool useStaticBuffers = false, bool visible = true) noexcept; 
         
     public:
         std::vector<VertexPositionNormalTextureSkinning>& GetVertices() noexcept;
@@ -221,6 +236,9 @@ class Model : public Asset {
                 bool visible = true);
 
         Model(Model& other);
+
+    public:
+        void UseStaticBuffers(bool useStaticBuffers);
 
         void Add(std::shared_ptr<Material> pMaterial);
         void Add(std::shared_ptr<IMesh> pMesh);
@@ -251,6 +269,8 @@ class Model : public Asset {
         Bone::TransformArray& GetBoneMatrices() noexcept;
         Bone::TransformArray& GetInverseBindPoseMatrices() noexcept;
 
+        // Return's true only if all meshes use static buffers.
+        bool IsUsingStaticBuffers() const noexcept;
         bool IsVisible() const noexcept;
 
         // A model is skinned if it contains one material with the **Skinned** effect.

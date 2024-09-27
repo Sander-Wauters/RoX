@@ -112,7 +112,7 @@ TEST_F(RendererTest, Load_Dirty_WithOccupiedScene) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_ToggleMSAA_StartOn) {
+TEST_F(RendererTest, PostFreshLoad_ToggleMSAA_StartOn) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
 
     ASSERT_NO_THROW(pRenderer->SetMsaa(true));
@@ -122,7 +122,7 @@ TEST_F(RendererTest, PostLoad_ToggleMSAA_StartOn) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_ToggleMSAA_StartOff) {
+TEST_F(RendererTest, PostFreshLoad_ToggleMSAA_StartOff) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
 
     ASSERT_NO_THROW(pRenderer->SetMsaa(false));
@@ -136,7 +136,7 @@ TEST_F(RendererTest, PostLoad_ToggleMSAA_StartOff) {
 //                          AssetBatch
 // ---------------------------------------------------------------- //
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewMaterial_NumUniqueTexturesExceedsMaxNumUniqueTextures) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithNewMaterial_NumUniqueTexturesExceedsMaxNumUniqueTextures) {
     pBatch = std::make_shared<AssetBatch>("ValidAssetBatch", 1, true);
     pScene->GetAssetBatches()[0] = pBatch;
 
@@ -153,7 +153,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewMaterial_NumUniqueTexturesEx
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewSprite_NumUniqueTexturesExceedsMaxNumUniqueTextures) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithNewSprite_NumUniqueTexturesExceedsMaxNumUniqueTextures) {
     pBatch = std::make_shared<AssetBatch>("ValidAssetBatch", 1, true);
     pScene->GetAssetBatches()[0] = pBatch;
 
@@ -170,7 +170,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewSprite_NumUniqueTexturesExce
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewText_NumUniqueTexturesExceedsMaxNumUniqueTextures) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithNewText_NumUniqueTexturesExceedsMaxNumUniqueTextures) {
     pBatch = std::make_shared<AssetBatch>("ValidAssetBatch", 1, true);
     pScene->GetAssetBatches()[0] = pBatch;
 
@@ -187,7 +187,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewText_NumUniqueTexturesExceed
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewMaterial) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithNewMaterial) {
     auto pNewMaterial = NewValidMaterial();
 
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
@@ -197,7 +197,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewMaterial) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithExistingMaterial) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithExistingMaterial) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -205,7 +205,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithExistingMaterial) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithInvalidMaterial) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithInvalidMaterial) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -213,7 +213,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithInvalidMaterial) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithExistingModel) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithExistingModel) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -221,7 +221,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithExistingModel) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewModelExistingMaterial) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithNewModelExistingMaterial) {
     auto pNewModel = NewValidModelWithExistingMaterial();
 
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
@@ -231,7 +231,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewModelExistingMaterial) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewModelNewMaterial) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithNewModelNewMaterial) {
     auto pNewModel = NewValidModelWithNewValidMaterial();
 
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
@@ -241,7 +241,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewModelNewMaterial) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewModelWithInvalidMaterial) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithNewModelWithInvalidMaterial) {
     auto pNewModel = NewValidModelWithNewValidMaterial();
     pNewModel->GetMaterials() = { nullptr };
 
@@ -252,7 +252,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewModelWithInvalidMaterial) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithInvalidModel) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithInvalidModel) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -264,7 +264,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithInvalidModel) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewSprite) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithNewSprite) {
     auto pNewSprite = NewValidSprite();
 
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
@@ -274,7 +274,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewSprite) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithExistingSprite) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithExistingSprite) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -282,7 +282,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithExistingSprite) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithInvalidSprite) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithInvalidSprite) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -290,7 +290,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithInvalidSprite) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewText) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithNewText) {
     auto pNewText = NewValidText();
 
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
@@ -300,7 +300,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewText) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithExistingText) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithExistingText) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -308,7 +308,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithExistingText) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithInvalidText) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithInvalidText) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -316,7 +316,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithInvalidText) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewOutline) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithNewOutline) {
     auto pNewOutline = NewValidOutline();
 
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
@@ -326,7 +326,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithNewOutline) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithExistingOutline) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithExistingOutline) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -334,7 +334,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithExistingOutline) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithInvalidOutline) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Add_WithInvalidOutline) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -342,7 +342,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Add_WithInvalidOutline) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByGUID_WithValidGUID) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Remove_ByGUID_WithValidGUID) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -367,7 +367,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByGUID_WithValidGUID) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByGUID_WithInvalidGUID) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Remove_ByGUID_WithInvalidGUID) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -387,7 +387,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByGUID_WithInvalidGUID) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByTypeAndGUID_WithValidGUID) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Remove_ByTypeAndGUID_WithValidGUID) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -412,7 +412,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByTypeAndGUID_WithValidGUID) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByTypeAndGUID_WithInvalidGUID) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Remove_ByTypeAndGUID_WithInvalidGUID) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -432,7 +432,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByTypeAndGUID_WithInvalidGUID) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByName_WithValidName) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Remove_ByName_WithValidName) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -457,7 +457,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByName_WithValidName) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByName_WithInvalidName) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Remove_ByName_WithInvalidName) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -477,7 +477,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByName_WithInvalidName) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByTypeAndName_WithValidName) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Remove_ByTypeAndName_WithValidName) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -502,7 +502,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByTypeAndName_WithValidName) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByTypeAndName_WithInvalidName) {
+TEST_F(RendererTest, PostFreshLoad_AssetBatch_Remove_ByTypeAndName_WithInvalidName) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -526,7 +526,7 @@ TEST_F(RendererTest, PostLoad_AssetBatch_Remove_ByTypeAndName_WithInvalidName) {
 //                          Mesh
 // ---------------------------------------------------------------- //
 
-TEST_F(RendererTest, PostLoad_Mesh_Add_WithNewSubmesh) {
+TEST_F(RendererTest, PostFreshLoad_Mesh_Add_WithNewSubmesh) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -538,7 +538,7 @@ TEST_F(RendererTest, PostLoad_Mesh_Add_WithNewSubmesh) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_Mesh_Add_WithInvalidSubmesh) {
+TEST_F(RendererTest, PostFreshLoad_Mesh_Add_WithInvalidSubmesh) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -548,7 +548,7 @@ TEST_F(RendererTest, PostLoad_Mesh_Add_WithInvalidSubmesh) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_Mesh_RemoveSubmesh_WithValidIndex) {
+TEST_F(RendererTest, PostFreshLoad_Mesh_RemoveSubmesh_WithValidIndex) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -559,7 +559,7 @@ TEST_F(RendererTest, PostLoad_Mesh_RemoveSubmesh_WithValidIndex) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_Mesh_RemoveSubmesh_WithInvalidIndex) {
+TEST_F(RendererTest, PostFreshLoad_Mesh_RemoveSubmesh_WithInvalidIndex) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -569,7 +569,7 @@ TEST_F(RendererTest, PostLoad_Mesh_RemoveSubmesh_WithInvalidIndex) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_SkinnedMesh_Add_WithNewSubmesh) {
+TEST_F(RendererTest, PostFreshLoad_SkinnedMesh_Add_WithNewSubmesh) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -581,7 +581,7 @@ TEST_F(RendererTest, PostLoad_SkinnedMesh_Add_WithNewSubmesh) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_SkinnedMesh_Add_WithInvalidSubmesh) {
+TEST_F(RendererTest, PostFreshLoad_SkinnedMesh_Add_WithInvalidSubmesh) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -591,7 +591,7 @@ TEST_F(RendererTest, PostLoad_SkinnedMesh_Add_WithInvalidSubmesh) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_SkinnedMesh_RemoveSubmesh_WithValidIndex) {
+TEST_F(RendererTest, PostFreshLoad_SkinnedMesh_RemoveSubmesh_WithValidIndex) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -603,7 +603,7 @@ TEST_F(RendererTest, PostLoad_SkinnedMesh_RemoveSubmesh_WithValidIndex) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_SkinnedMesh_RemoveSubmesh_WithInvalidIndex) {
+TEST_F(RendererTest, PostFreshLoad_SkinnedMesh_RemoveSubmesh_WithInvalidIndex) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -617,7 +617,7 @@ TEST_F(RendererTest, PostLoad_SkinnedMesh_RemoveSubmesh_WithInvalidIndex) {
 //                          Model
 // ---------------------------------------------------------------- //
 
-TEST_F(RendererTest, PostLoad_Model_Add_WithNewMaterial) {
+TEST_F(RendererTest, PostFreshLoad_Model_Add_WithNewMaterial) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -628,7 +628,7 @@ TEST_F(RendererTest, PostLoad_Model_Add_WithNewMaterial) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_Model_Add_WithInvalidMaterial) {
+TEST_F(RendererTest, PostFreshLoad_Model_Add_WithInvalidMaterial) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -638,7 +638,7 @@ TEST_F(RendererTest, PostLoad_Model_Add_WithInvalidMaterial) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_Model_Add_WithNewMesh) {
+TEST_F(RendererTest, PostFreshLoad_Model_Add_WithNewMesh) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -649,7 +649,7 @@ TEST_F(RendererTest, PostLoad_Model_Add_WithNewMesh) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_Model_Add_WithInvalidMesh) {
+TEST_F(RendererTest, PostFreshLoad_Model_Add_WithInvalidMesh) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -659,7 +659,7 @@ TEST_F(RendererTest, PostLoad_Model_Add_WithInvalidMesh) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_Model_RemoveMaterial_WithValidIndex) {
+TEST_F(RendererTest, PostFreshLoad_Model_RemoveMaterial_WithValidIndex) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -673,7 +673,7 @@ TEST_F(RendererTest, PostLoad_Model_RemoveMaterial_WithValidIndex) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_Model_RemoveMaterial_WithInalidIndex) {
+TEST_F(RendererTest, PostFreshLoad_Model_RemoveMaterial_WithInalidIndex) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -686,7 +686,7 @@ TEST_F(RendererTest, PostLoad_Model_RemoveMaterial_WithInalidIndex) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_Model_RemoveIMesh_WithValidIndex) {
+TEST_F(RendererTest, PostFreshLoad_Model_RemoveIMesh_WithValidIndex) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
@@ -699,7 +699,7 @@ TEST_F(RendererTest, PostLoad_Model_RemoveIMesh_WithValidIndex) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
-TEST_F(RendererTest, PostLoad_Model_RemoveIMesh_WithInalidIndex) {
+TEST_F(RendererTest, PostFreshLoad_Model_RemoveIMesh_WithInalidIndex) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 

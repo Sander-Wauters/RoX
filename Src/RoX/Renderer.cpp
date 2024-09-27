@@ -286,6 +286,9 @@ void Renderer::Impl::RenderMeshes(const DeviceDataBatch& batch, std::uint8_t bat
     ID3D12GraphicsCommandList* pCommandList = m_pDeviceResources->GetCommandList();
 
     for (const ModelPair& modelPair : batch.GetModelData()) {
+        Model* pModel = modelPair.first.get();
+        ModelDeviceData* pModelData = modelPair.second.get();
+
         if (!modelPair.first->IsVisible())
             continue;
         if (modelPair.first->IsSkinned()) {
@@ -293,7 +296,7 @@ void Renderer::Impl::RenderMeshes(const DeviceDataBatch& batch, std::uint8_t bat
             continue;
         }
 
-        for (std::uint64_t meshIndex = 0; meshIndex < modelPair.first->GetNumMeshes(); ++meshIndex) {
+        for (std::uint64_t meshIndex = 0; meshIndex < pModel->GetNumMeshes() && meshIndex < pModelData->GetNumMeshes(); ++meshIndex) {
             IMesh* pMesh = modelPair.first->GetMeshes()[meshIndex].get();
             MeshDeviceData* pMeshData = modelPair.second->GetMeshes()[meshIndex].get();
 
@@ -302,7 +305,7 @@ void Renderer::Impl::RenderMeshes(const DeviceDataBatch& batch, std::uint8_t bat
 
             pMeshData->PrepareForDraw();
 
-            for (std::uint64_t submeshIndex = 0; submeshIndex < pMesh->GetNumSubmeshes(); ++submeshIndex) {
+            for (std::uint64_t submeshIndex = 0; submeshIndex < pMesh->GetNumSubmeshes() && submeshIndex < pMeshData->GetNumSubmeshes(); ++submeshIndex) {
                 Submesh* pSubmesh = pMesh->GetSubmeshes()[submeshIndex].get();
                 SubmeshDeviceData* pSubmeshData = pMeshData->GetSubmeshes()[submeshIndex].get();
 

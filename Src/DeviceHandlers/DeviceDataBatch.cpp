@@ -18,6 +18,13 @@ DeviceDataBatch::DeviceDataBatch(
 
 DeviceDataBatch::~DeviceDataBatch() noexcept {
     m_deviceResources.Detach(this);
+
+    for (MeshPair& meshPair : m_meshData) {
+        meshPair.first->Detach(meshPair.second.get());
+    }
+    for (ModelPair& modelPair : m_modelData) {
+        modelPair.first->Detach(modelPair.second.get());
+    }
 }
 
 DeviceDataBatch::DeviceDataBatch(DeviceDataBatch& other) 
@@ -78,10 +85,8 @@ void DeviceDataBatch::OnAdd(const std::shared_ptr<Material>& pMaterial) {
 
 void DeviceDataBatch::OnAdd(const std::shared_ptr<Model>& pModel) {
     std::unique_ptr<ModelDeviceData>& pModelData = m_modelData[pModel];
-    if (!pModelData) {
+    if (!pModelData)
         pModelData = std::make_unique<ModelDeviceData>(*this, *pModel);
-        pModel->Attach(pModelData.get());
-    }
 }
 
 void DeviceDataBatch::OnAdd(const std::shared_ptr<Sprite>& pSprite) {
@@ -161,11 +166,8 @@ std::shared_ptr<MaterialDeviceData> DeviceDataBatch::GetMaterialDeviceData(const
 
 std::shared_ptr<MeshDeviceData> DeviceDataBatch::GetMeshDeviceData(const std::shared_ptr<IMesh>& pIMesh) {
     auto& pMeshDeviceData = m_meshData[pIMesh]; 
-    if (!pMeshDeviceData) {
+    if (!pMeshDeviceData)
         pMeshDeviceData = std::make_shared<MeshDeviceData>(m_deviceResources, *pIMesh);
-        pIMesh->Attach(pMeshDeviceData.get());
-    }
-
     return pMeshDeviceData;
 }
 

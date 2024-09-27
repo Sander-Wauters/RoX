@@ -127,6 +127,11 @@ void ModelUI::Menu(Model& model, const Materials& availableMaterials) {
     bool visible = model.IsVisible();
     if (ImGui::Checkbox(Util::GUIDLabel("Visible", model.GetGUID()).c_str(), &visible))
         model.SetVisible(visible);
+    ImGui::SameLine();
+    bool usingStaticBuffers = model.IsUsingStaticBuffers();
+    if (ImGui::Checkbox(Util::GUIDLabel("Using static buffers", model.GetGUID()).c_str(), &usingStaticBuffers))
+        UpdateScheduler::Get().Add([&, usingStaticBuffers](){ model.UseStaticBuffers(usingStaticBuffers); });
+    GeneralUI::HelpMarker("Applies to all meshes.");
 
     ImGui::SeparatorText("Identifiers");
     AssetUI::Menu(model);
