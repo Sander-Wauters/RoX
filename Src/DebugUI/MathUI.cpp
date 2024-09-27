@@ -158,12 +158,16 @@ void MathUI::Matrix(DirectX::XMFLOAT3X4& matrix) {
 }
 
 bool MathUI::AffineTransformation(DirectX::XMMATRIX& matrix) {
+    bool transformationApplied = false;
+
+    static bool applyInRealTime = false;
+
     static float origin[3] = { 0.f, 0.f, 0.f};
     static float translation[3] = { 0.f, 0.f, 0.f };
     static float scale[3] = { 1.f, 1.f, 1.f };
     static float rotation[3] = { 0.f, 0.f, 0.f };
 
-    if (ImGui::Button("Apply")) {
+    if (ImGui::Button("Apply") || applyInRealTime) {
         DirectX::XMVECTOR o = DirectX::XMVectorSet(origin[0], origin[1], origin[2], 0.f);
         DirectX::XMVECTOR t = DirectX::XMVectorSet(translation[0], translation[1], translation[2], 0.f);
         DirectX::XMVECTOR s = DirectX::XMVectorSet(scale[0], scale[1], scale[2], 0.f);
@@ -172,7 +176,7 @@ bool MathUI::AffineTransformation(DirectX::XMMATRIX& matrix) {
                 DirectX::XMConvertToRadians(rotation[1]), 
                 DirectX::XMConvertToRadians(rotation[2]));
         matrix = DirectX::XMMatrixAffineTransformation(s, o, r, t);
-        return true;
+        transformationApplied = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Load")) {
@@ -204,13 +208,16 @@ bool MathUI::AffineTransformation(DirectX::XMMATRIX& matrix) {
         scale[0]       = 1.f; scale[1]       = 1.f; scale[2]       = 1.f;
         rotation[0]    = 0.f; rotation[1]    = 0.f; rotation[2]    = 0.f;
     }
+    ImGui::SameLine();
+    ImGui::Checkbox("Apply in real time", &applyInRealTime);
+    GeneralUI::HelpMarker("May result in poor performance if left checked on multiple objects.");
 
-    ImGui::DragFloat3("origin", origin);
-    ImGui::DragFloat3("translation", translation);
-    ImGui::DragFloat3("scale", scale);
+    ImGui::DragFloat3("origin", origin, 0.01f);
+    ImGui::DragFloat3("translation", translation, 0.1f);
+    ImGui::DragFloat3("scale", scale, 0.01f);
     ImGui::DragFloat3("rotation", rotation);
 
-    return false;
+    return transformationApplied;
 }
 
 bool MathUI::AffineTransformation(DirectX::XMFLOAT4X4& matrix) {
