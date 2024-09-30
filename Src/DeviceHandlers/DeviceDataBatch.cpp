@@ -2,12 +2,12 @@
 
 DeviceDataBatch::DeviceDataBatch(
         DeviceResources& deviceResources, 
-        DirectX::CommonStates& commonStates,
-        DirectX::RenderTargetState& rtState,
+        DirectX::CommonStates* pCommonStates,
+        DirectX::RenderTargetState* pRtState,
         std::uint8_t descriptorHeapSize) 
     noexcept : m_deviceResources(deviceResources),
-    m_commonStates(commonStates),
-    m_rtState(rtState),
+    m_pCommonStates(pCommonStates),
+    m_pRtState(pRtState),
     m_descriptorHeapSize(descriptorHeapSize),
     m_nextDescriptorHeapIndex(0)
 {
@@ -29,8 +29,8 @@ DeviceDataBatch::~DeviceDataBatch() noexcept {
 
 DeviceDataBatch::DeviceDataBatch(DeviceDataBatch& other) 
     noexcept : m_deviceResources(other.m_deviceResources),
-    m_commonStates(other.m_commonStates),
-    m_rtState(other.m_rtState),
+    m_pCommonStates(other.m_pCommonStates),
+    m_pRtState(other.m_pRtState),
     m_descriptorHeapSize(other.m_descriptorHeapSize)
 {}
 
@@ -39,45 +39,46 @@ void DeviceDataBatch::OnDeviceLost() {
     m_pSpriteBatch.reset();
     m_pOutlineEffect.reset();
     m_pOutlinePrimitiveBatch.reset();
-
-    for (MaterialPair& materialPair : m_materialData) {
-        materialPair.second.reset();
-    }
-    for (MeshPair& meshPair : m_meshData) {
-        meshPair.second->OnDeviceLost();
-    }
-    for (TexturePair& texturePair : m_textureData) {
-        texturePair.second->OnDeviceLost();
-    }
-    for (SpritePair& spritePair : m_spriteData) {
-        spritePair.second->OnDeviceLost();
-    }
-    for (TextPair& textPair : m_textData) {
-        textPair.second->OnDeviceLost();
-    }
 }
 
 void DeviceDataBatch::OnDeviceRestored() {
-    CreateDeviceDependentResources();
+    CreateDescriptorHeapResources();
+    CreateOutlineBatchResources();
+    CreateSpriteBatchResources().wait();
     CreateWindowSizeDependentResources();
+
+    for (MaterialPair& materialPair : m_materialData) {
+        materialPair.second->SetDescriptorHeap(m_pDescriptorHeap.get());
+        materialPair.second->SetCommonStates(m_pCommonStates);
+        materialPair.second->SetRtState(m_pRtState);
+    }
+    for (TexturePair& texturePair : m_textureData) {
+        texturePair.second->SetDescriptorHeap(m_pDescriptorHeap.get());
+    }
+    for (SpritePair& spritePair : m_spriteData) {
+        spritePair.second->SetDescriptorHeap(m_pDescriptorHeap.get());
+    }
+    for (TextPair& textPair : m_textData) {
+        textPair.second->SetDescriptorHeap(m_pDescriptorHeap.get());
+    }
 }
 
 void DeviceDataBatch::OnAdd(const std::shared_ptr<Material>& pMaterial) {
     std::shared_ptr<TextureDeviceData>& pDiffData = m_textureData[pMaterial->GetDiffuseMapFilePath()];
     if (!pDiffData)
-        pDiffData = std::make_unique<TextureDeviceData>(m_deviceResources, *m_pDescriptorHeap, NextHeapIndex(), pMaterial->GetDiffuseMapFilePath());
+        pDiffData = std::make_unique<TextureDeviceData>(m_deviceResources, m_pDescriptorHeap.get(), NextHeapIndex(), pMaterial->GetDiffuseMapFilePath());
 
     std::shared_ptr<TextureDeviceData>& pNormData = m_textureData[pMaterial->GetNormalMapFilePath()];
     if (!pNormData)
-        pNormData = std::make_unique<TextureDeviceData>(m_deviceResources, *m_pDescriptorHeap, NextHeapIndex(), pMaterial->GetNormalMapFilePath());
+        pNormData = std::make_unique<TextureDeviceData>(m_deviceResources, m_pDescriptorHeap.get(), NextHeapIndex(), pMaterial->GetNormalMapFilePath());
 
     std::shared_ptr<MaterialDeviceData>& pMaterialData = m_materialData[pMaterial];
     if (!pMaterialData)
         pMaterialData = std::make_unique<MaterialDeviceData>(
                 m_deviceResources,
-                *m_pDescriptorHeap,
-                m_commonStates,
-                m_rtState,
+                m_pDescriptorHeap.get(),
+                m_pCommonStates,
+                m_pRtState,
                 pDiffData,
                 pNormData,
                 *pMaterial);
@@ -92,7 +93,7 @@ void DeviceDataBatch::OnAdd(const std::shared_ptr<Model>& pModel) {
 void DeviceDataBatch::OnAdd(const std::shared_ptr<Sprite>& pSprite) {
     std::unique_ptr<TextureDeviceData>& pSpriteData = m_spriteData[pSprite]; 
     if (!pSpriteData)
-        pSpriteData = std::make_unique<TextureDeviceData>(m_deviceResources, *m_pDescriptorHeap, NextHeapIndex(), pSprite->GetFilePath());
+        pSpriteData = std::make_unique<TextureDeviceData>(m_deviceResources, m_pDescriptorHeap.get(), NextHeapIndex(), pSprite->GetFilePath());
 }
 
 void DeviceDataBatch::OnAdd(const std::shared_ptr<Text>& pText) {
@@ -100,7 +101,7 @@ void DeviceDataBatch::OnAdd(const std::shared_ptr<Text>& pText) {
     if (!pTextData)
         pTextData = std::make_unique<TextDeviceData>(
                 m_deviceResources,
-                *m_pDescriptorHeap,
+                m_pDescriptorHeap.get(),
                 NextHeapIndex(),
                 pText->GetFilePath());
 }
@@ -211,26 +212,15 @@ void DeviceDataBatch::CreateDeviceDependentResources() {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
     CreateDescriptorHeapResources();
-
-    DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
-    resourceUploadBatch.Begin();
-
-    for (ModelPair& modelPair : m_modelData) {
-        //modelPair.second->LoadStaticBuffers(pDevice, resourceUploadBatch);
-    }
-
-    CreateRenderTargetDependentResources(resourceUploadBatch);
-
-    std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
-    uploadResourceFinished.wait();
+    CreateRenderTargetDependentResources();
 }
 
-void DeviceDataBatch::CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
+void DeviceDataBatch::CreateRenderTargetDependentResources() {
     for (MaterialPair& materialPair : m_materialData) {
         materialPair.second->CreateRenderTargetDependentResources();
     }
     CreateOutlineBatchResources();
-    CreateSpriteBatchResources(resourceUploadBatch);
+    CreateSpriteBatchResources();
 }
 
 void DeviceDataBatch::CreateWindowSizeDependentResources() {
@@ -258,10 +248,15 @@ void DeviceDataBatch::CreateDescriptorHeapResources() {
             m_descriptorHeapSize);
 }
 
-void DeviceDataBatch::CreateSpriteBatchResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
+std::future<void> DeviceDataBatch::CreateSpriteBatchResources() {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
-    DirectX::SpriteBatchPipelineStateDescription pd(m_rtState);
+    DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
+    resourceUploadBatch.Begin();
+
+    DirectX::SpriteBatchPipelineStateDescription pd(*m_pRtState);
     m_pSpriteBatch = std::make_unique<DirectX::SpriteBatch>(pDevice, resourceUploadBatch, pd);
+
+    return resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
 }
 
 void DeviceDataBatch::CreateOutlineBatchResources() {
@@ -279,7 +274,7 @@ void DeviceDataBatch::CreateOutlineBatchResources() {
             DirectX::CommonStates::Opaque,
             DirectX::CommonStates::DepthDefault,
             rastDesc,
-            m_rtState,
+            *m_pRtState,
             D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
 
     m_pOutlineEffect = std::make_unique<DirectX::BasicEffect>(pDevice, DirectX::EffectFlags::VertexColor, pd);
@@ -323,5 +318,13 @@ const std::unordered_map<std::shared_ptr<Text>, std::unique_ptr<TextDeviceData>>
 
 std::uint8_t DeviceDataBatch::GetNumDescriptors() const noexcept {
     return m_spriteData.size() + m_textData.size() + m_textureData.size();
+}
+
+void DeviceDataBatch::SetCommonStates(DirectX::CommonStates* pCommonStates) noexcept {
+    m_pCommonStates = pCommonStates;
+}
+
+void DeviceDataBatch::SetRtState(DirectX::RenderTargetState* pRtState) noexcept {
+    m_pRtState = pRtState;
 }
 

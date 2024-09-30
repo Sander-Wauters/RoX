@@ -4,16 +4,16 @@
 
 MaterialDeviceData::MaterialDeviceData(
         DeviceResources& deviceResources, 
-        DirectX::DescriptorHeap& descriptorHeap, 
-        DirectX::CommonStates& commonStates,
-        DirectX::RenderTargetState& rtState,
+        DirectX::DescriptorHeap* pDescriptorHeap, 
+        DirectX::CommonStates* pCommonStates,
+        DirectX::RenderTargetState* pRtState,
         std::shared_ptr<TextureDeviceData> pDiffuseMap,
         std::shared_ptr<TextureDeviceData> pNormalMap,
         Material& material) 
     : m_deviceResources(deviceResources),
-    m_descriptorHeap(descriptorHeap),
-    m_commonStates(commonStates),
-    m_rtState(rtState),
+    m_pDescriptorHeap(pDescriptorHeap),
+    m_pCommonStates(pCommonStates),
+    m_pRtState(pRtState),
     m_flags(material.GetFlags()),
     m_pDiffuseMap(pDiffuseMap),
     m_pNormalMap(pNormalMap)
@@ -59,7 +59,7 @@ void MaterialDeviceData::CreateIEffect() {
             BlendDesc(m_flags),
             DepthStencilDesc(m_flags),
             RasterizerDesc(m_flags),
-            m_rtState);
+            *m_pRtState);
 
     if (m_flags & RenderFlags::Effect::Instanced) 
         m_pIEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Instancing, pd);
@@ -76,8 +76,8 @@ void MaterialDeviceData::CreateIEffect() {
 
 void MaterialDeviceData::BindTexturesToIEffect() {
     auto pNormal = dynamic_cast<DirectX::NormalMapEffect*>(m_pIEffect.get());
-    pNormal->SetTexture(m_descriptorHeap.GetGpuHandle(m_pDiffuseMap->GetHeapIndex()), SamplerDesc(m_flags));
-    pNormal->SetNormalTexture(m_descriptorHeap.GetGpuHandle(m_pNormalMap->GetHeapIndex()));
+    pNormal->SetTexture(m_pDescriptorHeap->GetGpuHandle(m_pDiffuseMap->GetHeapIndex()), SamplerDesc(m_flags));
+    pNormal->SetNormalTexture(m_pDescriptorHeap->GetGpuHandle(m_pNormalMap->GetHeapIndex()));
 }
 
 D3D12_INPUT_LAYOUT_DESC MaterialDeviceData::InputLayoutDesc(std::uint32_t flags) const {
@@ -128,21 +128,33 @@ D3D12_RASTERIZER_DESC MaterialDeviceData::RasterizerDesc(std::uint32_t flags) co
 
 D3D12_GPU_DESCRIPTOR_HANDLE MaterialDeviceData::SamplerDesc(std::uint32_t flags) const noexcept {
     if (flags & RenderFlags::SamplerState::PointWrap)
-        return m_commonStates.PointWrap();
+        return m_pCommonStates->PointWrap();
     if (flags & RenderFlags::SamplerState::PointClamp)
-        return m_commonStates.PointClamp();
+        return m_pCommonStates->PointClamp();
     if (flags & RenderFlags::SamplerState::LinearWrap)
-        return m_commonStates.LinearWrap();
+        return m_pCommonStates->LinearWrap();
     if (flags & RenderFlags::SamplerState::LinearClamp)
-        return m_commonStates.LinearClamp();
+        return m_pCommonStates->LinearClamp();
     if (flags & RenderFlags::SamplerState::AnisotropicWrap)
-        return m_commonStates.AnisotropicWrap();
+        return m_pCommonStates->AnisotropicWrap();
     if (flags & RenderFlags::SamplerState::AnisotropicClamp)
-        return m_commonStates.AnisotropicClamp();
-    return m_commonStates.AnisotropicWrap();
+        return m_pCommonStates->AnisotropicClamp();
+    return m_pCommonStates->AnisotropicWrap();
 }
 
 DirectX::IEffect* MaterialDeviceData::GetIEffect() {
     return m_pIEffect.get();
+}
+
+void MaterialDeviceData::SetDescriptorHeap(DirectX::DescriptorHeap* pDescriptorHeap) noexcept {
+    m_pDescriptorHeap = pDescriptorHeap;
+}
+
+void MaterialDeviceData::SetCommonStates(DirectX::CommonStates* pCommonStates) noexcept {
+    m_pCommonStates = pCommonStates;
+}
+
+void MaterialDeviceData::SetRtState(DirectX::RenderTargetState* pRtState) noexcept {
+    m_pRtState = pRtState;
 }
 

@@ -1,14 +1,20 @@
 #include "DeviceResourceData.h"
 
-DeviceResourceData::DeviceResourceData(DeviceResources& deviceResources) 
+#include <ImGuiBackends/imgui_impl_dx12.h>
+
+DeviceResourceData::DeviceResourceData(DeviceResources& deviceResources, bool msaaEnabled) 
     noexcept : m_pScene(nullptr),
-    m_deviceResources(deviceResources)
+    m_deviceResources(deviceResources),
+    m_msaaEnabled(msaaEnabled)
 {
     m_deviceResources.Attach(this);
-    m_pRenderTartgetState = std::make_unique<DirectX::RenderTargetState>(
-            m_deviceResources.GetBackBufferFormat(), 
-            m_deviceResources.GetDepthBufferFormat());
     CreateDeviceDependentResources();
+    ImGui_ImplDX12_Init(m_deviceResources.GetDevice(), 
+            m_deviceResources.GetBackBufferCount(),
+            m_deviceResources.GetBackBufferFormat(),
+            m_pImGuiDescriptorHeap->Heap(),
+            m_pImGuiDescriptorHeap->GetCpuHandle(0),
+            m_pImGuiDescriptorHeap->GetGpuHandle(0));
 }
 
 DeviceResourceData::~DeviceResourceData() noexcept {
@@ -18,10 +24,21 @@ DeviceResourceData::~DeviceResourceData() noexcept {
 void DeviceResourceData::OnDeviceLost() {
     m_pImGuiDescriptorHeap.reset();
     m_pCommonStates.reset();
+    ImGui_ImplDX12_Shutdown();
 }
 
 void DeviceResourceData::OnDeviceRestored() {
     CreateDeviceDependentResources();
+    ImGui_ImplDX12_Init(m_deviceResources.GetDevice(), 
+            m_deviceResources.GetBackBufferCount(),
+            m_deviceResources.GetBackBufferFormat(),
+            m_pImGuiDescriptorHeap->Heap(),
+            m_pImGuiDescriptorHeap->GetCpuHandle(0),
+            m_pImGuiDescriptorHeap->GetGpuHandle(0));
+    for (auto& dataBatch : m_dataBatches) {
+        dataBatch->SetCommonStates(m_pCommonStates.get());
+        dataBatch->SetRtState(m_pRenderTartgetState.get());
+    }
 }
 
 void DeviceResourceData::Load(Scene& scene, bool& msaaEnabled) {
@@ -43,11 +60,19 @@ void DeviceResourceData::Update() {
 void DeviceResourceData::CreateDeviceDependentResources() {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
+    m_pRenderTartgetState = std::make_unique<DirectX::RenderTargetState>(
+            m_deviceResources.GetBackBufferFormat(), 
+            m_deviceResources.GetDepthBufferFormat());
+    if (m_msaaEnabled) {
+        m_pRenderTartgetState->sampleDesc.Count = DeviceResources::MSAA_COUNT;
+        m_pRenderTartgetState->sampleDesc.Quality = DeviceResources::MSAA_QUALITY;
+    }
     m_pCommonStates = std::make_unique<DirectX::CommonStates>(pDevice);
     CreateImGuiResources();
 }
 
-void DeviceResourceData::CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch, bool msaaEnabled) {
+void DeviceResourceData::CreateRenderTargetDependentResources(bool msaaEnabled) {
+    m_msaaEnabled = msaaEnabled;
     if (msaaEnabled) {
         m_pRenderTartgetState->sampleDesc.Count = DeviceResources::MSAA_COUNT;
         m_pRenderTartgetState->sampleDesc.Quality = DeviceResources::MSAA_QUALITY;
@@ -57,7 +82,7 @@ void DeviceResourceData::CreateRenderTargetDependentResources(DirectX::ResourceU
     }
 
     for (std::unique_ptr<DeviceDataBatch>& pBatch : m_dataBatches) {
-        pBatch->CreateRenderTargetDependentResources(resourceUploadBatch);
+        pBatch->CreateRenderTargetDependentResources();
     }
 }
 
@@ -85,8 +110,8 @@ void DeviceResourceData::FreshLoad(Scene& scene, bool& msaaEnabled) {
 
         auto pDataBatch = std::make_unique<DeviceDataBatch>(
                 m_deviceResources, 
-                *m_pCommonStates,
-                *m_pRenderTartgetState,
+                m_pCommonStates.get(),
+                m_pRenderTartgetState.get(),
                 pAssetBatch->GetMaxNumUniqueTextures());
 
         pDataBatch->Add(*m_pScene->GetAssetBatches()[i]);
@@ -127,8 +152,8 @@ void DeviceResourceData::DirtyLoad(Scene& scene, bool& msaaEnabled) {
         } else {
             auto pDataBatch = std::make_unique<DeviceDataBatch>(
                     m_deviceResources, 
-                    *m_pCommonStates,
-                    *m_pRenderTartgetState,
+                    m_pCommonStates.get(),
+                    m_pRenderTartgetState.get(),
                     pAssetBatch->GetMaxNumUniqueTextures());
             pDataBatch->Add(*scene.GetAssetBatches()[i]);
 

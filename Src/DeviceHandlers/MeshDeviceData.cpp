@@ -5,7 +5,8 @@ MeshDeviceData::MeshDeviceData(DeviceResources& deviceResources, IMesh& iMesh)
     m_indexBufferSize(0),
     m_vertexBufferSize(0),
     m_primitiveType(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST),
-    m_indexFormat(DXGI_FORMAT_R16_UINT)
+    m_indexFormat(DXGI_FORMAT_R16_UINT),
+    m_usingStaticBuffers(iMesh.IsUsingStaticBuffers())
 {
     m_deviceResources.Attach(this);
     iMesh.Attach(this);
@@ -39,27 +40,23 @@ void MeshDeviceData::OnDeviceLost() {
 void MeshDeviceData::OnDeviceRestored() {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
-    if (m_indexBuffer) {
+    if (!m_usingStaticBuffers) {
         m_indexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_indexBufferSize, 16, DirectX::GraphicsMemory::TAG_INDEX);
         memcpy(m_indexBuffer.Memory(), m_indexData.data(), m_indexBufferSize);
         m_indexData.clear();
-    }
-    if (m_staticIndexBuffer) {
-        m_indexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_indexBufferSize, 16, DirectX::GraphicsMemory::TAG_INDEX);
-        memcpy(m_indexBuffer.Memory(), m_indexData.data(), m_indexBufferSize);
-        LoadStaticIndexBuffer(!!m_indexBuffer);
-        m_indexData.clear();
-    }
 
-    if (m_vertexBuffer) {
         m_vertexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_vertexBufferSize, 16, DirectX::GraphicsMemory::TAG_VERTEX);
         memcpy(m_vertexBuffer.Memory(), m_vertexData.data(), m_vertexBufferSize);
         m_vertexData.clear();
-    }
-    if (m_staticVertexBuffer) {
+    } else {
+        m_indexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_indexBufferSize, 16, DirectX::GraphicsMemory::TAG_INDEX);
+        memcpy(m_indexBuffer.Memory(), m_indexData.data(), m_indexBufferSize);
+        LoadStaticIndexBuffer(false);
+        m_indexData.clear();
+
         m_vertexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_vertexBufferSize, 16, DirectX::GraphicsMemory::TAG_VERTEX);
         memcpy(m_vertexBuffer.Memory(), m_vertexData.data(), m_vertexBufferSize);
-        LoadStaticVertexBuffer(!!m_vertexBuffer);
+        LoadStaticVertexBuffer(false);
         m_vertexData.clear();
     }
 }

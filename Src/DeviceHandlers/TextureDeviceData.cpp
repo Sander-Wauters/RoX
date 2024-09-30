@@ -2,12 +2,12 @@
 
 TextureDeviceData::TextureDeviceData(
         DeviceResources& deviceResources, 
-        DirectX::DescriptorHeap& descriptorHeap,
+        DirectX::DescriptorHeap* pDescriptorHeap,
         std::uint32_t heapIndex, 
         std::wstring filePath) 
     : m_filePath(filePath),
     m_deviceResources(deviceResources),
-    m_descriptorHeap(descriptorHeap),
+    m_pDescriptorHeap(pDescriptorHeap),
     m_desciptorHeapIndex(heapIndex)
 {
     m_deviceResources.Attach(this);
@@ -32,13 +32,13 @@ std::future<void> TextureDeviceData::CreateTextureResource() {
     DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
     resourceUploadBatch.Begin();
 
-    if (DirectX::CreateWICTextureFromFile(pDevice, resourceUploadBatch, m_filePath.c_str(), m_pTexture.GetAddressOf()) != S_OK)
+    if (FAILED(DirectX::CreateWICTextureFromFile(pDevice, resourceUploadBatch, m_filePath.c_str(), m_pTexture.GetAddressOf())))
         ThrowIfFailed(DirectX::CreateDDSTextureFromFile(pDevice, resourceUploadBatch, m_filePath.c_str(), m_pTexture.GetAddressOf()));
 
     DirectX::CreateShaderResourceView(
             pDevice, 
             m_pTexture.Get(),
-            m_descriptorHeap.GetCpuHandle(m_desciptorHeapIndex));
+            m_pDescriptorHeap->GetCpuHandle(m_desciptorHeapIndex));
 
     return resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
 }
@@ -49,5 +49,9 @@ std::uint8_t TextureDeviceData::GetHeapIndex() const noexcept {
 
 Microsoft::WRL::ComPtr<ID3D12Resource>& TextureDeviceData::GetTexture() noexcept {
     return m_pTexture;
+}
+
+void TextureDeviceData::SetDescriptorHeap(DirectX::DescriptorHeap* pDescriptorHeap) noexcept {
+    m_pDescriptorHeap = pDescriptorHeap;
 }
 

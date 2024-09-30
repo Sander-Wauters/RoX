@@ -27,8 +27,8 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver, publ
     public:
         DeviceDataBatch(
                 DeviceResources& deviceResources, 
-                DirectX::CommonStates& commonStates,
-                DirectX::RenderTargetState& rtState,
+                DirectX::CommonStates* pCommonStates,
+                DirectX::RenderTargetState* pRtState,
                 std::uint8_t descriptorHeapSize) noexcept;
         ~DeviceDataBatch() noexcept;
 
@@ -62,14 +62,14 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver, publ
         void Update(DirectX::XMMATRIX view, DirectX::XMMATRIX projection);
 
         void CreateDeviceDependentResources();
-        void CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void CreateRenderTargetDependentResources();
         void CreateWindowSizeDependentResources();
 
     private:
         std::uint8_t NextHeapIndex() noexcept;
 
         void CreateDescriptorHeapResources();
-        void CreateSpriteBatchResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
+        std::future<void> CreateSpriteBatchResources();
         void CreateOutlineBatchResources();
 
     public:
@@ -88,10 +88,13 @@ class DeviceDataBatch : public IDeviceObserver, public IAssetBatchObserver, publ
 
         std::uint8_t GetNumDescriptors() const noexcept;
 
+        void SetCommonStates(DirectX::CommonStates* pCommonStates) noexcept;
+        void SetRtState(DirectX::RenderTargetState* pRtState) noexcept;
+
     private:
         DeviceResources& m_deviceResources;
-        DirectX::CommonStates& m_commonStates;
-        DirectX::RenderTargetState& m_rtState;
+        DirectX::CommonStates* m_pCommonStates;
+        DirectX::RenderTargetState* m_pRtState;
 
         const std::uint8_t m_descriptorHeapSize;
         std::uint8_t m_nextDescriptorHeapIndex;

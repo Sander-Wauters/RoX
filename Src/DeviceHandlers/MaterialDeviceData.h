@@ -12,9 +12,9 @@ class MaterialDeviceData : public IDeviceObserver {
     public:
         MaterialDeviceData(
                 DeviceResources& deviceResources, 
-                DirectX::DescriptorHeap& descriptorHeap, 
-                DirectX::CommonStates& commonStates,
-                DirectX::RenderTargetState& rtState,
+                DirectX::DescriptorHeap* pDescriptorHeap, 
+                DirectX::CommonStates* pCommonStates,
+                DirectX::RenderTargetState* pRtState,
                 std::shared_ptr<TextureDeviceData> pDiffuseMap,
                 std::shared_ptr<TextureDeviceData> pNormalMap,
                 Material& material);
@@ -42,11 +42,15 @@ class MaterialDeviceData : public IDeviceObserver {
     public:
         DirectX::IEffect* GetIEffect();
 
+        void SetDescriptorHeap(DirectX::DescriptorHeap* pDescriptorHeap) noexcept;
+        void SetCommonStates(DirectX::CommonStates* pCommonStates) noexcept;
+        void SetRtState(DirectX::RenderTargetState* pRtState) noexcept;
+
     private:
         DeviceResources& m_deviceResources;
-        DirectX::DescriptorHeap& m_descriptorHeap;
-        DirectX::CommonStates& m_commonStates;
-        DirectX::RenderTargetState& m_rtState;
+        DirectX::DescriptorHeap* m_pDescriptorHeap;
+        DirectX::CommonStates* m_pCommonStates;
+        DirectX::RenderTargetState* m_pRtState;
 
         std::uint32_t m_flags;
 

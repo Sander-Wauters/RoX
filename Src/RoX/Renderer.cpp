@@ -27,6 +27,8 @@ class Renderer::Impl : public IDeviceObserver {
         void Update();
         void Render(const std::function<void()>& renderImGui);
 
+        void ForceDeviceReset();
+
         void OnDeviceLost() override;
         void OnDeviceRestored() override;
         void OnActivated();
@@ -51,7 +53,7 @@ class Renderer::Impl : public IDeviceObserver {
         void RenderText(const DeviceDataBatch& batch, std::uint8_t batchIndex);
 
         void CreateDeviceDependentResources();
-        void CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch);
+        void CreateRenderTargetDependentResources();
         void CreateWindowSizeDependentResources();
 
     private:
@@ -68,6 +70,12 @@ Renderer::Impl::Impl(Renderer* pOwner, HWND window, int width, int height)
     noexcept : m_pOwner(pOwner),
     m_msaaEnabled(false)
 {
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    ImGui_ImplWin32_Init(window);    
+
     m_pDeviceResources = std::make_unique<DeviceResources>();
     m_pDeviceResources->Attach(this);
     m_pDeviceResources->SetWindow(window, width, height);
@@ -76,22 +84,7 @@ Renderer::Impl::Impl(Renderer* pOwner, HWND window, int width, int height)
 
     m_pGraphicsMemory = std::make_unique<DirectX::GraphicsMemory>(m_pDeviceResources->GetDevice());
 
-    m_pDeviceResourceData = std::make_unique<DeviceResourceData>(*m_pDeviceResources);
-
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    ImGui_ImplWin32_Init(window);    
-
-    m_pDeviceResourceData->CreateImGuiResources();
-    DirectX::DescriptorHeap* pDesc = m_pDeviceResourceData->GetImGuiDescriptorHeap();
-    ImGui_ImplDX12_Init(m_pDeviceResources->GetDevice(), 
-            m_pDeviceResources->GetBackBufferCount(),
-            m_pDeviceResources->GetBackBufferFormat(),
-            pDesc->Heap(),
-            pDesc->GetCpuHandle(0),
-            pDesc->GetGpuHandle(0));
+    m_pDeviceResourceData = std::make_unique<DeviceResourceData>(*m_pDeviceResources, m_msaaEnabled);
 }
 
 Renderer::Impl::~Impl() noexcept {
@@ -100,8 +93,8 @@ Renderer::Impl::~Impl() noexcept {
         m_pDeviceResources->WaitForGpu();
     }
 
-    ImGui_ImplDX12_Shutdown();
     ImGui_ImplWin32_Shutdown();
+    ImGui_ImplDX12_Shutdown();
     ImGui::DestroyContext();
 }
 
@@ -174,16 +167,17 @@ void Renderer::Impl::Render(const std::function<void()>& renderImGui) {
     m_pGraphicsMemory->Commit(m_pDeviceResources->GetCommandQueue());
 }
 
+void Renderer::Impl::ForceDeviceReset() {
+    m_pDeviceResources->HandleDeviceLost();
+}
+
 void Renderer::Impl::OnDeviceLost() {
     m_pGraphicsMemory.reset();
-    m_pDeviceResourceData->OnDeviceLost();
-    ImGui_ImplDX12_InvalidateDeviceObjects();
 }
 
 void Renderer::Impl::OnDeviceRestored() {
-    ImGui_ImplDX12_CreateDeviceObjects();
+    m_pGraphicsMemory = std::make_unique<DirectX::GraphicsMemory>(m_pDeviceResources->GetDevice());
     CreateDeviceDependentResources();
-    CreateWindowSizeDependentResources();
 }
 
 void Renderer::Impl::OnActivated() {
@@ -221,19 +215,11 @@ void Renderer::Impl::OnWindowSizeChanged(int width, int height) {
 void Renderer::Impl::SetMsaa(bool state) noexcept {
     if (m_msaaEnabled == state)
         return;
-
     m_msaaEnabled = state;
 
     m_pDeviceResources->WaitForGpu();
-    ID3D12Device* pDevice = m_pDeviceResources->GetDevice();
-    DirectX::ResourceUploadBatch resourceUploadBatch(pDevice);
-    resourceUploadBatch.Begin();
-
-    CreateRenderTargetDependentResources(resourceUploadBatch);
+    CreateRenderTargetDependentResources();
     CreateWindowSizeDependentResources();
-
-    std::future<void> uploadResourceFinished = resourceUploadBatch.End(m_pDeviceResources->GetCommandQueue());
-    uploadResourceFinished.wait();
 }
 
 bool Renderer::Impl::IsMsaaEnabled() const noexcept {
@@ -517,9 +503,9 @@ void Renderer::Impl::CreateDeviceDependentResources() {
         m_pDeviceResourceData->CreateDeviceDependentResources();
 }
 
-void Renderer::Impl::CreateRenderTargetDependentResources(DirectX::ResourceUploadBatch& resourceUploadBatch) {
+void Renderer::Impl::CreateRenderTargetDependentResources() {
     if (m_pDeviceResourceData->SceneLoaded())
-        m_pDeviceResourceData->CreateRenderTargetDependentResources(resourceUploadBatch, m_msaaEnabled);
+        m_pDeviceResourceData->CreateRenderTargetDependentResources(m_msaaEnabled);
 }
 
 void Renderer::Impl::CreateWindowSizeDependentResources() {
@@ -555,6 +541,10 @@ void Renderer::Render() {
 
 void Renderer::Render(const std::function<void()>& renderImGui) { 
     m_pImpl->Render(renderImGui); 
+}
+
+void Renderer::ForceDeviceReset() {
+    m_pImpl->ForceDeviceReset();
 }
 
 void Renderer::OnActivated() { 

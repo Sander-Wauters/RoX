@@ -23,6 +23,8 @@ class Renderer : public IWindowObserver {
         void Render();
         void Render(const std::function<void()>& renderImGui);
 
+        void ForceDeviceReset();
+
         void OnActivated() override;
         void OnDeactivated() override;
         void OnSuspending() override;

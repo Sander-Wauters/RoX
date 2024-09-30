@@ -9,7 +9,7 @@ class TextureDeviceData : public IDeviceObserver {
     public:
         TextureDeviceData(
                 DeviceResources& deviceResources, 
-                DirectX::DescriptorHeap& descriptorHeap,
+                DirectX::DescriptorHeap* pDescriptorHeap,
                 std::uint32_t heapIndex, 
                 std::wstring filePath);
         ~TextureDeviceData();
@@ -26,11 +26,13 @@ class TextureDeviceData : public IDeviceObserver {
 
         Microsoft::WRL::ComPtr<ID3D12Resource>& GetTexture() noexcept;
 
+        void SetDescriptorHeap(DirectX::DescriptorHeap* pDescriptorHeap) noexcept;
+
     private:
         const std::wstring m_filePath;
 
         DeviceResources& m_deviceResources;
-        DirectX::DescriptorHeap& m_descriptorHeap;
+        DirectX::DescriptorHeap* m_pDescriptorHeap;
 
         std::uint8_t m_desciptorHeapIndex;
         Microsoft::WRL::ComPtr<ID3D12Resource> m_pTexture;        

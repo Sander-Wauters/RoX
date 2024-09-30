@@ -64,6 +64,8 @@ class MeshDeviceData : public IDeviceObserver, public IMeshObserver {
 
         D3D_PRIMITIVE_TOPOLOGY m_primitiveType;
         DXGI_FORMAT m_indexFormat;
+
+        bool m_usingStaticBuffers;
         DirectX::SharedGraphicsResource m_indexBuffer;
         DirectX::SharedGraphicsResource m_vertexBuffer;
         Microsoft::WRL::ComPtr<ID3D12Resource> m_staticIndexBuffer;

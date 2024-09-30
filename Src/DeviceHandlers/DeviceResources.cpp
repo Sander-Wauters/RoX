@@ -660,11 +660,11 @@ void DeviceResources::UpdateColorSpace() {
 void DeviceResources::Attach(IDeviceObserver* pIDeviceObserver) {
     if (!pIDeviceObserver)
         throw std::invalid_argument("IDeviceObserver is nullptr.");
-    m_deviceObservers.insert(pIDeviceObserver);
+    m_deviceObservers.push_back(pIDeviceObserver);
 }
 
 void DeviceResources::Detach(IDeviceObserver* pIDeviceObserver) noexcept {
-    m_deviceObservers.erase(pIDeviceObserver);
+    m_deviceObservers.erase(std::remove(m_deviceObservers.begin(), m_deviceObservers.end(), pIDeviceObserver), m_deviceObservers.end());
 }
 
 void DeviceResources::SetWindow(HWND window, int width, int height) noexcept {

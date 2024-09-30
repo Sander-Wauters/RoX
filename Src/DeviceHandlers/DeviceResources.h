@@ -131,5 +131,5 @@ class DeviceResources {
         // DeviceResources options (see flags above)
         unsigned int m_options;
 
-        std::unordered_set<IDeviceObserver*> m_deviceObservers;
+        std::vector<IDeviceObserver*> m_deviceObservers;
 };

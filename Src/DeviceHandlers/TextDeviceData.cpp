@@ -2,12 +2,12 @@
 
 TextDeviceData::TextDeviceData(
         DeviceResources& deviceResources, 
-        DirectX::DescriptorHeap& descriptorHeap,
+        DirectX::DescriptorHeap* pDescriptorHeap,
         std::uint32_t heapIndex,
         std::wstring filePath) 
     : m_filePath(filePath),
     m_deviceResources(deviceResources),
-    m_descriptorHeap(descriptorHeap),
+    m_pDescriptorHeap(pDescriptorHeap),
     m_descriptorHeapIndex(heapIndex)
 {
     deviceResources.Attach(this);
@@ -39,8 +39,8 @@ std::future<void> TextDeviceData::CreateSpriteFont() {
             pDevice,
             resourceUploadBatch,
             m_filePath.c_str(),
-            m_descriptorHeap.GetCpuHandle(m_descriptorHeapIndex),
-            m_descriptorHeap.GetGpuHandle(m_descriptorHeapIndex));
+            m_pDescriptorHeap->GetCpuHandle(m_descriptorHeapIndex),
+            m_pDescriptorHeap->GetGpuHandle(m_descriptorHeapIndex));
 
     return resourceUploadBatch.End(m_deviceResources.GetCommandQueue());
 }
@@ -51,5 +51,9 @@ std::uint8_t TextDeviceData::GetHeapIndex() const noexcept {
 
 const DirectX::SpriteFont& TextDeviceData::GetSpriteFont() const noexcept {
     return *m_pSpriteFont;
+}
+
+void TextDeviceData::SetDescriptorHeap(DirectX::DescriptorHeap* pDescriptorHeap) noexcept {
+    m_pDescriptorHeap = pDescriptorHeap;
 }
 

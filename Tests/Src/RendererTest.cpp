@@ -29,6 +29,7 @@ class RendererTest : public testing::Test, public ValidAssetBatch {
 
         ~RendererTest() {
             g_pWindow->Detach(pRenderer.get());
+            pRenderer.reset();
         }
 
         std::unique_ptr<Renderer> pRenderer;
@@ -63,6 +64,11 @@ testing::AssertionResult SimulateMainLoop(Renderer& renderer, std::uint8_t count
 // ---------------------------------------------------------------- //
 
 TEST_F(RendererTest, PreLoad_SimulateMainLoop) {
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PreLoad_ForceDeviceReset) {
+    ASSERT_NO_THROW(pRenderer->ForceDeviceReset());
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
@@ -109,6 +115,13 @@ TEST_F(RendererTest, Load_Dirty_WithOccupiedScene) {
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
     ASSERT_NO_THROW(pRenderer->Load(*pNewScene));
+    ASSERT_TRUE(SimulateMainLoop(*pRenderer));
+}
+
+TEST_F(RendererTest, PostFreshLoad_ForceDeviceReset) {
+    ASSERT_NO_THROW(pRenderer->Load(*pScene));
+
+    ASSERT_NO_THROW(pRenderer->ForceDeviceReset());
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
