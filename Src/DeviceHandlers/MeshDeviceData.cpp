@@ -18,6 +18,11 @@ MeshDeviceData::MeshDeviceData(DeviceResources& deviceResources, IMesh& iMesh)
 
     LoadIndexBuffer(&iMesh);
     LoadVertexBuffer(&iMesh);
+
+    if (m_usingStaticBuffers) {
+        LoadStaticIndexBuffer(true);
+        LoadStaticVertexBuffer(true);
+    }
 }
 
 MeshDeviceData::~MeshDeviceData() {
@@ -33,35 +38,30 @@ void MeshDeviceData::OnDeviceLost() {
 
     m_indexBuffer.Reset();
     m_vertexBuffer.Reset();
-    m_staticIndexBuffer.Reset();
-    m_staticVertexBuffer.Reset();
+    m_pStaticIndexBuffer.Reset();
+    m_pStaticVertexBuffer.Reset();
 }
 
 void MeshDeviceData::OnDeviceRestored() {
     ID3D12Device* pDevice = m_deviceResources.GetDevice();
 
-    if (!m_usingStaticBuffers) {
-        m_indexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_indexBufferSize, 16, DirectX::GraphicsMemory::TAG_INDEX);
-        memcpy(m_indexBuffer.Memory(), m_indexData.data(), m_indexBufferSize);
-        m_indexData.clear();
+    m_indexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_indexBufferSize, 16, DirectX::GraphicsMemory::TAG_INDEX);
+    memcpy(m_indexBuffer.Memory(), m_indexData.data(), m_indexBufferSize);
 
-        m_vertexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_vertexBufferSize, 16, DirectX::GraphicsMemory::TAG_VERTEX);
-        memcpy(m_vertexBuffer.Memory(), m_vertexData.data(), m_vertexBufferSize);
-        m_vertexData.clear();
-    } else {
-        m_indexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_indexBufferSize, 16, DirectX::GraphicsMemory::TAG_INDEX);
-        memcpy(m_indexBuffer.Memory(), m_indexData.data(), m_indexBufferSize);
-        LoadStaticIndexBuffer(false);
-        m_indexData.clear();
+    m_vertexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_vertexBufferSize, 16, DirectX::GraphicsMemory::TAG_VERTEX);
+    memcpy(m_vertexBuffer.Memory(), m_vertexData.data(), m_vertexBufferSize);
 
-        m_vertexBuffer = DirectX::GraphicsMemory::Get(pDevice).Allocate(m_vertexBufferSize, 16, DirectX::GraphicsMemory::TAG_VERTEX);
-        memcpy(m_vertexBuffer.Memory(), m_vertexData.data(), m_vertexBufferSize);
-        LoadStaticVertexBuffer(false);
-        m_vertexData.clear();
+    if (m_usingStaticBuffers) {
+        LoadStaticIndexBuffer(true);
+        LoadStaticVertexBuffer(true);
     }
+    m_indexData.clear();
+    m_vertexData.clear();
 }
 
 void MeshDeviceData::OnUseStaticBuffers(IMesh* pIMesh, bool useStaticBuffers) {
+    m_usingStaticBuffers = useStaticBuffers;
+
     m_deviceResources.WaitForGpu();
 
     if (!m_indexBuffer && !m_vertexBuffer) {
@@ -69,12 +69,12 @@ void MeshDeviceData::OnUseStaticBuffers(IMesh* pIMesh, bool useStaticBuffers) {
         LoadVertexBuffer(pIMesh);
     }
 
-    if (useStaticBuffers && !m_staticIndexBuffer && !m_staticVertexBuffer) {
-        LoadStaticIndexBuffer(false);
-        LoadStaticVertexBuffer(false);
+    if (useStaticBuffers && !m_pStaticIndexBuffer && !m_pStaticVertexBuffer) {
+        LoadStaticIndexBuffer(true);
+        LoadStaticVertexBuffer(true);
     } else {
-        m_staticIndexBuffer.Reset();
-        m_staticVertexBuffer.Reset();
+        m_pStaticIndexBuffer.Reset();
+        m_pStaticVertexBuffer.Reset();
     }
 }
 
@@ -148,10 +148,10 @@ std::future<void> MeshDeviceData::LoadStaticIndexBuffer(bool keepMemory) {
 
     ThrowIfFailed(pDevice->CreateCommittedResource(
                 &heapProperties, D3D12_HEAP_FLAG_NONE, &desc, DirectX::c_initialCopyTargetState, nullptr,
-                IID_GRAPHICS_PPV_ARGS(m_staticIndexBuffer.GetAddressOf())));
+                IID_GRAPHICS_PPV_ARGS(m_pStaticIndexBuffer.GetAddressOf())));
 
-    resourceUploadBatch.Upload(m_staticIndexBuffer.Get(), m_indexBuffer);
-    resourceUploadBatch.Transition(m_staticIndexBuffer.Get(),
+    resourceUploadBatch.Upload(m_pStaticIndexBuffer.Get(), m_indexBuffer);
+    resourceUploadBatch.Transition(m_pStaticIndexBuffer.Get(),
             D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
     if (!keepMemory)
@@ -170,10 +170,10 @@ std::future<void> MeshDeviceData::LoadStaticVertexBuffer(bool keepMemory) {
     auto const desc = CD3DX12_RESOURCE_DESC::Buffer(m_vertexBufferSize);
     ThrowIfFailed(pDevice->CreateCommittedResource(
                 &heapProperties, D3D12_HEAP_FLAG_NONE, &desc, DirectX::c_initialCopyTargetState, nullptr,
-                IID_GRAPHICS_PPV_ARGS(m_staticVertexBuffer.GetAddressOf())));
+                IID_GRAPHICS_PPV_ARGS(m_pStaticVertexBuffer.GetAddressOf())));
 
-    resourceUploadBatch.Upload(m_staticVertexBuffer.Get(), m_vertexBuffer);
-    resourceUploadBatch.Transition(m_staticVertexBuffer.Get(),
+    resourceUploadBatch.Upload(m_pStaticVertexBuffer.Get(), m_vertexBuffer);
+    resourceUploadBatch.Transition(m_pStaticVertexBuffer.Get(),
             D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
     if (!keepMemory)
@@ -187,19 +187,19 @@ void MeshDeviceData::PrepareForDraw() const {
 
     if (!m_indexBufferSize || !m_vertexBufferSize) 
         throw std::runtime_error("Submesh is missing values for vertex and/or index buffer size: vertexBufferSize=" + std::to_string(m_vertexBufferSize) + "; indexBufferSize=" + std::to_string(m_indexBufferSize));
-    if (!m_staticIndexBuffer && !m_indexBuffer)
+    if (!m_pStaticIndexBuffer && !m_indexBuffer)
         throw std::runtime_error("Submesh is missing index buffer");
-    if (!m_staticVertexBuffer && !m_vertexBuffer)
+    if (!m_pStaticVertexBuffer && !m_vertexBuffer)
         throw std::runtime_error("Submesh is missing vertex buffer");
 
     D3D12_VERTEX_BUFFER_VIEW vbv;
-    vbv.BufferLocation = m_staticVertexBuffer ? m_staticVertexBuffer->GetGPUVirtualAddress() : m_vertexBuffer.GpuAddress();
+    vbv.BufferLocation = m_pStaticVertexBuffer ? m_pStaticVertexBuffer->GetGPUVirtualAddress() : m_vertexBuffer.GpuAddress();
     vbv.StrideInBytes = m_vertexStride;
     vbv.SizeInBytes = m_vertexBufferSize;
     pCommandList->IASetVertexBuffers(0, 1, &vbv);
 
     D3D12_INDEX_BUFFER_VIEW ibv;
-    ibv.BufferLocation = m_staticIndexBuffer ? m_staticIndexBuffer->GetGPUVirtualAddress() : m_indexBuffer.GpuAddress();
+    ibv.BufferLocation = m_pStaticIndexBuffer ? m_pStaticIndexBuffer->GetGPUVirtualAddress() : m_indexBuffer.GpuAddress();
     ibv.SizeInBytes = m_indexBufferSize;
     ibv.Format = m_indexFormat;
     pCommandList->IASetIndexBuffer(&ibv);
@@ -228,11 +228,11 @@ DirectX::SharedGraphicsResource& MeshDeviceData::GetVertexBuffer() noexcept {
 }
 
 Microsoft::WRL::ComPtr<ID3D12Resource>& MeshDeviceData::GetStaticIndexBuffer() noexcept {
-    return m_staticIndexBuffer;
+    return m_pStaticIndexBuffer;
 }
 
 Microsoft::WRL::ComPtr<ID3D12Resource>& MeshDeviceData::GetStaticVertexBuffer() noexcept {
-    return m_staticVertexBuffer;
+    return m_pStaticVertexBuffer;
 }
 
 void MeshDeviceData::SetIndexBufferSize(std::uint32_t size) noexcept {
@@ -244,11 +244,11 @@ void MeshDeviceData::SetVertexBufferSize(std::uint32_t size) noexcept {
 }
 
 void MeshDeviceData::SetStaticIndexBuffer(ID3D12Resource* pIndexBuffer) {
-    m_staticIndexBuffer = pIndexBuffer;
+    m_pStaticIndexBuffer = pIndexBuffer;
 }
 
 void MeshDeviceData::SetStaticVertexBuffer(ID3D12Resource* pVertexBuffer) {
-    m_staticVertexBuffer = pVertexBuffer;
+    m_pStaticVertexBuffer = pVertexBuffer;
 }
 
 std::uint32_t MeshDeviceData::GetNumSubmeshes() const noexcept {

@@ -8,6 +8,9 @@
 #include "SubmeshDeviceData.h"
 #include "DeviceResources.h"
 
+// Manages index and vertex buffers for a mesh.
+// **m_indexBuffer** and **m_vertexBuffer** will ALWAYS contain data, even when using static buffers.
+// This so that the object can rebuild itself after the device is lost.
 class MeshDeviceData : public IDeviceObserver, public IMeshObserver {
     public:
         MeshDeviceData(DeviceResources& deviceResources, IMesh& iMesh);
@@ -68,8 +71,8 @@ class MeshDeviceData : public IDeviceObserver, public IMeshObserver {
         bool m_usingStaticBuffers;
         DirectX::SharedGraphicsResource m_indexBuffer;
         DirectX::SharedGraphicsResource m_vertexBuffer;
-        Microsoft::WRL::ComPtr<ID3D12Resource> m_staticIndexBuffer;
-        Microsoft::WRL::ComPtr<ID3D12Resource> m_staticVertexBuffer;
+        Microsoft::WRL::ComPtr<ID3D12Resource> m_pStaticIndexBuffer;
+        Microsoft::WRL::ComPtr<ID3D12Resource> m_pStaticVertexBuffer;
 
         // Used as temporary storage for vertices and indices when restoring the device.
         // Outside of this use case these vectors should NOT store any data.

@@ -101,6 +101,9 @@ class IMeshObserver {
 
 // Abstract interface representing any mesh which can be used by the **Renderer**.
 // A mesh contains the vertices and indices of a part of a model.
+// The engine will always keep a copy of the vertices and indices to ensure that it can rebuild it's
+// own state in case of the application loses connection to the GPU.
+// The vertex and index data can safely be removed after it is loaded into the renderer.
 class IMesh {
     protected:
         IMesh() = default;
