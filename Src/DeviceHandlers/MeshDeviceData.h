@@ -23,6 +23,9 @@ class MeshDeviceData : public IDeviceObserver, public IMeshObserver {
         void OnUseStaticBuffers(IMesh* pIMesh, bool useStaticBuffers) override;
         void OnUpdateBuffers(IMesh* pIMesh) override;
 
+        void OnRebuildFromBuffers(Mesh* pMesh) override;
+        void OnRebuildFromBuffers(SkinnedMesh* pMesh) override;
+
         void OnAdd(const std::unique_ptr<Submesh>& pSubmesh) override;
 
         void OnRemoveSubmesh(std::uint8_t index) override;
@@ -62,8 +65,11 @@ class MeshDeviceData : public IDeviceObserver, public IMeshObserver {
         std::vector<std::unique_ptr<SubmeshDeviceData>> m_submeshes;
 
         std::uint32_t m_vertexStride;
-        std::uint32_t m_indexBufferSize;
-        std::uint32_t m_vertexBufferSize;
+        std::uint32_t m_indexBufferSizeInBytes;
+        std::uint32_t m_vertexBufferSizeInBytes;
+
+        std::uint32_t m_numIndices;
+        std::uint32_t m_numVertices;
 
         D3D_PRIMITIVE_TOPOLOGY m_primitiveType;
         DXGI_FORMAT m_indexFormat;

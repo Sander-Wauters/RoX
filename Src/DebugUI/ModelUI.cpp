@@ -131,6 +131,17 @@ void ModelUI::Menu(Model& model, const Materials& availableMaterials) {
     bool usingStaticBuffers = model.IsUsingStaticBuffers();
     if (ImGui::Checkbox(Util::GUIDLabel("Using static buffers", model.GetGUID()).c_str(), &usingStaticBuffers))
         UpdateScheduler::Get().Add([&, usingStaticBuffers](){ model.UseStaticBuffers(usingStaticBuffers); });
+    ImGui::SameLine();
+    GeneralUI::HelpMarker("Applies to all meshes.");
+
+    bool keepVertexData = model.GetNumVertices() != 0;
+    if (ImGui::Checkbox(Util::GUIDLabel("Keep vertex data", model.GetGUID()).c_str(), &keepVertexData)) {
+        if (keepVertexData)
+            UpdateScheduler::Get().Add([&](){ model.RebuildFromBuffers(); });
+        else
+            UpdateScheduler::Get().Add([&](){ model.ClearGeometry(); });
+    }
+    ImGui::SameLine();
     GeneralUI::HelpMarker("Applies to all meshes.");
 
     ImGui::SeparatorText("Identifiers");

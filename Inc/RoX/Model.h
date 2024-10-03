@@ -88,11 +88,17 @@ class Submesh : public Asset {
 };
 
 class IMesh;
+class Mesh;
+class SkinnedMesh;
 
+// Mainly used to communicate with the renderer.
 class IMeshObserver {
     public:
         virtual void OnUseStaticBuffers(IMesh* pIMesh, bool useStaticBuffers) = 0;
         virtual void OnUpdateBuffers(IMesh* pIMesh) = 0;
+
+        virtual void OnRebuildFromBuffers(Mesh* pMesh) = 0;
+        virtual void OnRebuildFromBuffers(SkinnedMesh* pMesh) = 0;
 
         virtual void OnAdd(const std::unique_ptr<Submesh>& pSubmesh) = 0;
 
@@ -116,6 +122,9 @@ class IMesh {
         virtual void UseStaticBuffers(bool useStaticBuffers) = 0;
         // Only when using dynamic buffers.
         virtual void UpdateBuffers() = 0;
+
+        virtual void ClearGeometry() noexcept = 0;
+        virtual void RebuildFromBuffers() noexcept = 0;
 
         virtual void Add(std::unique_ptr<Submesh> pSubmesh) = 0;
 
@@ -180,7 +189,7 @@ class BaseMesh : public IMesh, public Asset {
         void SetBoneIndex(std::uint32_t boneIndex) noexcept override;
         void SetVisible(bool visible) noexcept override;
 
-    private:
+    protected:
         std::unordered_set<IMeshObserver*> m_iMeshObservers;
 
         std::uint32_t m_boneIndex;
@@ -197,6 +206,9 @@ class BaseMesh : public IMesh, public Asset {
 class Mesh : public BaseMesh {
     public:
         Mesh(std::string name = "", bool useStaticBuffers = false, bool visible = true) noexcept; 
+
+        void ClearGeometry() noexcept override;
+        void RebuildFromBuffers() noexcept override;
         
     public:
         std::vector<VertexPositionNormalTexture>& GetVertices() noexcept;
@@ -211,6 +223,9 @@ class Mesh : public BaseMesh {
 class SkinnedMesh : public BaseMesh {
     public:
         SkinnedMesh(std::string name = "", bool useStaticBuffers = false, bool visible = true) noexcept; 
+
+        void ClearGeometry() noexcept override;
+        void RebuildFromBuffers() noexcept override;
         
     public:
         std::vector<VertexPositionNormalTextureSkinning>& GetVertices() noexcept;
@@ -245,6 +260,9 @@ class Model : public Asset {
 
         void Add(std::shared_ptr<Material> pMaterial);
         void Add(std::shared_ptr<IMesh> pMesh);
+
+        void ClearGeometry() noexcept;
+        void RebuildFromBuffers() noexcept;
 
         void MakeBoneMatricesArray(std::uint64_t count);
         void MakeInverseBoneMatricesArray(std::uint64_t count);

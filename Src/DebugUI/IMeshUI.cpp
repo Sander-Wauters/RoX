@@ -53,6 +53,14 @@ void IMeshUI::Menu(IMesh& iMesh) {
     bool usingStaticBuffers = iMesh.IsUsingStaticBuffers();
     if (ImGui::Checkbox(Util::GUIDLabel("Using static buffers", iMesh.GetGUID()).c_str(), &usingStaticBuffers))
         UpdateScheduler::Get().Add([&, usingStaticBuffers](){ iMesh.UseStaticBuffers(usingStaticBuffers); });
+    
+    bool keepVertexData = iMesh.GetNumVertices() != 0;
+    if (ImGui::Checkbox(Util::GUIDLabel("Keep vertex data", iMesh.GetGUID()).c_str(), &keepVertexData)) {
+        if (keepVertexData)
+            UpdateScheduler::Get().Add([&](){ iMesh.RebuildFromBuffers(); });
+        else
+            UpdateScheduler::Get().Add([&](){ iMesh.ClearGeometry(); });
+    }
 
     if (auto pMesh = dynamic_cast<Mesh*>(&iMesh)) {
         ImGui::SeparatorText("Identifiers");

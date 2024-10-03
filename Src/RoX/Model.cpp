@@ -233,6 +233,18 @@ Mesh::Mesh(std::string name, bool useStaticBuffers, bool visible)
     noexcept : BaseMesh(name, useStaticBuffers, visible)
 {}
 
+void Mesh::ClearGeometry() noexcept {
+    m_indices.clear();
+    m_vertices.clear();
+}
+
+void Mesh::RebuildFromBuffers() noexcept {
+    for (IMeshObserver* pMeshObserver : m_iMeshObservers) {
+        if (pMeshObserver)
+            pMeshObserver->OnRebuildFromBuffers(this);
+    }
+}
+
 std::vector<VertexPositionNormalTexture>& Mesh::GetVertices() noexcept {
     return m_vertices;
 }
@@ -249,12 +261,24 @@ SkinnedMesh::SkinnedMesh(std::string name, bool useStaticBuffers, bool visible)
     noexcept : BaseMesh(name, useStaticBuffers, visible)
 {}
 
-std::uint32_t SkinnedMesh::GetNumVertices() const noexcept {
-    return m_vertices.size();
+void SkinnedMesh::ClearGeometry() noexcept {
+    m_indices.clear();
+    m_vertices.clear();
+}
+
+void SkinnedMesh::RebuildFromBuffers() noexcept {
+    for (IMeshObserver* pMeshObserver : m_iMeshObservers) {
+        if (pMeshObserver)
+            pMeshObserver->OnRebuildFromBuffers(this);
+    }
 }
 
 std::vector<VertexPositionNormalTextureSkinning>& SkinnedMesh::GetVertices() noexcept {
     return m_vertices;
+}
+
+std::uint32_t SkinnedMesh::GetNumVertices() const noexcept {
+    return m_vertices.size();
 }
 
 // ---------------------------------------------------------------- //
@@ -314,6 +338,18 @@ void Model::Add(std::shared_ptr<IMesh> pMesh) {
     for (IModelObserver* pIModelObserver : m_modelObservers) {
         if (pIModelObserver)
             pIModelObserver->OnAdd(pMesh);
+    }
+}
+
+void Model::ClearGeometry() noexcept {
+    for (std::shared_ptr<IMesh>& pMesh : m_meshes) {
+        pMesh->ClearGeometry();
+    }
+}
+
+void Model::RebuildFromBuffers() noexcept {
+    for (std::shared_ptr<IMesh>& pMesh : m_meshes) {
+        pMesh->RebuildFromBuffers();
     }
 }
 
