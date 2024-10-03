@@ -43,6 +43,14 @@ void MaterialDeviceData::UpdateIEffect(DirectX::XMMATRIX view, DirectX::XMMATRIX
         pNormal->SetDiffuseColor(DirectX::XMLoadFloat4(&material.GetDiffuseColor()));
         pNormal->SetEmissiveColor(DirectX::XMLoadFloat4(&material.GetEmissiveColor()));
         pNormal->SetSpecularColor(DirectX::XMLoadFloat4(&material.GetSpecularColor()));
+        
+        pNormal->SetAmbientLightColor(DirectX::XMLoadFloat3(&material.GetAmbientLight()));
+        for (std::uint8_t i = 0; i < material.GetNumDirectionalLights() && i < material.MAX_DIRECTIONAL_LIGHTS; ++i) {
+            std::shared_ptr<DirectionalLight>& pDirLight = material.GetDirectionalLights()[i];
+            pNormal->SetLightDirection(i, DirectX::XMLoadFloat3(&pDirLight->GetDirection()));
+            pNormal->SetLightDiffuseColor(i, DirectX::XMLoadFloat3(&pDirLight->GetDiffuseColor()));
+            pNormal->SetLightSpecularColor(i, DirectX::XMLoadFloat3(&pDirLight->GetSpecularColor()));
+        }
     }
 }
 
@@ -67,9 +75,6 @@ void MaterialDeviceData::CreateIEffect() {
         m_pIEffect = std::make_unique<DirectX::SkinnedNormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting, pd);
     else
         m_pIEffect = std::make_unique<DirectX::NormalMapEffect>(pDevice, DirectX::EffectFlags::Lighting | DirectX::EffectFlags::Texture, pd);
-
-    auto pNormal = dynamic_cast<DirectX::NormalMapEffect*>(m_pIEffect.get());
-    pNormal->EnableDefaultLighting();
 
     BindTexturesToIEffect();
 }

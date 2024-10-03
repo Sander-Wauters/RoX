@@ -43,6 +43,7 @@ set(SOURCE
     Src/RoX/AssetBatch.cpp
     Src/RoX/AssetIO.cpp
     Src/RoX/Camera.cpp
+    Src/RoX/DirectionalLight.cpp
     Src/RoX/Material.cpp
     Src/RoX/MeshFactory.cpp
     Src/RoX/Model.cpp
@@ -70,6 +71,7 @@ set(DEBUGUI_SOURCE
     Src/DebugUI/CameraUI.cpp
     Src/DebugUI/GeneralUI.cpp
     Src/DebugUI/IMeshUI.cpp
+    Src/DebugUI/LightingUI.cpp
     Src/DebugUI/MaterialUI.cpp
     Src/DebugUI/MathUI.cpp
     Src/DebugUI/MeshFactoryUI.cpp

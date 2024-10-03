@@ -3,6 +3,7 @@
 #include <ImGui/imgui.h>
 
 #include "DebugUI/UpdateScheduler.h"
+#include "DebugUI/LightingUI.h"
 #include "DebugUI/Util.h"
 #include "DebugUI/GeneralUI.h"
 #include "DebugUI/AssetUI.h"
@@ -256,6 +257,26 @@ void MaterialUI::Colors(Material& material) {
         Util::LoadFloat4(specular, material.GetSpecularColor());
 }
 
+void MaterialUI::Lights(Material& material) {
+    float ambient[3];
+    Util::StoreFloat3(material.GetAmbientLight(), ambient);
+
+    if (ImGui::ColorEdit3(Util::GUIDLabel("Ambient", material.GetGUID()).c_str(), ambient))
+        Util::LoadFloat3(ambient, material.GetAmbientLight());
+
+    ImGui::SeparatorText("Directional lights");
+
+    if (ImGui::Button("Add new directional light##Lights"))
+        material.GetDirectionalLights().push_back(std::make_shared<DirectionalLight>());
+    
+    for (std::uint8_t i = 0; i < material.GetNumDirectionalLights() && i < Material::MAX_DIRECTIONAL_LIGHTS; ++i) {
+        if (ImGui::TreeNode(Util::GUIDLabel(std::to_string(i), material.GetGUID()).c_str())) {
+            LightingUI::DirectionalLightMenu(*material.GetDirectionalLights()[i]);
+            ImGui::TreePop();
+        }
+    }
+}
+
 void MaterialUI::Creator(AssetBatch& batch) {
     static char diffuseMapFilePath[128] = "";
     static char normalMapFilePath[128] = "";
@@ -324,6 +345,9 @@ void MaterialUI::Menu(Material& material) {
 
     ImGui::SeparatorText("Colors");
     Colors(material);
+
+    ImGui::SeparatorText("Lights");
+    Lights(material);
 }
 
 void MaterialUI::Menu(std::vector<std::shared_ptr<Material>>& materials) {

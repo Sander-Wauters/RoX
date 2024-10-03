@@ -1,10 +1,13 @@
 #pragma once
 
 #include <string>
+#include <vector>
+#include <memory>
 #include <DirectXMath.h>
 #include <DirectXColors.h>
 
 #include "Asset.h"
+#include "DirectionalLight.h"
 
 // Collection of flags that **Renderer** uses to determine how a material (and by association a submesh) should be rendered.
 // To reset flags use `RenderFlags &= RenderFlags::...::Reset`.
@@ -87,11 +90,15 @@ namespace RenderFlags {
 // **Renderer** requires a material to have both a diffuse and normal map.
 class Material : public Asset {
     public:
+        static constexpr std::uint8_t MAX_DIRECTIONAL_LIGHTS = 3;
+
+    public:
         Material(
                 const std::wstring diffuseMapFilePath,
                 const std::wstring normalMapFilePath,
                 std::string name = "",
                 std::uint32_t flags = RenderFlags::Default,
+                DirectX::XMVECTOR ambientLight = DirectX::Colors::Gray,
                 DirectX::XMVECTOR diffuseColor = DirectX::Colors::White,
                 DirectX::XMVECTOR emissiveColor = DirectX::Colors::Black,
                 DirectX::XMVECTOR specularColor = DirectX::Colors::White) noexcept;
@@ -100,16 +107,22 @@ class Material : public Asset {
                 const std::string normalMapFilePath,
                 std::string name = "",
                 std::uint32_t flags = RenderFlags::Default,
+                DirectX::XMVECTOR ambientLight = DirectX::Colors::White,
                 DirectX::XMVECTOR diffuseColor = DirectX::Colors::White,
                 DirectX::XMVECTOR emissiveColor = DirectX::Colors::Black,
                 DirectX::XMVECTOR specularColor = DirectX::Colors::White) noexcept;
         ~Material() noexcept;
 
     public:
+        std::uint8_t GetNumDirectionalLights() const noexcept;
+
         std::wstring GetDiffuseMapFilePath() const noexcept;
         std::wstring GetNormalMapFilePath() const noexcept;
 
         std::uint32_t GetFlags() const noexcept;
+
+        DirectX::XMFLOAT3& GetAmbientLight() noexcept;
+        std::vector<std::shared_ptr<DirectionalLight>>& GetDirectionalLights() noexcept;
 
         DirectX::XMFLOAT4& GetDiffuseColor() noexcept;
         DirectX::XMFLOAT4& GetEmissiveColor() noexcept;
@@ -122,6 +135,9 @@ class Material : public Asset {
         const std::wstring m_normalMapFilePath;
 
         std::uint32_t m_flags;
+
+        DirectX::XMFLOAT3 m_ambientLight;
+        std::vector<std::shared_ptr<DirectionalLight>> m_directionalLights;
 
         DirectX::XMFLOAT4 m_diffuseColor;
         DirectX::XMFLOAT4 m_emissiveColor;

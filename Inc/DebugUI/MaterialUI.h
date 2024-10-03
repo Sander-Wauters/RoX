@@ -22,6 +22,7 @@ namespace MaterialUI {
 
     void Textures(Material& material);
     void Colors(Material& material);
+    void Lights(Material& material);
 
     void Creator(AssetBatch& batch);
     void Remover(Model& model);

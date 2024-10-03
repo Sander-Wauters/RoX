@@ -2,8 +2,7 @@
 
 #include <string>
 
-// Abstract class that contains properties that every asset has in common.
-// Used internally, the client should NEVER be required to inherit this class.
+// Abstract class that contains properties that helps the engine identify different objects.
 class Asset {
     public:
         static constexpr std::uint64_t INVALID_GUID = std::uint64_t(-1);
