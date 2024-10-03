@@ -20,7 +20,7 @@ std::uint64_t AssetBatch::FindGUID(std::string name, const Materials& materials)
         if (pair.second->GetName() == name)
             return pair.first;
     }
-    return Asset::INVALID_GUID;
+    return Identifiable::INVALID_GUID;
 }
 
 std::uint64_t AssetBatch::FindGUID(std::string name, const Models& models) {
@@ -28,7 +28,7 @@ std::uint64_t AssetBatch::FindGUID(std::string name, const Models& models) {
         if (pair.second->GetName() == name)
             return pair.first;
     }
-    return Asset::INVALID_GUID;
+    return Identifiable::INVALID_GUID;
 }
 
 std::uint64_t AssetBatch::FindGUID(std::string name, const Sprites& sprites) {
@@ -36,7 +36,7 @@ std::uint64_t AssetBatch::FindGUID(std::string name, const Sprites& sprites) {
         if (pair.second->GetName() == name)
             return pair.first;
     }
-    return Asset::INVALID_GUID;
+    return Identifiable::INVALID_GUID;
 }
 
 std::uint64_t AssetBatch::FindGUID(std::string name, const Texts& texts) {
@@ -44,7 +44,7 @@ std::uint64_t AssetBatch::FindGUID(std::string name, const Texts& texts) {
         if (pair.second->GetName() == name)
             return pair.first;
     }
-    return Asset::INVALID_GUID;
+    return Identifiable::INVALID_GUID;
 }
 
 std::uint64_t AssetBatch::FindGUID(std::string name, const Outlines& outlines) {
@@ -52,7 +52,7 @@ std::uint64_t AssetBatch::FindGUID(std::string name, const Outlines& outlines) {
         if (pair.second->GetName() == name)
             return pair.first;
     }
-    return Asset::INVALID_GUID;
+    return Identifiable::INVALID_GUID;
 }
 
 void AssetBatch::Add(std::shared_ptr<Material> pMaterial) {

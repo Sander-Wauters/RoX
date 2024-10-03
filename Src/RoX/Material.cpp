@@ -11,7 +11,7 @@ Material::Material(
         DirectX::XMVECTOR diffuseColor,
         DirectX::XMVECTOR emissiveColor,
         DirectX::XMVECTOR specularColor)
-    noexcept : Asset("material", name),
+    noexcept : Identifiable("material", name),
     m_diffuseMapFilePath(diffuseMapFilePath),
     m_normalMapFilePath(normalMapFilePath),
     m_flags(flags)

@@ -4,7 +4,7 @@
 #include <DirectXMath.h>
 #include <DirectXColors.h>
 
-#include "Asset.h"
+#include "Identifiable.h"
 
 // Describes a 2D texture.
 // Positioning
@@ -13,7 +13,7 @@
 // -x --+-- +x
 //      |
 //      +y
-class Sprite : public Asset {
+class Sprite : public Identifiable {
     public: 
         Sprite(const std::wstring filePath,
                 std::string name = "",

@@ -5,7 +5,7 @@
 // ---------------------------------------------------------------- //
 
 Outline::Outline(Type type, std::string name, DirectX::XMVECTOR color, bool visible) 
-    noexcept : Asset("outline", name), 
+    noexcept : Identifiable("outline", name), 
     m_type(type),
     m_visible(visible)
 {

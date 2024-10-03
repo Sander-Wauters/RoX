@@ -6,7 +6,7 @@
 #include <DirectXMath.h>
 #include <DirectXColors.h>
 
-#include "Asset.h"
+#include "Identifiable.h"
 #include "DirectionalLight.h"
 
 // Collection of flags that **Renderer** uses to determine how a material (and by association a submesh) should be rendered.
@@ -88,7 +88,7 @@ namespace RenderFlags {
 // Describes the texture, color and effects of a submesh.
 // Name must be unique as it is used as a key internally.
 // **Renderer** requires a material to have both a diffuse and normal map.
-class Material : public Asset {
+class Material : public Identifiable {
     public:
         static constexpr std::uint8_t MAX_DIRECTIONAL_LIGHTS = 3;
 

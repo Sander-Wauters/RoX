@@ -4,7 +4,7 @@
 
 #include <DebugUI/Util.h>
 #include <DebugUI/UpdateScheduler.h>
-#include <DebugUI/AssetUI.h>
+#include <DebugUI/IdentifiableUI.h>
 #include <DebugUI/MathUI.h>
 #include <DebugUI/SubmeshUI.h>
 #include <DebugUI/MeshFactoryUI.h>
@@ -64,13 +64,13 @@ void IMeshUI::Menu(IMesh& iMesh) {
 
     if (auto pMesh = dynamic_cast<Mesh*>(&iMesh)) {
         ImGui::SeparatorText("Identifiers");
-        AssetUI::Menu(*pMesh);
+        IdentifiableUI::Menu(*pMesh);
 
         if (ImGui::CollapsingHeader("Vertices")) 
             MathUI::Vertices(pMesh->GetVertices());
     } else if (auto pSkinnedMesh = dynamic_cast<SkinnedMesh*>(&iMesh)) {
         ImGui::SeparatorText("Identifiers");
-        AssetUI::Menu(*pSkinnedMesh);
+        IdentifiableUI::Menu(*pSkinnedMesh);
 
         if (ImGui::CollapsingHeader("Vertices")) 
             MathUI::Vertices(pSkinnedMesh->GetVertices());

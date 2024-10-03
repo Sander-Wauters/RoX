@@ -4,7 +4,7 @@
 #include <vector>
 #include <unordered_set>
 
-#include "Asset.h"
+#include "Identifiable.h"
 #include "VertexTypes.h"
 #include "Material.h"
 
@@ -12,7 +12,7 @@
 class Model;
 
 // Represents a node in the bone hierarchy.
-class Bone : public Asset {
+class Bone : public Identifiable {
     public:
         static constexpr std::uint32_t INVALID_INDEX = std::uint32_t(-1);
 
@@ -47,7 +47,7 @@ class Bone : public Asset {
 // The location of a submesh in world space is determined by the transformation in **m_instances**.
 // There need to be 1 instance available at all time.
 // If multiple instances need to be rendered then the **RenderFlags::Effect::Instances** should be set in the used material.
-class Submesh : public Asset {
+class Submesh : public Identifiable {
     public:
         Submesh(std::string name = "", std::uint32_t materialIndex = 0, bool visible = true) noexcept;
 
@@ -155,7 +155,7 @@ class IMesh {
 };
 
 // Abstract class of a mesh with shared functionality.
-class BaseMesh : public IMesh, public Asset {
+class BaseMesh : public IMesh, public Identifiable {
     protected:
         BaseMesh(std::string name = "", bool useStaticBuffers = false, bool visible = true) noexcept; 
 
@@ -247,7 +247,7 @@ class IModelObserver {
 
 // Contains 1 or more meshes, all the materials used by there submeshes and a collection of tranformations to animate the model.
 // All **Material**s need assigned to the **Model** before being added to a **Scene**.
-class Model : public Asset {
+class Model : public Identifiable {
     public:
         Model(std::shared_ptr<Material> pMaterial,
                 std::string name = "", 

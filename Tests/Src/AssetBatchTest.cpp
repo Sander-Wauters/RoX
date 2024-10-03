@@ -86,11 +86,11 @@ TEST_F(GeneralAssetBatchTest, DeregisterAssetBatchObserver_WithInvalidObserver) 
 }
 
 TEST_F(GeneralAssetBatchTest, FindGUID_ByName_WithInvalidName) {
-    EXPECT_EQ(pBatch->FindGUID(INVALID_NAME, pBatch->GetMaterials()), Asset::INVALID_GUID);
-    EXPECT_EQ(pBatch->FindGUID(INVALID_NAME, pBatch->GetModels()),    Asset::INVALID_GUID);
-    EXPECT_EQ(pBatch->FindGUID(INVALID_NAME, pBatch->GetSprites()),   Asset::INVALID_GUID);
-    EXPECT_EQ(pBatch->FindGUID(INVALID_NAME, pBatch->GetTexts()),     Asset::INVALID_GUID);
-    EXPECT_EQ(pBatch->FindGUID(INVALID_NAME, pBatch->GetOutlines()),  Asset::INVALID_GUID);
+    EXPECT_EQ(pBatch->FindGUID(INVALID_NAME, pBatch->GetMaterials()), Identifiable::INVALID_GUID);
+    EXPECT_EQ(pBatch->FindGUID(INVALID_NAME, pBatch->GetModels()),    Identifiable::INVALID_GUID);
+    EXPECT_EQ(pBatch->FindGUID(INVALID_NAME, pBatch->GetSprites()),   Identifiable::INVALID_GUID);
+    EXPECT_EQ(pBatch->FindGUID(INVALID_NAME, pBatch->GetTexts()),     Identifiable::INVALID_GUID);
+    EXPECT_EQ(pBatch->FindGUID(INVALID_NAME, pBatch->GetOutlines()),  Identifiable::INVALID_GUID);
 }
 
 TEST_F(GeneralAssetBatchTest, Add_WithInvalidMaterial) {
@@ -175,11 +175,11 @@ TEST_F(GeneralAssetBatchTest, Remove_ByGUID_WithInvalidGUID) {
     EXPECT_CALL(observer, OnRemove(pOutline) ).Times(testing::Exactly(0));
     ASSERT_NO_THROW(pBatch->Attach(&observer));
 
-    EXPECT_THROW(pBatch->RemoveMaterial(Asset::INVALID_GUID), std::out_of_range);
-    EXPECT_THROW(pBatch->RemoveModel(Asset::INVALID_GUID),    std::out_of_range);
-    EXPECT_THROW(pBatch->RemoveSprite(Asset::INVALID_GUID),   std::out_of_range);
-    EXPECT_THROW(pBatch->RemoveText(Asset::INVALID_GUID),     std::out_of_range);
-    EXPECT_THROW(pBatch->RemoveOutline(Asset::INVALID_GUID),  std::out_of_range);
+    EXPECT_THROW(pBatch->RemoveMaterial(Identifiable::INVALID_GUID), std::out_of_range);
+    EXPECT_THROW(pBatch->RemoveModel(Identifiable::INVALID_GUID),    std::out_of_range);
+    EXPECT_THROW(pBatch->RemoveSprite(Identifiable::INVALID_GUID),   std::out_of_range);
+    EXPECT_THROW(pBatch->RemoveText(Identifiable::INVALID_GUID),     std::out_of_range);
+    EXPECT_THROW(pBatch->RemoveOutline(Identifiable::INVALID_GUID),  std::out_of_range);
 }
 
 TEST_F(GeneralAssetBatchTest, Remove_ByTypeAndGUID_WithInvalidGUID) {
@@ -196,11 +196,11 @@ TEST_F(GeneralAssetBatchTest, Remove_ByTypeAndGUID_WithInvalidGUID) {
     EXPECT_CALL(observer, OnRemove(pOutline) ).Times(testing::Exactly(0));
     ASSERT_NO_THROW(pBatch->Attach(&observer));
 
-    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Material, Asset::INVALID_GUID), std::out_of_range);
-    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Model, Asset::INVALID_GUID),    std::out_of_range);
-    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Sprite, Asset::INVALID_GUID),   std::out_of_range);
-    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Text, Asset::INVALID_GUID),     std::out_of_range);
-    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Outline, Asset::INVALID_GUID),  std::out_of_range);
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Material, Identifiable::INVALID_GUID), std::out_of_range);
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Model, Identifiable::INVALID_GUID),    std::out_of_range);
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Sprite, Identifiable::INVALID_GUID),   std::out_of_range);
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Text, Identifiable::INVALID_GUID),     std::out_of_range);
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Outline, Identifiable::INVALID_GUID),  std::out_of_range);
 }
 
 TEST_F(GeneralAssetBatchTest, Remove_ByName_WithInvalidName) {
@@ -246,19 +246,19 @@ TEST_F(GeneralAssetBatchTest, Remove_ByTypeAndName_WithInvalidName) {
 }
 
 TEST_F(GeneralAssetBatchTest, GetAsset_ByGUID_WithGUID) {
-    EXPECT_THROW(pBatch->GetMaterial(Asset::INVALID_GUID), std::out_of_range);
-    EXPECT_THROW(pBatch->GetModel(   Asset::INVALID_GUID), std::out_of_range);
-    EXPECT_THROW(pBatch->GetSprite(  Asset::INVALID_GUID), std::out_of_range);
-    EXPECT_THROW(pBatch->GetText(    Asset::INVALID_GUID), std::out_of_range);
-    EXPECT_THROW(pBatch->GetOutline( Asset::INVALID_GUID), std::out_of_range);
+    EXPECT_THROW(pBatch->GetMaterial(Identifiable::INVALID_GUID), std::out_of_range);
+    EXPECT_THROW(pBatch->GetModel(   Identifiable::INVALID_GUID), std::out_of_range);
+    EXPECT_THROW(pBatch->GetSprite(  Identifiable::INVALID_GUID), std::out_of_range);
+    EXPECT_THROW(pBatch->GetText(    Identifiable::INVALID_GUID), std::out_of_range);
+    EXPECT_THROW(pBatch->GetOutline( Identifiable::INVALID_GUID), std::out_of_range);
 }
 
 TEST_F(EmptyAssetBatchTest, FindGUID_ByName_WithValidName) {
-    EXPECT_EQ(pBatch->FindGUID(MaterialName, pBatch->GetMaterials()), Asset::INVALID_GUID);
-    EXPECT_EQ(pBatch->FindGUID(ModelName,    pBatch->GetModels()),    Asset::INVALID_GUID);
-    EXPECT_EQ(pBatch->FindGUID(SpriteName,   pBatch->GetSprites()),   Asset::INVALID_GUID);
-    EXPECT_EQ(pBatch->FindGUID(TextName,     pBatch->GetTexts()),     Asset::INVALID_GUID);
-    EXPECT_EQ(pBatch->FindGUID(OutlineName,  pBatch->GetOutlines()),  Asset::INVALID_GUID);
+    EXPECT_EQ(pBatch->FindGUID(MaterialName, pBatch->GetMaterials()), Identifiable::INVALID_GUID);
+    EXPECT_EQ(pBatch->FindGUID(ModelName,    pBatch->GetModels()),    Identifiable::INVALID_GUID);
+    EXPECT_EQ(pBatch->FindGUID(SpriteName,   pBatch->GetSprites()),   Identifiable::INVALID_GUID);
+    EXPECT_EQ(pBatch->FindGUID(TextName,     pBatch->GetTexts()),     Identifiable::INVALID_GUID);
+    EXPECT_EQ(pBatch->FindGUID(OutlineName,  pBatch->GetOutlines()),  Identifiable::INVALID_GUID);
 }
 
 TEST_F(EmptyAssetBatchTest, Add_WithNewMaterial) {

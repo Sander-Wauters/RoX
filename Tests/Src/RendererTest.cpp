@@ -384,19 +384,19 @@ TEST_F(RendererTest, PostFreshLoad_AssetBatch_Remove_ByGUID_WithInvalidGUID) {
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
-    EXPECT_THROW(pBatch->RemoveMaterial(Asset::INVALID_GUID), std::out_of_range);
+    EXPECT_THROW(pBatch->RemoveMaterial(Identifiable::INVALID_GUID), std::out_of_range);
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
-    EXPECT_THROW(pBatch->RemoveModel(Asset::INVALID_GUID),    std::out_of_range);
+    EXPECT_THROW(pBatch->RemoveModel(Identifiable::INVALID_GUID),    std::out_of_range);
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
-    EXPECT_THROW(pBatch->RemoveSprite(Asset::INVALID_GUID),   std::out_of_range);
+    EXPECT_THROW(pBatch->RemoveSprite(Identifiable::INVALID_GUID),   std::out_of_range);
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
-    EXPECT_THROW(pBatch->RemoveText(Asset::INVALID_GUID),     std::out_of_range);
+    EXPECT_THROW(pBatch->RemoveText(Identifiable::INVALID_GUID),     std::out_of_range);
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
-    EXPECT_THROW(pBatch->RemoveOutline(Asset::INVALID_GUID),  std::out_of_range);
+    EXPECT_THROW(pBatch->RemoveOutline(Identifiable::INVALID_GUID),  std::out_of_range);
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 
@@ -429,19 +429,19 @@ TEST_F(RendererTest, PostFreshLoad_AssetBatch_Remove_ByTypeAndGUID_WithInvalidGU
     ASSERT_NO_THROW(pRenderer->Load(*pScene));
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
-    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Material, Asset::INVALID_GUID), std::out_of_range);
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Material, Identifiable::INVALID_GUID), std::out_of_range);
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
-    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Model, Asset::INVALID_GUID),    std::out_of_range);
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Model, Identifiable::INVALID_GUID),    std::out_of_range);
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
-    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Sprite, Asset::INVALID_GUID),   std::out_of_range);
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Sprite, Identifiable::INVALID_GUID),   std::out_of_range);
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
-    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Text, Asset::INVALID_GUID),     std::out_of_range);
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Text, Identifiable::INVALID_GUID),     std::out_of_range);
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 
-    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Outline, Asset::INVALID_GUID),  std::out_of_range);
+    EXPECT_THROW(pBatch->Remove(AssetBatch::AssetType::Outline, Identifiable::INVALID_GUID),  std::out_of_range);
     ASSERT_TRUE(SimulateMainLoop(*pRenderer));
 }
 

@@ -1,4 +1,4 @@
-#include "DebugUI/AssetUI.h"
+#include "DebugUI/IdentifiableUI.h"
 
 #include <stdexcept>
 
@@ -8,7 +8,7 @@
 #include "DebugUI/UpdateScheduler.h"
 #include "DebugUI/GeneralUI.h"
 
-void AssetUI::Remover(AssetBatch::AssetType type, AssetBatch& batch) {
+void IdentifiableUI::Remover(AssetBatch::AssetType type, AssetBatch& batch) {
     static std::uint64_t GUID = 0;
     static bool GUIDnotFound = false;
 
@@ -44,7 +44,7 @@ void AssetUI::Remover(AssetBatch::AssetType type, AssetBatch& batch) {
     GeneralUI::Error(nameNotFound, "Name not found."); 
 }
 
-void AssetUI::Menu(Asset& asset) {
+void IdentifiableUI::Menu(Identifiable& asset) {
     static char name[128] = "";
     static bool editName = false;
 
@@ -65,7 +65,7 @@ void AssetUI::Menu(Asset& asset) {
     }
 }
 
-void AssetUI::RemoverPopupMenu(AssetBatch::AssetType type, AssetBatch& batch) {
+void IdentifiableUI::RemoverPopupMenu(AssetBatch::AssetType type, AssetBatch& batch) {
     std::string typeStr;
     switch (type) {
         case AssetBatch::AssetType::Material:
@@ -92,3 +92,4 @@ void AssetUI::RemoverPopupMenu(AssetBatch::AssetType type, AssetBatch& batch) {
         ImGui::EndPopup();
     }
 }
+

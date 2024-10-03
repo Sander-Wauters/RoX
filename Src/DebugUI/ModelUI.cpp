@@ -7,7 +7,7 @@
 #include "DebugUI/Util.h"
 #include "DebugUI/UpdateScheduler.h"
 #include "DebugUI/MeshFactoryUI.h"
-#include "DebugUI/AssetUI.h"
+#include "DebugUI/IdentifiableUI.h"
 #include "DebugUI/GeneralUI.h"
 #include "DebugUI/MaterialUI.h"
 #include "DebugUI/MathUI.h"
@@ -72,7 +72,7 @@ void ModelUI::Creator(AssetBatch& batch) {
     static char name[128] = "";
     static MeshFactory::Geometry geo = MeshFactory::Geometry::Cube;
     static char filePath[128] = "";
-    static std::uint64_t baseMaterialGUID = Asset::INVALID_GUID;
+    static std::uint64_t baseMaterialGUID = Identifiable::INVALID_GUID;
     static bool visible = true;
     static bool skinned = false;
     static bool packed = true;
@@ -84,14 +84,14 @@ void ModelUI::Creator(AssetBatch& batch) {
 
     ImGui::SeparatorText("Material");
     MaterialUI::Selector(baseMaterialGUID, batch.GetMaterials());
-    GeneralUI::Error(baseMaterialGUID == Asset::INVALID_GUID, "Must select a material.");
+    GeneralUI::Error(baseMaterialGUID == Identifiable::INVALID_GUID, "Must select a material.");
 
     ImGui::SeparatorText("Import from file (optional)");
     bool validModel = GeneralUI::InputFilePath("Filepath##ModelCreator", filePath, std::size(filePath)); 
     GeneralUI::Error(validModel, "Invalid file path");
     ImGui::Checkbox("Pack meshes##ModelCreator", &packed);
 
-    if (ImGui::Button("Create new model##ModelCreator") && (baseMaterialGUID != Asset::INVALID_GUID)) {
+    if (ImGui::Button("Create new model##ModelCreator") && (baseMaterialGUID != Identifiable::INVALID_GUID)) {
         if (validModel) {
             UpdateScheduler::Get().Add([&](){ 
                 std::shared_ptr<Model> pModel;
@@ -145,7 +145,7 @@ void ModelUI::Menu(Model& model, const Materials& availableMaterials) {
     GeneralUI::HelpMarker("Applies to all meshes.");
 
     ImGui::SeparatorText("Identifiers");
-    AssetUI::Menu(model);
+    IdentifiableUI::Menu(model);
     if (ImGui::CollapsingHeader("World transform")) {
         GeneralUI::HelpMarker("Transformation will be applied to all instances of all submeshes of all meshes in this model.\n!CAUTION! meshes could be shared beteen models.");
         DirectX::XMFLOAT3X4 W = model.GetMeshes()[0]->GetSubmeshes()[0]->GetInstances()[0];

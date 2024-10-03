@@ -6,7 +6,7 @@ DirectionalLight::DirectionalLight(
         DirectX::XMVECTOR diffuseColor, 
         DirectX::XMVECTOR specularColor,
         bool visible) 
-    noexcept : Asset("directional_light", name),
+    noexcept : Identifiable("directional_light", name),
     m_visible(visible),
     m_direction(direction)
 {

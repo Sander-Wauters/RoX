@@ -6,7 +6,7 @@
 #include "DebugUI/UpdateScheduler.h"
 #include "DebugUI/Util.h"
 #include "DebugUI/MathUI.h"
-#include "DebugUI/AssetUI.h"
+#include "DebugUI/IdentifiableUI.h"
 
 Outline::Type OutlineUI::TypeSelector() {
     static Outline::Type options[5] = { Outline::Type::Grid, Outline::Type::Ring, Outline::Type::Ray, Outline::Type::Triangle, Outline::Type::Quad };
@@ -254,7 +254,7 @@ void OutlineUI::Menu(Outline& outline) {
         outline.SetVisible(visible);
 
     ImGui::SeparatorText("Identifiers");
-    AssetUI::Menu(outline);
+    IdentifiableUI::Menu(outline);
 
     if (ImGui::CollapsingHeader("Position")) {
         switch (outline.GetType()) {

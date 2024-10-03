@@ -3,15 +3,15 @@
 #include <string>
 
 // Abstract class that contains properties that helps the engine identify different objects.
-class Asset {
+class Identifiable {
     public:
         static constexpr std::uint64_t INVALID_GUID = std::uint64_t(-1);
 
     protected:
-        Asset(std::string defaultName, std::string name = "") noexcept;
-        virtual ~Asset() = default;
+        Identifiable(std::string defaultName, std::string name = "") noexcept;
+        virtual ~Identifiable() = default;
 
-        Asset(const Asset& other) noexcept;
+        Identifiable(const Identifiable& other) noexcept;
 
     public:
         std::string GetName() const noexcept;

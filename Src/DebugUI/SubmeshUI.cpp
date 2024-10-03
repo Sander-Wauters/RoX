@@ -7,7 +7,7 @@
 #include "DebugUI/UpdateScheduler.h"
 #include "DebugUI/MaterialUI.h"
 #include "DebugUI/MathUI.h"
-#include "DebugUI/AssetUI.h"
+#include "DebugUI/IdentifiableUI.h"
 
 void SubmeshUI::Instances(Submesh& submesh) {
     static std::uint32_t index = 0;
@@ -107,7 +107,7 @@ void SubmeshUI::Menu(Submesh& submesh, std::vector<std::shared_ptr<Material>>& a
         submesh.SetVisible(visible);
 
     ImGui::SeparatorText("Identifiers");
-    AssetUI::Menu(submesh);
+    IdentifiableUI::Menu(submesh);
 
     if (ImGui::CollapsingHeader("Available materials")) {
         std::uint32_t materialIndex = submesh.GetMaterialIndex();

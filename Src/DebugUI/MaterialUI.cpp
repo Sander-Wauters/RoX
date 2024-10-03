@@ -6,7 +6,7 @@
 #include "DebugUI/LightingUI.h"
 #include "DebugUI/Util.h"
 #include "DebugUI/GeneralUI.h"
-#include "DebugUI/AssetUI.h"
+#include "DebugUI/IdentifiableUI.h"
 
 void MaterialUI::RenderFlagsPresets(std::uint32_t& renderFlags) {
     if (ImGui::Selectable("None", renderFlags == RenderFlags::None, ImGuiSelectableFlags_DontClosePopups))
@@ -335,7 +335,7 @@ void MaterialUI::Menu(Material& material) {
     std::uint32_t renderFlags = material.GetFlags();
 
     ImGui::SeparatorText("Identifiers");
-    AssetUI::Menu(material);
+    IdentifiableUI::Menu(material);
 
     ImGui::SeparatorText("Textures");
     Textures(material);
@@ -383,9 +383,9 @@ void MaterialUI::AdderPopupMenu(Model& model, const Materials& availableMaterial
     if (ImGui::Button(Util::GUIDLabel("+", "MaterialAdderPopupMenu").c_str())) 
         ImGui::OpenPopup("MaterialAdderPopupMenu");
     if (ImGui::BeginPopup("MaterialAdderPopupMenu")) {
-        std::uint64_t selected = Asset::INVALID_GUID;
+        std::uint64_t selected = Identifiable::INVALID_GUID;
         Selector(selected, availableMaterials);
-        if (selected != Asset::INVALID_GUID)
+        if (selected != Identifiable::INVALID_GUID)
             UpdateScheduler::Get().Add([&, selected](){ model.Add(availableMaterials.at(selected)); });
         ImGui::EndPopup();
     }

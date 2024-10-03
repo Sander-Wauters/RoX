@@ -5,7 +5,7 @@
 #include "DebugUI/UpdateScheduler.h"
 #include "DebugUI/Util.h"
 #include "DebugUI/GeneralUI.h"
-#include "DebugUI/AssetUI.h"
+#include "DebugUI/IdentifiableUI.h"
 
 void SpriteUI::Position(Sprite& sprite) {
     float origin[2] = { sprite.GetOrigin().x, sprite.GetOrigin().y };
@@ -76,7 +76,7 @@ void SpriteUI::Menu(Sprite& sprite) {
         sprite.SetVisible(visible);
 
     ImGui::SeparatorText("Identifiers");
-    AssetUI::Menu(sprite);
+    IdentifiableUI::Menu(sprite);
 
     ImGui::SeparatorText("Textures");
     ImGui::Text("File: %ws", sprite.GetFilePath().c_str());

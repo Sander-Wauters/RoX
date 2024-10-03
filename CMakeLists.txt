@@ -39,11 +39,11 @@ set(SOURCE
     Src/Exceptions/ThrowIfFailed.h
 
     Src/RoX/Animation.cpp
-    Src/RoX/Asset.cpp
     Src/RoX/AssetBatch.cpp
     Src/RoX/AssetIO.cpp
     Src/RoX/Camera.cpp
     Src/RoX/DirectionalLight.cpp
+    Src/RoX/Identifiable.cpp
     Src/RoX/Material.cpp
     Src/RoX/MeshFactory.cpp
     Src/RoX/Model.cpp
@@ -66,10 +66,10 @@ set(SOURCE
 
 set(DEBUGUI_SOURCE
     Src/DebugUI/AssetBatchUI.cpp
-    Src/DebugUI/AssetUI.cpp
     Src/DebugUI/BoneUI.cpp
     Src/DebugUI/CameraUI.cpp
     Src/DebugUI/GeneralUI.cpp
+    Src/DebugUI/IdentifiableUI.cpp
     Src/DebugUI/IMeshUI.cpp
     Src/DebugUI/LightingUI.cpp
     Src/DebugUI/MaterialUI.cpp

@@ -3,9 +3,9 @@
 #include "DirectXMath.h"
 #include "DirectXColors.h"
 
-#include "Asset.h"
+#include "Identifiable.h"
 
-class DirectionalLight : public Asset {
+class DirectionalLight : public Identifiable {
     public:
         DirectionalLight(
                 std::string name = "",

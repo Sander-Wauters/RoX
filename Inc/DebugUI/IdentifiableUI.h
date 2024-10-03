@@ -1,12 +1,13 @@
 #pragma once
 
-#include <RoX/Asset.h>
+#include <RoX/Identifiable.h>
 #include <RoX/AssetBatch.h>
 
-namespace AssetUI {
+namespace IdentifiableUI {
     void Remover(AssetBatch::AssetType type, AssetBatch& batch);
 
-    void Menu(Asset& asset);
+    void Menu(Identifiable& asset);
 
     void RemoverPopupMenu(AssetBatch::AssetType type, AssetBatch& batch);
 }
+

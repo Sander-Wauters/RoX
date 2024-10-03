@@ -16,7 +16,7 @@ Sprite::Sprite(
         float angle,
         DirectX::XMVECTOR color,
         bool visible) 
-    noexcept : Asset("sprite", name),
+    noexcept : Identifiable("sprite", name),
     m_filePath(filePath),
     m_origin(origin),
     m_offset(offset),

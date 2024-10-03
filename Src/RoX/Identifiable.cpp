@@ -1,29 +1,29 @@
-#include "RoX/Asset.h"
+#include "RoX/Identifiable.h"
 
-std::uint64_t Asset::NEXT_GUID = 0;
+std::uint64_t Identifiable::NEXT_GUID = 0;
 
-Asset::Asset(std::string defaultName, std::string name)
+Identifiable::Identifiable(std::string defaultName, std::string name)
     noexcept : m_defaultName(defaultName),
     m_GUID(NEXT_GUID++)
 {
     SetName(name);
 }
 
-Asset::Asset(const Asset& other)
+Identifiable::Identifiable(const Identifiable& other)
     noexcept : m_defaultName(other.m_defaultName),
     m_name(other.m_name),
     m_GUID(other.m_GUID)
 {}
 
-std::string Asset::GetName() const noexcept {
+std::string Identifiable::GetName() const noexcept {
     return m_name;    
 }
 
-std::uint64_t Asset::GetGUID() const noexcept {
+std::uint64_t Identifiable::GetGUID() const noexcept {
     return m_GUID;
 }
 
-void Asset::SetName(std::string name) noexcept {
+void Identifiable::SetName(std::string name) noexcept {
     if (name.empty())
         m_name = m_defaultName + "_" + std::to_string(m_GUID);
     else 

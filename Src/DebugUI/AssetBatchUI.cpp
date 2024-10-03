@@ -2,7 +2,7 @@
 
 #include <ImGui/imgui.h>
 
-#include "DebugUI/AssetUI.h"
+#include "DebugUI/IdentifiableUI.h"
 #include "DebugUI/GeneralUI.h"
 #include "DebugUI/SpriteUI.h"
 #include "DebugUI/TextUI.h"
@@ -60,7 +60,7 @@ void AssetBatchUI::Menu(AssetBatch& batch) {
         ImGui::BeginChild(ImGui::GetID((void*)(intptr_t)ID++), ImVec2(ImGui::GetWindowWidth() - 15.f, 200.f), ImGuiChildFlags_None);
         ModelUI::CreatorPopupMenu(batch);
         ImGui::SameLine();
-        AssetUI::RemoverPopupMenu(AssetBatch::AssetType::Model, batch);
+        IdentifiableUI::RemoverPopupMenu(AssetBatch::AssetType::Model, batch);
         ImGui::SameLine();
         ModelUI::Selector(batch, &pSelectedModel, &pSelectedIMesh, &pSelectedSubmesh);
         ImGui::EndChild();
@@ -97,7 +97,7 @@ void AssetBatchUI::Menu(AssetBatch& batch) {
     if (ImGui::CollapsingHeader("Materials")) {
         MaterialUI::CreatorPopupMenu(batch);
         ImGui::SameLine();
-        AssetUI::RemoverPopupMenu(AssetBatch::AssetType::Material, batch);
+        IdentifiableUI::RemoverPopupMenu(AssetBatch::AssetType::Material, batch);
 
         MaterialUI::Menu(batch.GetMaterials());
 
@@ -108,7 +108,7 @@ void AssetBatchUI::Menu(AssetBatch& batch) {
     if (ImGui::CollapsingHeader("Sprites")) {
         SpriteUI::CreatorPopupMenu(batch);
         ImGui::SameLine();
-        AssetUI::RemoverPopupMenu(AssetBatch::AssetType::Sprite, batch);
+        IdentifiableUI::RemoverPopupMenu(AssetBatch::AssetType::Sprite, batch);
 
         SpriteUI::Menu(batch.GetSprites());
 
@@ -119,7 +119,7 @@ void AssetBatchUI::Menu(AssetBatch& batch) {
     if (ImGui::CollapsingHeader("Text")) {
         TextUI::CreatorPopupMenu(batch);
         ImGui::SameLine();
-        AssetUI::RemoverPopupMenu(AssetBatch::AssetType::Text, batch);
+        IdentifiableUI::RemoverPopupMenu(AssetBatch::AssetType::Text, batch);
 
         TextUI::Menu(batch.GetTexts());
 
@@ -130,7 +130,7 @@ void AssetBatchUI::Menu(AssetBatch& batch) {
     if (ImGui::CollapsingHeader("Outlines")) {
         OutlineUI::CreatorPopupMenu(batch);
         ImGui::SameLine();
-        AssetUI::RemoverPopupMenu(AssetBatch::AssetType::Outline, batch);
+        IdentifiableUI::RemoverPopupMenu(AssetBatch::AssetType::Outline, batch);
 
         OutlineUI::Menu(batch.GetOutlines());
 

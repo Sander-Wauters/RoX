@@ -7,13 +7,13 @@
 #include <DirectXColors.h>
 #include <DirectXCollision.h>
 
-#include "Asset.h"
+#include "Identifiable.h"
 
 
 // Collection of structs that hold data to renderer the outline of shape.
 
 // Abstract class that contains properties that every outline has in common.
-class Outline : public Asset {
+class Outline : public Identifiable {
     public:
         enum class Type {
             BoundingBox,

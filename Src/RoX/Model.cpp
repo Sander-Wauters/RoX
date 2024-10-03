@@ -7,12 +7,12 @@
 // ---------------------------------------------------------------- //
 
 Bone::Bone(std::string name) 
-    noexcept : Asset("bone", name),
+    noexcept : Identifiable("bone", name),
     m_parentIndex(-1)
 {}
 
 Bone::Bone(const std::string name, std::uint32_t parentIndex) 
-    noexcept : Asset("bone", name),
+    noexcept : Identifiable("bone", name),
     m_parentIndex(parentIndex)
 {}
 
@@ -33,7 +33,7 @@ void Bone::SetParentIndex(std::uint32_t index) noexcept {
 // ---------------------------------------------------------------- //
 
 Submesh::Submesh(std::string name, std::uint32_t materialIndex, bool visible) 
-    noexcept : Asset("submesh", name),
+    noexcept : Identifiable("submesh", name),
     m_numCulled(0),
     m_instances({{
             1.f, 0.f, 0.f, 0.f,
@@ -118,7 +118,7 @@ void Submesh::SetVisible(bool visible) noexcept {
 // ---------------------------------------------------------------- //
 
 BaseMesh::BaseMesh(std::string name, bool useStaticBuffers, bool visible) 
-    noexcept : Asset("mesh", name),
+    noexcept : Identifiable("mesh", name),
     m_boneIndex(Bone::INVALID_INDEX),
     m_usingStaticBuffers(useStaticBuffers),
     m_visible(visible)
@@ -174,11 +174,11 @@ void BaseMesh::Detach(IMeshObserver* pIMeshObserver) noexcept {
 }
 
 std::string BaseMesh::GetName() const noexcept {
-    return Asset::GetName();
+    return Identifiable::GetName();
 }
 
 std::uint64_t BaseMesh::GetGUID() const noexcept {
-    return Asset::GetGUID();
+    return Identifiable::GetGUID();
 }
 
 std::uint32_t BaseMesh::GetBoneIndex() const noexcept {
@@ -214,7 +214,7 @@ bool BaseMesh::IsVisible() const noexcept {
 }
 
 void BaseMesh::SetName(std::string name) noexcept {
-    Asset::SetName(name);
+    Identifiable::SetName(name);
 }
 
 void BaseMesh::SetBoneIndex(std::uint32_t boneIndex) noexcept {
@@ -289,7 +289,7 @@ Model::Model(
         std::shared_ptr<Material> pMaterial,
         std::string name, 
         bool visible) : 
-    Asset("model", name),
+    Identifiable("model", name),
     m_visible(visible)
 {
     if (!pMaterial)
@@ -298,7 +298,7 @@ Model::Model(
     m_materials.push_back(std::move(pMaterial));
 }
 
-Model::Model(Model& other) : Asset(other),
+Model::Model(Model& other) : Identifiable(other),
     m_materials(other.GetMaterials()),
     m_meshes(other.GetMeshes()),
     m_bones(other.GetBones())

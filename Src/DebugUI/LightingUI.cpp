@@ -3,7 +3,7 @@
 #include <ImGui/imgui.h>
 
 #include "DebugUI/Util.h"
-#include "DebugUI/AssetUI.h"
+#include "DebugUI/IdentifiableUI.h"
 
 void LightingUI::DirectionalLightMenu(DirectionalLight& dirLight) {
     float direction[3];
@@ -13,7 +13,7 @@ void LightingUI::DirectionalLightMenu(DirectionalLight& dirLight) {
     float specular[3];
     Util::StoreFloat3(dirLight.GetSpecularColor(), specular);
 
-    AssetUI::Menu(dirLight);
+    IdentifiableUI::Menu(dirLight);
     if (ImGui::DragFloat3("Direction", direction, .01f, -1.f, 1.f))
         Util::LoadFloat3(direction, dirLight.GetDirection());
     if (ImGui::ColorEdit3("Diffuse", diffuse))

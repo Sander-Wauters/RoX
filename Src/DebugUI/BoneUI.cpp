@@ -2,7 +2,7 @@
 
 #include <ImGui/imgui.h>
 
-#include "DebugUI/AssetUI.h"
+#include "DebugUI/IdentifiableUI.h"
 #include "DebugUI/MathUI.h"
 
 void BoneUI::Selector(std::uint32_t& index, std::vector<Bone>& bones) {
@@ -19,7 +19,7 @@ void BoneUI::Menu(Model& model, std::uint32_t boneIndex) {
     std::vector<Bone>& bones = model.GetBones();
 
     ImGui::SeparatorText("Identifiers");
-    AssetUI::Menu(bones[boneIndex]);
+    IdentifiableUI::Menu(bones[boneIndex]);
 
     ImGui::SeparatorText("Parent");
     ImGui::Text("Parent: %s", bones[boneIndex].IsRoot() ? "NONE" : bones[bones[boneIndex].GetParentIndex()].GetName().c_str());
