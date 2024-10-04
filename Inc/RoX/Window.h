@@ -46,6 +46,7 @@ class Window {
 
         void Attach(IWindowObserver* pIWindowObserver);
         void Detach(IWindowObserver* pIWindowObserver) noexcept;
+        void DetachAll() noexcept;
 
     private:
         static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {

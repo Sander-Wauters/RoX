@@ -10,6 +10,10 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 add_subdirectory(Lib/googletest)
 
 set(TESTS
+    Src/Mocks/MockAssetBatchObserver.h
+    Src/Mocks/MockMeshObserver.h
+    Src/Mocks/MockModelObserver.h
+
     Src/PredefinedObjects/ValidAssetBatch.cpp
     Src/PredefinedObjects/ValidAssetBatch.h
     Src/PredefinedObjects/ValidMaterial.cpp
@@ -19,13 +23,11 @@ set(TESTS
     Src/PredefinedObjects/ValidModel.cpp
     Src/PredefinedObjects/ValidModel.h
 
-    Src/AssetBatchTest.cpp 
-    Src/MeshTest.cpp
-    Src/MockAssetBatchObserver.h
-    Src/MockMeshObserver.h
-    Src/MockModelObserver.h
-    Src/ModelTest.cpp
-    Src/RendererTest.cpp
+    Src/UnitTests/AssetBatchTest.cpp 
+    Src/UnitTests/MeshTest.cpp
+    Src/UnitTests/ModelTest.cpp
+
+    Src/IntegrationTest.cpp
 )
 
 include_directories(

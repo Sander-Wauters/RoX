@@ -90,6 +90,10 @@ void Window::Detach(IWindowObserver* pIWindowObserver) noexcept {
     m_windowObservers.erase(pIWindowObserver);
 }
 
+void Window::DetachAll() noexcept {
+    m_windowObservers.clear();
+}
+
 void Window::HandleActivated() {
     for (IWindowObserver* pIWindowObserver : m_windowObservers) {
         if (pIWindowObserver)

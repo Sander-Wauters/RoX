@@ -3,9 +3,9 @@
 
 #include <RoX/MeshFactory.h>
 
-#include "MockAssetBatchObserver.h"
+#include "../Mocks/MockAssetBatchObserver.h"
 
-#include "PredefinedObjects/ValidAssetBatch.h"
+#include "../PredefinedObjects/ValidAssetBatch.h"
 
 class GeneralAssetBatchTest : public testing::Test, public ValidAssetBatch {
     protected:

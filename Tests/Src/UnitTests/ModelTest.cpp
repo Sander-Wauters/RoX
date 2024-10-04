@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "PredefinedObjects/ValidModel.h"
-#include "MockModelObserver.h"
+#include "../Mocks/MockModelObserver.h"
+#include "../PredefinedObjects/ValidModel.h"
 
 class ModelTest : public testing::Test, public ValidModel {
     protected:
@@ -9,6 +9,20 @@ class ModelTest : public testing::Test, public ValidModel {
 
         }
 };
+
+TEST_F(ModelTest, UseStaticBuffers) {
+    EXPECT_NO_THROW(pModel->UseStaticBuffers(true));
+    EXPECT_EQ(pModel->IsUsingStaticBuffers(), true);
+    for (auto& pMesh : pModel->GetMeshes()) {
+        EXPECT_TRUE(pMesh->IsUsingStaticBuffers());
+    }
+
+    EXPECT_NO_THROW(pModel->UseStaticBuffers(false));
+    EXPECT_EQ(pModel->IsUsingStaticBuffers(), false);
+    for (auto& pMesh : pModel->GetMeshes()) {
+        EXPECT_FALSE(pMesh->IsUsingStaticBuffers());
+    }
+}
 
 TEST_F(ModelTest, Add_WithNewMaterial) {
     auto pNewMaterial = NewValidMaterial();
@@ -49,6 +63,14 @@ TEST_F(ModelTest, Add_WithInvalidMesh) {
 
     EXPECT_THROW(pModel->Add(std::shared_ptr<Mesh>()), std::invalid_argument);
     EXPECT_EQ(pModel->GetNumMeshes(), 1);
+}
+
+TEST_F(ModelTest, ClearGeometry) {
+    EXPECT_NO_THROW(pModel->ClearGeometry());
+    for (auto& pMesh : pModel->GetMeshes()) {
+        EXPECT_EQ(pMesh->GetNumVertices(), 0);
+        EXPECT_EQ(pMesh->GetNumIndices(), 0);
+    }
 }
 
 TEST_F(ModelTest, RemoveMaterial_WithValidIndex) {
