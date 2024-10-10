@@ -42,6 +42,7 @@ set(SOURCE
     Src/Exceptions/DXException.cpp
     Src/Exceptions/ThrowIfFailed.h
 
+    Src/FileFormats/RoxAnim.h
     Src/FileFormats/RoxModl.h
 
     Src/RoX/Animation.cpp

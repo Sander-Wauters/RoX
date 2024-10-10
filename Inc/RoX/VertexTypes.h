@@ -6,6 +6,7 @@
 #include <d3d12.h>
 
 // Describes a vertex for use in static geometry.
+#pragma pack(push, vpnt, 8)
 struct VertexPositionNormalTexture {
     VertexPositionNormalTexture() = default;
 
@@ -47,8 +48,12 @@ struct VertexPositionNormalTexture {
         InputElementsInstancing, 6
     };
 };
+#pragma pack(pop, vpnt)
+
+static_assert(sizeof(VertexPositionNormalTexture) == 32);
 
 // Describes a vertex for use in skinned meshes.
+#pragma pack(push, vpnts, 8)
 struct VertexPositionNormalTextureSkinning {
     VertexPositionNormalTextureSkinning() = default;
 
@@ -97,3 +102,6 @@ struct VertexPositionNormalTextureSkinning {
         InputElements, 5
     };
 };
+#pragma pack(pop, vpnts)
+
+static_assert(sizeof(VertexPositionNormalTextureSkinning) == 52);

@@ -9,6 +9,7 @@
 #define ASSIMP_LOAD_FLAGS (aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_JoinIdenticalVertices | aiProcess_ConvertToLeftHanded)
 
 #include "../FileFormats/RoXModl.h"
+#include "../FileFormats/RoXAnim.h"
 
 using BoneNameToAiBone = std::unordered_map<std::string, const aiBone*>;
 
@@ -535,7 +536,7 @@ std::shared_ptr<Model> AssetIO::ImportRoXModl(std::string filePath, std::shared_
     return pModel;
 }
 
-void AssetIO::ExportRoXModl(std::shared_ptr<Model> pModel, std::string filePath) {
+void AssetIO::ExportRoXModl(std::shared_ptr<Model>& pModel, std::string filePath) {
     std::ofstream fout(filePath, std::ios::binary);
     if (!fout.is_open())
         throw std::runtime_error("Failed to open file: '" + filePath + ".roxmodl'");
@@ -624,6 +625,54 @@ void AssetIO::ExportRoXModl(std::shared_ptr<Model> pModel, std::string filePath)
             fout.write(reinterpret_cast<char*>(p->GetVertices().data()), vbHeader.VertexSizeInBytes * vbHeader.NumVertices);
         } else
             throw std::runtime_error("Failed to downcast IMesh.");
+    }
+
+    fout.close();
+}
+
+std::shared_ptr<Animation> AssetIO::ImportRoXAnim(std::string filePath) {
+    std::ifstream fin = std::ifstream(filePath, std::ios::binary);
+    if (!fin.is_open())
+        throw std::runtime_error("Failed to open file: '" + filePath + ".roxmodl'");
+
+    fin.seekg(0);
+
+    ROXANIM::ANIM_HEADER animHeader;
+    fin.read(reinterpret_cast<char*>(&animHeader), sizeof(ROXANIM::ANIM_HEADER));
+
+    auto pAnim = std::make_shared<Animation>();
+    pAnim->BoneAnimations.resize(animHeader.NumBoneAnimations);
+
+    for (std::uint32_t i = 0; i < animHeader.NumBoneAnimations; ++i) {
+        ROXANIM::BONE_ANIM_HEADER boneAnimHeader;
+        fin.read(reinterpret_cast<char*>(&boneAnimHeader), sizeof(ROXANIM::BONE_ANIM_HEADER));
+
+        pAnim->BoneAnimations[i].Keyframes.resize(boneAnimHeader.NumKeyframes);
+        fin.read(reinterpret_cast<char*>(pAnim->BoneAnimations[i].Keyframes.data()), boneAnimHeader.KeyframeSizeInBytes * boneAnimHeader.NumKeyframes);
+    }
+
+    fin.close();
+    return pAnim;
+}
+
+void AssetIO::ExportRoXAnim(std::shared_ptr<Animation>& pAnim, std::string filePath) {
+    std::ofstream fout = std::ofstream(filePath, std::ios::binary);
+    if (!fout.is_open())
+        throw std::runtime_error("Failed to open file: '" + filePath + ".roxmodl'");
+
+    fout.seekp(0);
+
+    ROXANIM::ANIM_HEADER animHeader;
+    animHeader.NumBoneAnimations = pAnim->GetNumBoneAnimations();
+    fout.write(reinterpret_cast<char*>(&animHeader), sizeof(ROXANIM::ANIM_HEADER));
+
+    for (std::uint32_t i = 0; i < animHeader.NumBoneAnimations; ++i) {
+        ROXANIM::BONE_ANIM_HEADER boneAnimHeader;
+        boneAnimHeader.NumKeyframes = pAnim->BoneAnimations[i].GetNumKeyframes();
+        boneAnimHeader.KeyframeSizeInBytes = sizeof(Keyframe);
+
+        fout.write(reinterpret_cast<char*>(&boneAnimHeader), sizeof(ROXANIM::BONE_ANIM_HEADER));
+        fout.write(reinterpret_cast<char*>(pAnim->BoneAnimations[i].Keyframes.data()), boneAnimHeader.KeyframeSizeInBytes * boneAnimHeader.NumKeyframes);
     }
 
     fout.close();

@@ -8,6 +8,7 @@
 // Describes the position scale and rotation of a transformation at a point in time.
 // Does not enforce a given time unit.
 // When comparing keyframes, be mindfull that both are using the same time unit.
+#pragma pack(push, keyframe, 4)
 struct Keyframe {
     Keyframe(
             float timePosition = 0.f, 
@@ -24,6 +25,8 @@ struct Keyframe {
     DirectX::XMFLOAT3 Scale;
     DirectX::XMFLOAT4 RotationQuaternion;
 };
+#pragma pack(pop, keyframe)
+static_assert(sizeof(Keyframe) == 44, "Keyframe size mismatch");
 
 // Hold the keyframes for the animation of a bone.
 // All keyframes must be sorted in ascending order.

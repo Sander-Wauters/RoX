@@ -2,7 +2,7 @@
 
 #include "../Util/pch.h"
 
-// Describles how an .roxmodl is serialized.
+// Describes how an .roxmodl is constructed.
 // All arrays are stored in order.
 //
 //  ROXMODL::HEADER
@@ -44,7 +44,7 @@ namespace ROXMODL {
     };
 #pragma pack(pop, boneHeader)
 
-    static_assert(sizeof(BONE_HEADER) == 8, "ROXMODL::BONE size mismatch");
+    static_assert(sizeof(BONE_HEADER) == 8, "ROXMODL::BONE_HEADER size mismatch");
 
 #pragma pack(push, meshHeader, 1)
     struct MESH_HEADER {

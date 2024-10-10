@@ -19,6 +19,11 @@ namespace AssetIO {
 
     // Imports a model from a .roxmodl file.
     std::shared_ptr<Model> ImportRoXModl(std::string filePath, std::shared_ptr<Material> pMaterial);
-    // Exports a model from memory into an .roxmodl file.
-    void ExportRoXModl(std::shared_ptr<Model> pModel, std::string filePath);
+    // Exports a model object into an .roxmodl file.
+    void ExportRoXModl(std::shared_ptr<Model>& pModel, std::string filePath);
+
+    // Imports an animation from a .roxanim file.
+    std::shared_ptr<Animation> ImportRoXAnim(std::string filePath);
+    // Exports an animation object into an .roxanim file.
+    void ExportRoXAnim(std::shared_ptr<Animation>& pAnim, std::string filePath);
 };
