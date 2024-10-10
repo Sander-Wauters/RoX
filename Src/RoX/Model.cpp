@@ -185,6 +185,10 @@ std::uint32_t BaseMesh::GetBoneIndex() const noexcept {
     return m_boneIndex;
 }
 
+std::uint32_t BaseMesh::GetNumBoneInfluences() const noexcept {
+    return m_boneInfluences.size();
+}
+
 std::uint32_t BaseMesh::GetNumSubmeshes() const noexcept {
     return m_submeshes.size();
 }
@@ -475,6 +479,14 @@ void Model::SetVisible(bool visible) noexcept {
 
 std::uint32_t Model::GetNumBones() const noexcept {
     return m_bones.size();
+}
+
+std::uint32_t Model::GetNumSubmeshes() const noexcept {
+    std::uint32_t total = 0;
+    for (const std::shared_ptr<IMesh>& pIMesh : m_meshes) {
+        total += pIMesh->GetNumSubmeshes();
+    }
+    return total;
 }
 
 std::uint32_t Model::GetNumMeshes() const noexcept {

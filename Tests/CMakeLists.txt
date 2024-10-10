@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20.0)
 project(RoX_Tests LANGUAGES CXX)
 
 # GoogleTest requires at least C++14
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
@@ -24,6 +24,7 @@ set(TESTS
     Src/PredefinedObjects/ValidModel.h
 
     Src/UnitTests/AssetBatchTest.cpp 
+    Src/UnitTests/AssetIOTest.cpp
     Src/UnitTests/MeshTest.cpp
     Src/UnitTests/ModelTest.cpp
 

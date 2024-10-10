@@ -9,6 +9,10 @@ set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "Assimp build tests" FORCE)
 set(ASSIMP_INJECT_DEBUG_POSTFIX OFF CACHE BOOL "Debug postfix" FORCE)
 set(ASSIMP_INSTALL OFF CACHE BOOL "Assimp install" FORCE)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 add_subdirectory(Lib/assimp)
 add_subdirectory(Lib/DirectXTK12)
 add_subdirectory(Lib/ImGui)
@@ -37,6 +41,8 @@ set(SOURCE
 
     Src/Exceptions/DXException.cpp
     Src/Exceptions/ThrowIfFailed.h
+
+    Src/FileFormats/RoxModl.h
 
     Src/RoX/Animation.cpp
     Src/RoX/AssetBatch.cpp

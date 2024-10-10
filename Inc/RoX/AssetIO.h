@@ -10,10 +10,15 @@ namespace AssetIO {
     // Imports the meshes and bones from a file.
     // Uses **assimp** and should only be used to import from source files.
     // Should not be used in production code due to the high parsing costs.
-    std::shared_ptr<Model> ImportModel(std::string filepath, std::shared_ptr<Material> material, bool skinned, bool packMeshes);
+    std::shared_ptr<Model> ImportModel(std::string filePath, std::shared_ptr<Material> material, bool skinned, bool packMeshes);
 
     // Imports all animations from a file.
     // Uses **assimp** and should only be used to import from source files.
     // Should not be used in production code due to the high parsing costs.
-    std::unordered_map<std::string, std::shared_ptr<Animation>> ImportAnimations(std::string filepath);
+    std::unordered_map<std::string, std::shared_ptr<Animation>> ImportAnimations(std::string filePath);
+
+    // Imports a model from a .roxmodl file.
+    std::shared_ptr<Model> ImportRoXModl(std::string filePath, std::shared_ptr<Material> pMaterial);
+    // Exports a model from memory into an .roxmodl file.
+    void ExportRoXModl(std::shared_ptr<Model> pModel, std::string filePath);
 };

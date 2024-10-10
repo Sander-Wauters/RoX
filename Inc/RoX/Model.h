@@ -138,6 +138,7 @@ class IMesh {
         virtual std::uint64_t GetGUID() const noexcept = 0;
 
         virtual std::uint32_t GetBoneIndex() const noexcept = 0;
+        virtual std::uint32_t GetNumBoneInfluences() const noexcept = 0;
         virtual std::uint32_t GetNumSubmeshes() const noexcept = 0;
         virtual std::uint32_t GetNumVertices() const noexcept = 0;
         virtual std::uint32_t GetNumIndices() const noexcept = 0;
@@ -175,6 +176,7 @@ class BaseMesh : public IMesh, public Identifiable {
         std::uint64_t GetGUID() const noexcept override;
 
         std::uint32_t GetBoneIndex() const noexcept override;
+        std::uint32_t GetNumBoneInfluences() const noexcept override;
         std::uint32_t GetNumSubmeshes() const noexcept override;
         std::uint32_t GetNumIndices() const noexcept override;
 
@@ -300,6 +302,7 @@ class Model : public Identifiable {
         void SetVisible(bool visible) noexcept;
 
         std::uint32_t GetNumBones() const noexcept;
+        std::uint32_t GetNumSubmeshes() const noexcept;
         std::uint32_t GetNumMeshes() const noexcept;
         std::uint32_t GetNumMaterials() const noexcept;
         std::uint32_t GetNumVertices() const noexcept;

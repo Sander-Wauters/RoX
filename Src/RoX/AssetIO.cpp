@@ -8,6 +8,8 @@
 
 #define ASSIMP_LOAD_FLAGS (aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_JoinIdenticalVertices | aiProcess_ConvertToLeftHanded)
 
+#include "../FileFormats/RoXModl.h"
+
 using BoneNameToAiBone = std::unordered_map<std::string, const aiBone*>;
 
 struct VertexBoneData {
@@ -259,14 +261,14 @@ void ParsePackedModel(const aiScene* pScene, Model& model, bool skinned) {
     }
 }
 
-std::shared_ptr<Model> AssetIO::ImportModel(std::string filepath, std::shared_ptr<Material> material, bool skinned, bool packMeshes) {
+std::shared_ptr<Model> AssetIO::ImportModel(std::string filePath, std::shared_ptr<Material> material, bool skinned, bool packMeshes) {
     Assimp::Importer importer;
-    const aiScene* pScene = importer.ReadFile(filepath.c_str(), ASSIMP_LOAD_FLAGS);
+    const aiScene* pScene = importer.ReadFile(filePath.c_str(), ASSIMP_LOAD_FLAGS);
 
     if (!pScene)
-        throw std::runtime_error("Error parsing '" + filepath + "': " + importer.GetErrorString());
+        throw std::runtime_error("Error parsing '" + filePath + "': " + importer.GetErrorString());
 
-    Model model(material, GetNameFromFilePath(filepath));
+    Model model(material, GetNameFromFilePath(filePath));
     ParseBones(pScene, model);
     if (packMeshes)
         ParsePackedModel(pScene, model, skinned);
@@ -373,12 +375,12 @@ void FillMissingBoneAnimations(
     } 
 }
 
-std::unordered_map<std::string, std::shared_ptr<Animation>> AssetIO::ImportAnimations(std::string filepath) {
+std::unordered_map<std::string, std::shared_ptr<Animation>> AssetIO::ImportAnimations(std::string filePath) {
     Assimp::Importer importer;
-    const aiScene* pScene = importer.ReadFile(filepath.c_str(), ASSIMP_LOAD_FLAGS);
+    const aiScene* pScene = importer.ReadFile(filePath.c_str(), ASSIMP_LOAD_FLAGS);
 
     if (!pScene)
-        throw std::runtime_error("Error parsing '" + filepath + "': " + importer.GetErrorString());
+        throw std::runtime_error("Error parsing '" + filePath + "': " + importer.GetErrorString());
 
     std::unordered_map<std::string, std::shared_ptr<Animation>> animations;
 
@@ -420,3 +422,210 @@ std::unordered_map<std::string, std::shared_ptr<Animation>> AssetIO::ImportAnima
 
     return animations;
 }
+
+std::shared_ptr<Model> AssetIO::ImportRoXModl(std::string filePath, std::shared_ptr<Material> pMaterial) {
+    std::ifstream fin(filePath, std::ios::binary);
+    if (!fin.is_open())
+        throw std::runtime_error("Failed to open file: '" + filePath + "'");
+
+    fin.seekg(0);
+
+    ROXMODL::HEADER modelHeader = {};
+    fin.read(reinterpret_cast<char*>(&modelHeader), sizeof(ROXMODL::HEADER));
+
+    char* modelName = new char[modelHeader.NameSizeInBytes + 1];
+    fin.read(modelName, modelHeader.NameSizeInBytes);
+    modelName[modelHeader.NameSizeInBytes] = '\0';
+
+    std::vector<Bone> bones;
+    bones.reserve(modelHeader.NumBones);
+    for (std::uint8_t i = 0; i < modelHeader.NumBones; ++i) {
+        ROXMODL::BONE_HEADER boneHeader = {};
+        fin.read(reinterpret_cast<char*>(&boneHeader), sizeof(ROXMODL::BONE_HEADER));
+
+        char* boneName = new char[boneHeader.NameSizeInBytes + 1];
+        fin.read(boneName, boneHeader.NameSizeInBytes);
+        boneName[boneHeader.NameSizeInBytes] = '\0';
+
+        bones.push_back({ boneName, boneHeader.ParentIndex });
+        delete [] boneName;
+    }
+
+    std::vector<DirectX::XMFLOAT4X4> boneMatrices;
+    boneMatrices.resize(modelHeader.NumBones);
+    fin.read(reinterpret_cast<char*>(boneMatrices.data()), sizeof(DirectX::XMFLOAT4X4) * modelHeader.NumBones);
+
+    std::vector<DirectX::XMFLOAT4X4> inverseBoneMatrices;
+    inverseBoneMatrices.resize(modelHeader.NumBones);
+    fin.read(reinterpret_cast<char*>(inverseBoneMatrices.data()), sizeof(DirectX::XMFLOAT4X4) * modelHeader.NumBones);
+
+    std::vector<std::shared_ptr<IMesh>> meshes;
+    meshes.reserve(modelHeader.NumMeshes);
+    for (std::uint32_t i = 0; i < modelHeader.NumMeshes; ++i) {
+        ROXMODL::MESH_HEADER meshHeader = {};
+        fin.read(reinterpret_cast<char*>(&meshHeader), sizeof(ROXMODL::MESH_HEADER));
+
+        char* meshName = new char[meshHeader.NameSizeInBytes + 1];
+        fin.read(meshName, meshHeader.NameSizeInBytes);
+        meshName[meshHeader.NameSizeInBytes] = '\0';
+
+        std::shared_ptr<IMesh> pMesh;
+        if (!meshHeader.IsSkinned)
+            pMesh = std::make_shared<Mesh>(meshName);
+        else
+            pMesh = std::make_shared<SkinnedMesh>(meshName);
+        delete [] meshName;
+
+        pMesh->GetBoneInfluences().resize(sizeof(std::uint32_t) * meshHeader.NumBoneInfluences);
+        fin.read(reinterpret_cast<char*>(pMesh->GetBoneInfluences().data()), sizeof(std::uint32_t) * meshHeader.NumBoneInfluences);
+
+        for (std::uint32_t j = 0; j < meshHeader.NumSubmeshes; ++j) {
+            ROXMODL::SUBMESH_HEADER submeshHeader = {};
+            fin.read(reinterpret_cast<char*>(&submeshHeader), sizeof(ROXMODL::SUBMESH_HEADER));
+
+            char* submeshName = new char[submeshHeader.NameSizeInBytes + 1];
+            fin.read(submeshName, submeshHeader.NameSizeInBytes);
+            submeshName[submeshHeader.NameSizeInBytes] = '\0';
+            
+            auto pSubmesh = std::make_unique<Submesh>(submeshName, submeshHeader.MaterialIndex);
+            delete [] submeshName;
+            pSubmesh->SetIndexCount(submeshHeader.IndexCount);
+            pSubmesh->SetStartIndex(submeshHeader.StartIndex);
+            pSubmesh->SetVertexOffset(submeshHeader.VertexOffset);
+
+            pMesh->Add(std::move(pSubmesh));
+        }
+
+        ROXMODL::INDEX_BUFFER_HEADER ibHeader = {};
+        fin.read(reinterpret_cast<char*>(&ibHeader), sizeof(ROXMODL::INDEX_BUFFER_HEADER));
+
+        pMesh->GetIndices().resize(ibHeader.NumIndices);
+        fin.read(reinterpret_cast<char*>(pMesh->GetIndices().data()), ibHeader.IndexSizeInBytes * ibHeader.NumIndices);
+
+        ROXMODL::VERTEX_BUFFER_HEADER vbHeader = {};
+        fin.read(reinterpret_cast<char*>(&vbHeader), sizeof(ROXMODL::VERTEX_BUFFER_HEADER));
+
+        if (auto p = dynamic_cast<Mesh*>(pMesh.get())) {
+            p->GetVertices().resize(vbHeader.NumVertices);
+            fin.read(reinterpret_cast<char*>(p->GetVertices().data()), vbHeader.VertexSizeInBytes * vbHeader.NumVertices);
+        } else if (auto p = dynamic_cast<SkinnedMesh*>(pMesh.get())) {
+            p->GetVertices().resize(vbHeader.NumVertices);
+            fin.read(reinterpret_cast<char*>(p->GetVertices().data()), vbHeader.VertexSizeInBytes * vbHeader.NumVertices);
+        } else
+            throw std::runtime_error("Failed to downcast IMesh.");
+ 
+        meshes.push_back(std::move(pMesh));
+    }
+
+    fin.close();
+
+    auto pModel = std::make_shared<Model>(pMaterial, modelName);
+    delete [] modelName;
+    pModel->GetMeshes() = std::move(meshes);
+    pModel->GetBones() = std::move(bones);
+    pModel->MakeBoneMatricesArray(pModel->GetNumBones());;
+    for (std::uint8_t i = 0; i < pModel->GetNumBones(); ++i) {
+        pModel->GetBoneMatrices()[i] = DirectX::XMLoadFloat4x4(&boneMatrices[i]);
+    }
+    pModel->MakeInverseBoneMatricesArray(pModel->GetNumBones());;
+    for (std::uint8_t i = 0; i < pModel->GetNumBones(); ++i) {
+        pModel->GetInverseBindPoseMatrices()[i] = DirectX::XMLoadFloat4x4(&inverseBoneMatrices[i]);
+    }
+
+    return pModel;
+}
+
+void AssetIO::ExportRoXModl(std::shared_ptr<Model> pModel, std::string filePath) {
+    std::ofstream fout(filePath, std::ios::binary);
+    if (!fout.is_open())
+        throw std::runtime_error("Failed to open file: '" + filePath + ".roxmodl'");
+
+    fout.seekp(0);
+
+    ROXMODL::HEADER modelHeader;
+    modelHeader.Version = 1;
+    modelHeader.NameSizeInBytes = pModel->GetName().length();
+    modelHeader.NumBones = pModel->GetNumBones();
+    modelHeader.NumMeshes = pModel->GetNumMeshes();
+    modelHeader.NumMaterials = pModel->GetNumMaterials();
+    fout.write(reinterpret_cast<char*>(&modelHeader), sizeof(ROXMODL::HEADER));
+    fout.write(pModel->GetName().c_str(), modelHeader.NameSizeInBytes);
+
+    for (Bone& bone : pModel->GetBones()) {
+        ROXMODL::BONE_HEADER boneHeader;
+        boneHeader.NameSizeInBytes = bone.GetName().length();
+        boneHeader.ParentIndex = bone.GetParentIndex();
+
+        fout.write(reinterpret_cast<char*>(&boneHeader), sizeof(ROXMODL::BONE_HEADER));
+        fout.write(bone.GetName().c_str(), boneHeader.NameSizeInBytes);
+    }
+
+    std::vector<DirectX::XMFLOAT4X4> boneMatrices;
+    boneMatrices.resize(pModel->GetNumBones());
+    for (std::uint8_t i = 0; i < pModel->GetNumBones(); ++i) {
+        DirectX::XMStoreFloat4x4(&boneMatrices[i], pModel->GetBoneMatrices()[i]);
+    }
+    fout.write(reinterpret_cast<char*>(boneMatrices.data()), sizeof(DirectX::XMFLOAT4X4) * pModel->GetNumBones());
+
+    std::vector<DirectX::XMFLOAT4X4> inverseBoneMatrices;
+    inverseBoneMatrices.resize(pModel->GetNumBones());
+    for (std::uint8_t i = 0; i < pModel->GetNumBones(); ++i) {
+        DirectX::XMStoreFloat4x4(&inverseBoneMatrices[i], pModel->GetInverseBindPoseMatrices()[i]);
+    }
+    fout.write(reinterpret_cast<char*>(inverseBoneMatrices.data()), sizeof(DirectX::XMFLOAT4X4) * pModel->GetNumBones());
+
+    for (std::shared_ptr<IMesh>& pMesh : pModel->GetMeshes()) {
+        ROXMODL::MESH_HEADER meshHeader;
+        if (dynamic_cast<Mesh*>(pMesh.get()))
+            meshHeader.IsSkinned = false;
+        else if (dynamic_cast<SkinnedMesh*>(pMesh.get()))
+            meshHeader.IsSkinned = true;
+        else
+            throw std::runtime_error("Failed to downcast IMesh.");
+        meshHeader.NameSizeInBytes = pMesh->GetName().length();
+        meshHeader.NumBoneInfluences = pMesh->GetNumBoneInfluences();
+        meshHeader.NumSubmeshes = pMesh->GetNumSubmeshes();
+
+        fout.write(reinterpret_cast<char*>(&meshHeader), sizeof(ROXMODL::MESH_HEADER));
+        fout.write(pMesh->GetName().c_str(), meshHeader.NameSizeInBytes);
+        if (meshHeader.NumBoneInfluences)
+            fout.write(reinterpret_cast<char*>(pMesh->GetBoneInfluences().data()), sizeof(std::uint32_t) * meshHeader.NameSizeInBytes);
+
+        for (std::unique_ptr<Submesh>& pSubmesh : pMesh->GetSubmeshes()) {
+            ROXMODL::SUBMESH_HEADER submeshHeader;
+            submeshHeader.NameSizeInBytes = pSubmesh->GetName().length();
+            submeshHeader.MaterialIndex = pSubmesh->GetMaterialIndex();
+            submeshHeader.IndexCount = pSubmesh->GetIndexCount();
+            submeshHeader.StartIndex = pSubmesh->GetStartIndex();
+            submeshHeader.VertexOffset = pSubmesh->GetVertexOffset();
+
+            fout.write(reinterpret_cast<char*>(&submeshHeader), sizeof(ROXMODL::SUBMESH_HEADER));
+            fout.write(pSubmesh->GetName().c_str(), submeshHeader.NameSizeInBytes);
+        }
+
+        ROXMODL::INDEX_BUFFER_HEADER ibHeader;
+        ibHeader.NumIndices = pMesh->GetNumIndices();
+        ibHeader.IndexSizeInBytes = sizeof(std::uint16_t);
+
+        fout.write(reinterpret_cast<char*>(&ibHeader), sizeof(ROXMODL::INDEX_BUFFER_HEADER));
+        fout.write(reinterpret_cast<char*>(pMesh->GetIndices().data()), ibHeader.IndexSizeInBytes * ibHeader.NumIndices);
+
+        ROXMODL::VERTEX_BUFFER_HEADER vbHeader;
+        vbHeader.NumVertices = pMesh->GetNumVertices();
+        if (auto p = dynamic_cast<Mesh*>(pMesh.get())) {
+            vbHeader.VertexSizeInBytes = sizeof(VertexPositionNormalTexture);
+
+            fout.write(reinterpret_cast<char*>(&vbHeader), sizeof(ROXMODL::VERTEX_BUFFER_HEADER));
+            fout.write(reinterpret_cast<char*>(p->GetVertices().data()), vbHeader.VertexSizeInBytes * vbHeader.NumVertices);
+        } else if (auto p = dynamic_cast<SkinnedMesh*>(pMesh.get())) {
+            vbHeader.VertexSizeInBytes = sizeof(VertexPositionNormalTextureSkinning);
+
+            fout.write(reinterpret_cast<char*>(&vbHeader), sizeof(ROXMODL::VERTEX_BUFFER_HEADER));
+            fout.write(reinterpret_cast<char*>(p->GetVertices().data()), vbHeader.VertexSizeInBytes * vbHeader.NumVertices);
+        } else
+            throw std::runtime_error("Failed to downcast IMesh.");
+    }
+
+    fout.close();
+}
+

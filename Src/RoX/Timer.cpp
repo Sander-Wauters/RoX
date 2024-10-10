@@ -30,6 +30,10 @@ void Timer::ResetElapsedTime() {
     m_qpcSecondCounter = 0;
 }
 
+void Timer::Tick() {
+    Tick([](){});
+}
+
 std::uint64_t Timer::GetElapsedTicks() const noexcept { 
     return m_elapsedTicks; 
 }

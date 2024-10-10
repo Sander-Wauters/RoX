@@ -20,6 +20,8 @@ class Timer {
         // Update calls.
         void ResetElapsedTime();
 
+        void Tick();
+
         // Update timer state, calling the specified Update function the appropriate number of times.
         void Tick(const std::function<void()>& update) {
             // Query the current time.
