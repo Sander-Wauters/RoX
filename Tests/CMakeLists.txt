@@ -14,6 +14,8 @@ set(TESTS
     Src/Mocks/MockMeshObserver.h
     Src/Mocks/MockModelObserver.h
 
+    Src/PredefinedObjects/ValidAnimation.cpp
+    Src/PredefinedObjects/ValidAnimation.h
     Src/PredefinedObjects/ValidAssetBatch.cpp
     Src/PredefinedObjects/ValidAssetBatch.h
     Src/PredefinedObjects/ValidMaterial.cpp
