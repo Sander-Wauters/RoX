@@ -6,23 +6,19 @@
 #include "DebugUI/Util.h"
 #include "DebugUI/GeneralUI.h"
 #include "DebugUI/IdentifiableUI.h"
+#include "DebugUI/MathUI.h"
 
 void SpriteUI::Position(Sprite& sprite) {
-    float origin[2] = { sprite.GetOrigin().x, sprite.GetOrigin().y };
-    float offset[2] = { sprite.GetOffset().x, sprite.GetOffset().y };
-    float scale[2] = { sprite.GetScale().x, sprite.GetScale().y };
     float layer = sprite.GetLayer();
     float angle = DirectX::XMConvertToDegrees(sprite.GetAngle());
 
-    if (ImGui::DragFloat2(Util::GUIDLabel("Origin", sprite.GetGUID()).c_str(), origin))
-        sprite.GetOrigin() = { origin[0], origin[1] };
-    if (ImGui::DragFloat2(Util::GUIDLabel("Offset", sprite.GetGUID()).c_str(), offset))
-        sprite.GetOffset() = { offset[0], offset[1] };
-    if (ImGui::DragFloat2(Util::GUIDLabel("Scale", sprite.GetGUID()).c_str(), scale))
-        sprite.GetScale() = { scale[0], scale[1] };
-    if (ImGui::DragFloat(Util::GUIDLabel("Layer", sprite.GetGUID()).c_str(), &layer))
+    float speed = GeneralUI::DragSpeedControls();
+    MathUI::Vector(Util::GUIDLabel("Origin", sprite.GetGUID()), sprite.GetOrigin(), speed);
+    MathUI::Vector(Util::GUIDLabel("Offset", sprite.GetGUID()), sprite.GetOffset(), speed);
+    MathUI::Vector(Util::GUIDLabel("Scale", sprite.GetGUID()), sprite.GetScale(), speed);
+    if (ImGui::DragFloat(Util::GUIDLabel("Layer", sprite.GetGUID()).c_str(), &layer, speed))
         sprite.SetLayer(layer);
-    if (ImGui::DragFloat(Util::GUIDLabel("Angle", sprite.GetGUID()).c_str(), &angle))
+    if (ImGui::DragFloat(Util::GUIDLabel("Angle", sprite.GetGUID()).c_str(), &angle, speed))
         sprite.SetAngle(DirectX::XMConvertToRadians(angle));
 }
 

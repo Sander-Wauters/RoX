@@ -234,3 +234,59 @@ bool MathUI::AffineTransformation(DirectX::XMFLOAT3X4& matrix) {
     return transformatonApplied;
 }
 
+void MathUI::Vector(std::string label, DirectX::XMFLOAT2& vector, float dragSpeed) {
+    float v[2];
+    Util::StoreFloat2(vector, v);
+
+    if (ImGui::DragFloat2(label.c_str(), v, dragSpeed))
+        Util::LoadFloat2(v, vector);
+}
+
+void MathUI::Vector(std::string label, DirectX::XMFLOAT3& vector, float dragSpeed) {
+    float v[3];
+    Util::StoreFloat3(vector, v);
+
+    if (ImGui::DragFloat3(label.c_str(), v, dragSpeed))
+        Util::LoadFloat3(v, vector);
+}
+
+void MathUI::Vector(std::string label, DirectX::XMFLOAT4& vector, float dragSpeed) {
+    float v[4];
+    Util::StoreFloat4(vector, v);
+
+    if (ImGui::DragFloat4(label.c_str(), v, dragSpeed))
+        Util::LoadFloat4(v, vector);
+}
+
+void MathUI::ColorVector(std::string label, DirectX::XMFLOAT3& colorVector, float dragSpeed) {
+    float color[3];
+    Util::StoreFloat3(colorVector, color);
+
+    if (ImGui::ColorEdit3(label.c_str(), color, dragSpeed))
+        Util::LoadFloat3(color, colorVector);
+}
+
+void MathUI::ColorVector(std::string label, DirectX::XMFLOAT4& colorVector, float dragSpeed) {
+    float color[4];
+    Util::StoreFloat4(colorVector, color);
+
+    if (ImGui::ColorEdit4(label.c_str(), color, dragSpeed))
+        Util::LoadFloat4(color, colorVector);
+}
+
+void MathUI::QuaternionWithEulerControlls(std::string label, DirectX::XMFLOAT4& quaternion, float dragSpeed) {
+    DirectX::SimpleMath::Quaternion q = quaternion;
+    DirectX::XMFLOAT3 euler = q.ToEuler();
+    float rotation[3] = {
+        DirectX::XMConvertToDegrees(euler.x),
+        DirectX::XMConvertToDegrees(euler.y),
+        DirectX::XMConvertToDegrees(euler.z),
+    };
+
+    if (ImGui::DragFloat3(label.c_str(), rotation, dragSpeed))
+        DirectX::XMStoreFloat4(&quaternion, DirectX::XMQuaternionRotationRollPitchYaw(
+                    DirectX::XMConvertToRadians(rotation[0]), 
+                    DirectX::XMConvertToRadians(rotation[1]), 
+                    DirectX::XMConvertToRadians(rotation[2])));
+}
+

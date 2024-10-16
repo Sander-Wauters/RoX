@@ -7,6 +7,7 @@
 #include "DebugUI/Util.h"
 #include "DebugUI/MathUI.h"
 #include "DebugUI/IdentifiableUI.h"
+#include "DebugUI/GeneralUI.h"
 
 Outline::Type OutlineUI::TypeSelector() {
     static Outline::Type options[5] = { Outline::Type::Grid, Outline::Type::Ring, Outline::Type::Ray, Outline::Type::Triangle, Outline::Type::Quad };
@@ -94,158 +95,85 @@ void OutlineUI::Creator(AssetBatch& batch) {
 void OutlineUI::BoundingBoxMenu(BoundingBodyOutline<DirectX::BoundingBox>& outline) {
     DirectX::BoundingBox& b = outline.GetBoundingBody();
 
-    float center[3] = { b.Center.x, b.Center.y, b.Center.z };
-    float extents[3] = { b.Extents.x, b.Extents.y, b.Extents.z };
-
-    if (ImGui::DragFloat3(Util::GUIDLabel("Center", outline.GetGUID()).c_str(), center))
-        b.Center = { center[0], center[1], center[2] };
-    if (ImGui::DragFloat3(Util::GUIDLabel("Extents", outline.GetGUID()).c_str(), extents))
-        b.Extents = { extents[0], extents[1], extents[2] };
+    float speed = GeneralUI::DragSpeedControls();
+    MathUI::Vector(Util::GUIDLabel("Center", outline.GetGUID()), b.Center, speed);
+    MathUI::Vector(Util::GUIDLabel("Extents", outline.GetGUID()), b.Extents, speed);
 }
 
 void OutlineUI::BoundingFrustumMenu(BoundingBodyOutline<DirectX::BoundingFrustum>& outline) {
     DirectX::BoundingFrustum& b = outline.GetBoundingBody();
 
-    float origin[3] = { b.Origin.x, b.Origin.y, b.Origin.z };
-
-    DirectX::SimpleMath::Quaternion q = b.Orientation;
-    DirectX::XMFLOAT3 r = q.ToEuler();
-    float rotation[3] = { r.x, r.y, r.z };
-
-    if (ImGui::DragFloat3(Util::GUIDLabel("Origin", outline.GetGUID()).c_str(), origin))
-        b.Origin = { origin[0], origin[1], origin[2] };
-    if (ImGui::DragFloat3(Util::GUIDLabel("Rotation", outline.GetGUID()).c_str(), rotation))
-        DirectX::XMStoreFloat4(&b.Orientation, DirectX::XMQuaternionRotationRollPitchYaw(
-                    DirectX::XMConvertToRadians(rotation[0]), 
-                    DirectX::XMConvertToRadians(rotation[1]), 
-                    DirectX::XMConvertToRadians(rotation[2])));
-    ImGui::DragFloat(Util::GUIDLabel("Right slope", outline.GetGUID()).c_str(), &b.RightSlope);
-    ImGui::DragFloat(Util::GUIDLabel("Left slope", outline.GetGUID()).c_str(), &b.LeftSlope);
-    ImGui::DragFloat(Util::GUIDLabel("Top slope", outline.GetGUID()).c_str(), &b.TopSlope);
-    ImGui::DragFloat(Util::GUIDLabel("Bottom slope", outline.GetGUID()).c_str(), &b.BottomSlope);
-    ImGui::DragFloat(Util::GUIDLabel("Near", outline.GetGUID()).c_str(), &b.Near);
-    ImGui::DragFloat(Util::GUIDLabel("Far", outline.GetGUID()).c_str(), &b.Far);
+    float speed = GeneralUI::DragSpeedControls();
+    MathUI::Vector(Util::GUIDLabel("Origin", outline.GetGUID()), b.Origin, speed);
+    MathUI::QuaternionWithEulerControlls(Util::GUIDLabel("Rotation (euler)", outline.GetGUID()), b.Orientation, speed);
+    ImGui::DragFloat(Util::GUIDLabel("Right slope", outline.GetGUID()).c_str(), &b.RightSlope, speed);
+    ImGui::DragFloat(Util::GUIDLabel("Left slope", outline.GetGUID()).c_str(), &b.LeftSlope, speed);
+    ImGui::DragFloat(Util::GUIDLabel("Top slope", outline.GetGUID()).c_str(), &b.TopSlope, speed);
+    ImGui::DragFloat(Util::GUIDLabel("Bottom slope", outline.GetGUID()).c_str(), &b.BottomSlope, speed);
+    ImGui::DragFloat(Util::GUIDLabel("Near", outline.GetGUID()).c_str(), &b.Near, speed);
+    ImGui::DragFloat(Util::GUIDLabel("Far", outline.GetGUID()).c_str(), &b.Far, speed);
 }
 
 void OutlineUI::BoundingOrientedBoxMenu(BoundingBodyOutline<DirectX::BoundingOrientedBox>& outline) {
     DirectX::BoundingOrientedBox& b = outline.GetBoundingBody();
 
-    float center[3] = { b.Center.x, b.Center.y, b.Center.z };
-    float extents[3] = { b.Extents.x, b.Extents.y, b.Extents.z };
-    DirectX::SimpleMath::Quaternion q = b.Orientation;
-    DirectX::XMFLOAT3 r = q.ToEuler();
-    float rotation[3] = { r.x, r.y, r.z };
-
-    if (ImGui::DragFloat3(Util::GUIDLabel("Center", outline.GetGUID()).c_str(), center))
-        b.Center = { center[0], center[1], center[2] };
-    if (ImGui::DragFloat3(Util::GUIDLabel("Extents", outline.GetGUID()).c_str(), extents))
-        b.Extents = { extents[0], extents[1], extents[2] };
-    if (ImGui::DragFloat3(Util::GUIDLabel("Rotation", outline.GetGUID()).c_str(), rotation))
-        DirectX::XMStoreFloat4(&b.Orientation, DirectX::XMQuaternionRotationRollPitchYaw(
-                    DirectX::XMConvertToRadians(rotation[0]), 
-                    DirectX::XMConvertToRadians(rotation[1]), 
-                    DirectX::XMConvertToRadians(rotation[2])));
+    float speed = GeneralUI::DragSpeedControls();
+    MathUI::Vector(Util::GUIDLabel("Center", outline.GetGUID()), b.Center, speed);
+    MathUI::Vector(Util::GUIDLabel("Extents", outline.GetGUID()), b.Extents, speed);
+    MathUI::QuaternionWithEulerControlls(Util::GUIDLabel("Rotation (euler)", outline.GetGUID()), b.Orientation, speed);
 }
 
 void OutlineUI::BoundingSphereMenu(BoundingBodyOutline<DirectX::BoundingSphere>& outline) {
     DirectX::BoundingSphere& b = outline.GetBoundingBody();
 
-    float center[3] = { b.Center.x, b.Center.y, b.Center.z };
-
-    if (ImGui::DragFloat3(Util::GUIDLabel("Center", outline.GetGUID()).c_str(), center))
-        b.Center = { center[0], center[1], center[2] };
-    ImGui::DragFloat(Util::GUIDLabel("Radius", outline.GetGUID()).c_str(), &b.Radius);
+    float speed = GeneralUI::DragSpeedControls();
+    MathUI::Vector(Util::GUIDLabel("Center", outline.GetGUID()), b.Center, speed);
+    ImGui::DragFloat(Util::GUIDLabel("Radius", outline.GetGUID()).c_str(), &b.Radius, speed);
 }
 
 void OutlineUI::GridMenu(GridOutline& outline) {
-    float xDivisions = outline.GetXDivisions();
-    float yDivisions = outline.GetYDivisions();
-    if (ImGui::DragScalar(Util::GUIDLabel("X divisions", outline.GetGUID()).c_str(), ImGuiDataType_U16, &xDivisions))
+    std::uint16_t xDivisions = outline.GetXDivisions();
+    std::uint16_t yDivisions = outline.GetYDivisions();
+
+    float speed = GeneralUI::DragSpeedControls();
+    if (ImGui::DragScalar(Util::GUIDLabel("X divisions", outline.GetGUID()).c_str(), ImGuiDataType_U16, &xDivisions, speed))
         outline.SetXDivisions(xDivisions);
-    if (ImGui::DragScalar(Util::GUIDLabel("Y divisions", outline.GetGUID()).c_str(), ImGuiDataType_U16, &yDivisions))
+    if (ImGui::DragScalar(Util::GUIDLabel("Y divisions", outline.GetGUID()).c_str(), ImGuiDataType_U16, &yDivisions, speed))
         outline.SetYDivisions(yDivisions);
-
-    float xAxis[3];
-    Util::StoreFloat3(outline.GetXAxis(), xAxis);
-    float yAxis[3];
-    Util::StoreFloat3(outline.GetYAxis(), yAxis);
-    float origin[3];
-    Util::StoreFloat3(outline.GetOrigin(), origin);
-
-    if (ImGui::DragFloat3(Util::GUIDLabel("X axis", outline.GetGUID()).c_str(), xAxis))
-        Util::LoadFloat3(xAxis, outline.GetXAxis());
-    if (ImGui::DragFloat3(Util::GUIDLabel("Y axis", outline.GetGUID()).c_str(), yAxis))
-        Util::LoadFloat3(yAxis, outline.GetYAxis());
-    if (ImGui::DragFloat3(Util::GUIDLabel("Origin", outline.GetGUID()).c_str(), origin))
-        Util::LoadFloat3(origin, outline.GetOrigin());
+    MathUI::Vector(Util::GUIDLabel("X axis", outline.GetGUID()), outline.GetXAxis(), speed);
+    MathUI::Vector(Util::GUIDLabel("Y axis", outline.GetGUID()), outline.GetYAxis(), speed);
+    MathUI::Vector(Util::GUIDLabel("Origin", outline.GetGUID()), outline.GetOrigin(), speed);
 }
 
 void OutlineUI::RingMenu(RingOutline& outline) {
-    float minorAxis[3];
-    Util::StoreFloat3(outline.GetMinorAxis(), minorAxis);
-    float majorAxis[3];
-    Util::StoreFloat3(outline.GetMajorAxis(), majorAxis);
-    float origin[3];
-    Util::StoreFloat3(outline.GetOrigin(), origin);
-
-    if (ImGui::DragFloat3(Util::GUIDLabel("Minor axis", outline.GetGUID()).c_str(), minorAxis))
-        Util::LoadFloat3(minorAxis, outline.GetMinorAxis());
-    if (ImGui::DragFloat3(Util::GUIDLabel("Major axis", outline.GetGUID()).c_str(), majorAxis))
-        Util::LoadFloat3(majorAxis, outline.GetMajorAxis());
-    if (ImGui::DragFloat3(Util::GUIDLabel("Origin", outline.GetGUID()).c_str(), origin))
-        Util::LoadFloat3(origin, outline.GetOrigin());
+    float speed = GeneralUI::DragSpeedControls();
+    MathUI::Vector(Util::GUIDLabel("Minor axis", outline.GetGUID()), outline.GetMinorAxis(), speed);
+    MathUI::Vector(Util::GUIDLabel("Major axis", outline.GetGUID()), outline.GetMajorAxis(), speed);
+    MathUI::Vector(Util::GUIDLabel("Origin", outline.GetGUID()), outline.GetOrigin(), speed);
 }
 
 void OutlineUI::RayMenu(RayOutline& outline) {
     bool normalized = outline.IsNormalized();
     if (ImGui::Checkbox(Util::GUIDLabel("Normalized", outline.GetGUID()).c_str(), &normalized))
         outline.SetNormalized(normalized);
-
-    float direction[3];
-    Util::StoreFloat3(outline.GetDirection(), direction);
-    float origin[3];
-    Util::StoreFloat3(outline.GetOrigin(), origin);
-
-    if (ImGui::DragFloat3(Util::GUIDLabel("Direction", outline.GetGUID()).c_str(), direction))
-        Util::LoadFloat3(direction, outline.GetDirection());
-    if (ImGui::DragFloat3(Util::GUIDLabel("Origin##", outline.GetGUID()).c_str(), origin))
-        Util::LoadFloat3(origin, outline.GetOrigin());
+    float speed = GeneralUI::DragSpeedControls();
+    MathUI::Vector(Util::GUIDLabel("Direction", outline.GetGUID()), outline.GetDirection(), speed);
+    MathUI::Vector(Util::GUIDLabel("Origin", outline.GetGUID()), outline.GetOrigin(), speed);
 }
 
 void OutlineUI::TriangleMenu(TriangleOutline& outline) {
-    float pointA[3];
-    Util::StoreFloat3(outline.GetPointA(), pointA);
-    float pointB[3];
-    Util::StoreFloat3(outline.GetPointB(), pointB);
-    float pointC[3];
-    Util::StoreFloat3(outline.GetPointC(), pointC);
-
-    if (ImGui::DragFloat3(Util::GUIDLabel("Point A", outline.GetGUID()).c_str(), pointA))
-        Util::LoadFloat3(pointA, outline.GetPointA());
-    if (ImGui::DragFloat3(Util::GUIDLabel("Point B", outline.GetGUID()).c_str(), pointB))
-        Util::LoadFloat3(pointB, outline.GetPointB());
-    if (ImGui::DragFloat3(Util::GUIDLabel("Point C", outline.GetGUID()).c_str(), pointC))
-        Util::LoadFloat3(pointC, outline.GetPointC());
+    float speed = GeneralUI::DragSpeedControls();
+    MathUI::Vector(Util::GUIDLabel("Point A", outline.GetGUID()), outline.GetPointA(), speed);
+    MathUI::Vector(Util::GUIDLabel("Point B", outline.GetGUID()), outline.GetPointB(), speed);
+    MathUI::Vector(Util::GUIDLabel("Point C", outline.GetGUID()), outline.GetPointC(), speed);
 }
 
 void OutlineUI::QuadMenu(QuadOutline& outline) {
-    float pointA[3];
-    Util::StoreFloat3(outline.GetPointA(), pointA);
-    float pointB[3];
-    Util::StoreFloat3(outline.GetPointB(), pointB);
-    float pointC[3];
-    Util::StoreFloat3(outline.GetPointC(), pointC);
-    float pointD[3];
-    Util::StoreFloat3(outline.GetPointD(), pointD);
-
-    if (ImGui::DragFloat3(Util::GUIDLabel("Point A", outline.GetGUID()).c_str(), pointA))
-        Util::LoadFloat3(pointA, outline.GetPointA());
-    if (ImGui::DragFloat3(Util::GUIDLabel("Point B", outline.GetGUID()).c_str(), pointB))
-        Util::LoadFloat3(pointB, outline.GetPointB());
-    if (ImGui::DragFloat3(Util::GUIDLabel("Point C", outline.GetGUID()).c_str(), pointC))
-        Util::LoadFloat3(pointC, outline.GetPointC());
-    if (ImGui::DragFloat3(Util::GUIDLabel("Point D", outline.GetGUID()).c_str(), pointD))
-        Util::LoadFloat3(pointD, outline.GetPointD());
+    float speed = GeneralUI::DragSpeedControls();
+    MathUI::Vector(Util::GUIDLabel("Point A", outline.GetGUID()), outline.GetPointA(), speed);
+    MathUI::Vector(Util::GUIDLabel("Point B", outline.GetGUID()), outline.GetPointB(), speed);
+    MathUI::Vector(Util::GUIDLabel("Point C", outline.GetGUID()), outline.GetPointC(), speed);
+    MathUI::Vector(Util::GUIDLabel("Point D", outline.GetGUID()), outline.GetPointD(), speed);
 }
 
 void OutlineUI::Menu(Outline& outline) {
@@ -288,11 +216,10 @@ void OutlineUI::Menu(Outline& outline) {
         }
     }
 
-    float color[4];
-    Util::StoreFloat4(outline.GetColor(), color);
-    if (ImGui::CollapsingHeader("Color"))
-        if (ImGui::ColorEdit4(Util::GUIDLabel("Color", outline.GetGUID()).c_str(), color))
-            Util::LoadFloat4(color, outline.GetColor());
+    if (ImGui::CollapsingHeader("Color")) {
+        float speed = GeneralUI::DragSpeedControls();
+        MathUI::ColorVector(Util::GUIDLabel("Color", outline.GetGUID()), outline.GetColor(), speed);
+    }
 }
 
 void OutlineUI::Menu(const Outlines& outlines) {

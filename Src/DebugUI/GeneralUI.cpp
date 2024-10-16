@@ -88,3 +88,10 @@ void GeneralUI::SameLineError(bool show, const char* label) {
     }
 }
 
+float GeneralUI::DragSpeedControls() {
+    static float speed = .25f;
+    ImGui::DragFloat("Drag speed", &speed, 0.001f);
+    ImGui::Separator();
+    return speed;
+}
+

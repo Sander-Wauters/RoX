@@ -1,7 +1,7 @@
 #include "RoX/Scene.h"
 
 Scene::Scene(const std::string name, Camera& camera) 
-    noexcept : m_name(name),
+    noexcept : Identifiable("scene", name),
     m_camera(camera)
 {}
 
@@ -70,10 +70,6 @@ void Scene::RemoveText(std::uint8_t batch, std::string name) {
 
 void Scene::RemoveOutline(std::uint8_t batch, std::string name) {
     m_assetBatches[batch]->RemoveOutline(name);
-}
-
-std::string Scene::GetName() const noexcept {
-    return m_name;
 }
 
 Camera& Scene::GetCamera() const noexcept {

@@ -237,6 +237,14 @@ Mesh::Mesh(std::string name, bool useStaticBuffers, bool visible)
     noexcept : BaseMesh(name, useStaticBuffers, visible)
 {}
 
+void Mesh::TransformVertices(DirectX::XMMATRIX& M) noexcept {
+    for (VertexPositionNormalTexture& vertex : m_vertices) {
+        DirectX::XMVECTOR P = DirectX::XMLoadFloat3(&vertex.position);
+        P = DirectX::XMVector3Transform(P, M);
+        DirectX::XMStoreFloat3(&vertex.position, P);
+    }
+}
+
 void Mesh::ClearGeometry() noexcept {
     m_indices.clear();
     m_vertices.clear();
@@ -264,6 +272,14 @@ std::uint32_t Mesh::GetNumVertices() const noexcept {
 SkinnedMesh::SkinnedMesh(std::string name, bool useStaticBuffers, bool visible) 
     noexcept : BaseMesh(name, useStaticBuffers, visible)
 {}
+
+void SkinnedMesh::TransformVertices(DirectX::XMMATRIX& M) noexcept {
+    for (VertexPositionNormalTextureSkinning& vertex : m_vertices) {
+        DirectX::XMVECTOR P = DirectX::XMLoadFloat3(&vertex.position);
+        P = DirectX::XMVector3Transform(P, M);
+        DirectX::XMStoreFloat3(&vertex.position, P);
+    }
+}
 
 void SkinnedMesh::ClearGeometry() noexcept {
     m_indices.clear();
@@ -396,13 +412,19 @@ void Model::RemoveIMesh(std::uint8_t index) {
     m_meshes.erase(m_meshes.begin() + index);
 }
 
-void Model::ApplyWorldTransform(DirectX::XMFLOAT3X4 W) {
+void Model::ApplyWorldTransform(DirectX::XMFLOAT3X4 W) noexcept {
     for (std::shared_ptr<IMesh>& pIMesh : m_meshes) {
         for (std::unique_ptr<Submesh>& pSubmesh : pIMesh->GetSubmeshes()) {
             for (DirectX::XMFLOAT3X4& instance : pSubmesh->GetInstances()) {
                 instance = W;
             }
         }
+    }
+}
+
+void Model::TransformVertices(DirectX::XMMATRIX& M) noexcept {
+    for (std::shared_ptr<IMesh>& pIMesh : m_meshes) {
+        pIMesh->TransformVertices(M);
     }
 }
 

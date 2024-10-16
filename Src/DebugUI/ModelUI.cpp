@@ -155,12 +155,11 @@ void ModelUI::Menu(Model& model, const Materials& availableMaterials) {
 
     if (ImGui::CollapsingHeader("Armature")) {
         static std::uint32_t selectedBone = std::uint32_t(-1);
-        BoneUI::Selector(selectedBone, model.GetBones());
         if (selectedBone != std::uint32_t(-1) && selectedBone < model.GetNumBones()) {
-            ImGui::SeparatorText(model.GetBones()[selectedBone].GetName().c_str());
             BoneUI::Menu(model, selectedBone);
-            ImGui::Separator();
+            ImGui::SeparatorText("Armature");
         }
+        BoneUI::Selector(selectedBone, model.GetBones());
     }
 
     if (ImGui::CollapsingHeader(Util::GUIDLabel("Materials", "ModelMenu").c_str())) {

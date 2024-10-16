@@ -3,7 +3,7 @@
 #include "../Util/pch.h"
 
 AssetBatch::AssetBatch(const std::string name, std::uint8_t maxNumUniqueTextures, bool visible) 
-    noexcept : m_name(name),
+    noexcept : Identifiable("asset_batch", name),
     m_visible(visible),
     m_maxNumUniqueTextures(maxNumUniqueTextures)
 {}
@@ -12,7 +12,7 @@ AssetBatch::~AssetBatch() noexcept
 {}
 
 bool AssetBatch::operator== (const AssetBatch& other) const noexcept {
-    return m_name == other.m_name;
+    return GetGUID() == other.GetGUID();
 }
 
 std::uint64_t AssetBatch::FindGUID(std::string name, const Materials& materials) {
@@ -274,10 +274,6 @@ void AssetBatch::AddUniqueTexture(std::wstring texture) {
         m_uniqueTextures.erase(texture);
         throw std::runtime_error("The number of unique textures exceeds the maximum number of unique textures.");
     }
-}
-
-std::string AssetBatch::GetName() const noexcept {
-    return m_name;
 }
 
 bool AssetBatch::IsVisible() const noexcept {

@@ -9,11 +9,12 @@
 #include "Sprite.h"
 #include "Outline.h"
 #include "AssetBatch.h"
+#include "Identifiable.h"
 
 // Contains all the data that will be rendered to the display.
 // This data is stored in **AssetBatch**es.
 // Assets are rendered bassed on their batch index. So batch 0 will be rendered first than batch 1 and so on.
-class Scene {
+class Scene : public Identifiable {
     public:
         Scene(const std::string name, Camera& camera) noexcept;
         ~Scene() noexcept;
@@ -40,7 +41,6 @@ class Scene {
         void RemoveOutline(std::uint8_t batch, std::string name);
 
     public:
-        std::string GetName() const noexcept;
         Camera& GetCamera() const noexcept;
 
         std::shared_ptr<AssetBatch>& GetAssetBatch(std::uint8_t batch);
@@ -81,8 +81,6 @@ class Scene {
         std::uint64_t GetNumRenderedVertices() const noexcept;
 
     private:
-        const std::string m_name;
-
         Camera& m_camera;
 
         std::vector<std::shared_ptr<AssetBatch>> m_assetBatches;

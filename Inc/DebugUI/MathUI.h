@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <string>
 
 #include <RoX/VertexTypes.h>
 
@@ -19,5 +20,14 @@ namespace MathUI {
     bool AffineTransformation(DirectX::XMMATRIX& matrix);
     bool AffineTransformation(DirectX::XMFLOAT4X4& matrix);
     bool AffineTransformation(DirectX::XMFLOAT3X4& matrix);
+
+    void Vector(std::string label, DirectX::XMFLOAT2& vector, float dragSpeed = 0.05f);
+    void Vector(std::string label, DirectX::XMFLOAT3& vector, float dragSpeed = 0.05f);
+    void Vector(std::string label, DirectX::XMFLOAT4& vector, float dragSpeed = 0.05f);
+
+    void ColorVector(std::string label, DirectX::XMFLOAT3& colorVector, float dragSpeed = 0.05f);
+    void ColorVector(std::string label, DirectX::XMFLOAT4& colorVector, float dragSpeed = 0.05f);
+
+    void QuaternionWithEulerControlls(std::string label, DirectX::XMFLOAT4& quaternion, float dragSpeed = 0.05f);
 }
 

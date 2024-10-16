@@ -90,8 +90,7 @@ void AssetBatchUI::Menu(AssetBatch& batch) {
             ModelUI::Menu(*pSelectedModel, batch.GetMaterials());
         }
 
-        ImGui::Separator();
-        ImGui::Spacing();
+        ImGui::SeparatorText("AssetBatch");
     }
 
     if (ImGui::CollapsingHeader("Materials")) {
@@ -101,8 +100,7 @@ void AssetBatchUI::Menu(AssetBatch& batch) {
 
         MaterialUI::Menu(batch.GetMaterials());
 
-        ImGui::Separator();
-        ImGui::Spacing();
+        ImGui::SeparatorText("AssetBatch");
     }
 
     if (ImGui::CollapsingHeader("Sprites")) {
@@ -112,8 +110,7 @@ void AssetBatchUI::Menu(AssetBatch& batch) {
 
         SpriteUI::Menu(batch.GetSprites());
 
-        ImGui::Separator();
-        ImGui::Spacing();
+        ImGui::SeparatorText("AssetBatch");
     }
 
     if (ImGui::CollapsingHeader("Text")) {
@@ -123,8 +120,7 @@ void AssetBatchUI::Menu(AssetBatch& batch) {
 
         TextUI::Menu(batch.GetTexts());
 
-        ImGui::Separator();
-        ImGui::Spacing();
+        ImGui::SeparatorText("AssetBatch");
     }
 
     if (ImGui::CollapsingHeader("Outlines")) {
@@ -134,15 +130,13 @@ void AssetBatchUI::Menu(AssetBatch& batch) {
 
         OutlineUI::Menu(batch.GetOutlines());
 
-        ImGui::Separator();
-        ImGui::Spacing();
+        ImGui::SeparatorText("AssetBatch");
     }
 
     if (ImGui::CollapsingHeader(std::string("Stats##" + batch.GetName()).c_str())) {
         Stats(batch);
 
-        ImGui::Separator();
-        ImGui::Spacing();
+        ImGui::SeparatorText("AssetBatch");
     }
 }
 

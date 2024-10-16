@@ -351,25 +351,25 @@ void Renderer::Impl::RenderOutlines(const DeviceDataBatch& batch, std::uint8_t b
             case Outline::Type::BoundingBox: 
                 {
                     auto p = static_cast<BoundingBodyOutline<DirectX::BoundingBox>*>(pOutline);
-                    Draw(pOutlineBatch, p->GetBoundingBody(), DirectX::XMLoadFloat4(&p->GetColor()));
+                    Draw(pOutlineBatch, p->GetBoundingBody(), DirectX::XMLoadFloat3(&p->GetColor()));
                 }
                 break;
             case Outline::Type::BoundingFrustum:
                 {
                     auto p = static_cast<BoundingBodyOutline<DirectX::BoundingFrustum>*>(pOutline);
-                    Draw(pOutlineBatch, p->GetBoundingBody(), DirectX::XMLoadFloat4(&p->GetColor()));
+                    Draw(pOutlineBatch, p->GetBoundingBody(), DirectX::XMLoadFloat3(&p->GetColor()));
                 }
                 break;
             case Outline::Type::BoundingOrientedBox:
                 {
                     auto p = static_cast<BoundingBodyOutline<DirectX::BoundingOrientedBox>*>(pOutline);
-                    Draw(pOutlineBatch, p->GetBoundingBody(), DirectX::XMLoadFloat4(&p->GetColor()));
+                    Draw(pOutlineBatch, p->GetBoundingBody(), DirectX::XMLoadFloat3(&p->GetColor()));
                 }
                 break;
             case Outline::Type::BoundingSphere:
                 {
                     auto p = static_cast<BoundingBodyOutline<DirectX::BoundingSphere>*>(pOutline);
-                    Draw(pOutlineBatch, p->GetBoundingBody(), DirectX::XMLoadFloat4(&p->GetColor()));
+                    Draw(pOutlineBatch, p->GetBoundingBody(), DirectX::XMLoadFloat3(&p->GetColor()));
                 }
                 break;
             case Outline::Type::Grid: 
@@ -381,7 +381,7 @@ void Renderer::Impl::RenderOutlines(const DeviceDataBatch& batch, std::uint8_t b
                             DirectX::XMLoadFloat3(&p->GetOrigin()), 
                             p->GetXDivisions(), 
                             p->GetYDivisions(), 
-                            DirectX::XMLoadFloat4(&p->GetColor()));
+                            DirectX::XMLoadFloat3(&p->GetColor()));
                 }
                 break;
             case Outline::Type::Ring:
@@ -391,7 +391,7 @@ void Renderer::Impl::RenderOutlines(const DeviceDataBatch& batch, std::uint8_t b
                             DirectX::XMLoadFloat3(&p->GetOrigin()), 
                             DirectX::XMLoadFloat3(&p->GetMajorAxis()), 
                             DirectX::XMLoadFloat3(&p->GetMinorAxis()), 
-                            DirectX::XMLoadFloat4(&p->GetColor()));
+                            DirectX::XMLoadFloat3(&p->GetColor()));
                 }
                 break;
             case Outline::Type::Ray:
@@ -401,7 +401,7 @@ void Renderer::Impl::RenderOutlines(const DeviceDataBatch& batch, std::uint8_t b
                             DirectX::XMLoadFloat3(&p->GetOrigin()), 
                             DirectX::XMLoadFloat3(&p->GetDirection()), 
                             p->IsNormalized(), 
-                            DirectX::XMLoadFloat4(&p->GetColor()));
+                            DirectX::XMLoadFloat3(&p->GetColor()));
                 }
                 break;
             case Outline::Type::Triangle:
@@ -411,7 +411,7 @@ void Renderer::Impl::RenderOutlines(const DeviceDataBatch& batch, std::uint8_t b
                             DirectX::XMLoadFloat3(&p->GetPointA()), 
                             DirectX::XMLoadFloat3(&p->GetPointB()), 
                             DirectX::XMLoadFloat3(&p->GetPointC()), 
-                            DirectX::XMLoadFloat4(&p->GetColor()));
+                            DirectX::XMLoadFloat3(&p->GetColor()));
                 }
                 break;
             case Outline::Type::Quad:
@@ -422,7 +422,7 @@ void Renderer::Impl::RenderOutlines(const DeviceDataBatch& batch, std::uint8_t b
                             DirectX::XMLoadFloat3(&p->GetPointB()), 
                             DirectX::XMLoadFloat3(&p->GetPointC()), 
                             DirectX::XMLoadFloat3(&p->GetPointD()), 
-                            DirectX::XMLoadFloat4(&p->GetColor()));
+                            DirectX::XMLoadFloat3(&p->GetColor()));
                 }
                 break;
         }

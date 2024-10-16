@@ -123,11 +123,11 @@ class IMesh {
         // Only when using dynamic buffers.
         virtual void UpdateBuffers() = 0;
 
+        virtual void TransformVertices(DirectX::XMMATRIX& M) noexcept = 0;
         virtual void ClearGeometry() noexcept = 0;
         virtual void RebuildFromBuffers() noexcept = 0;
 
         virtual void Add(std::unique_ptr<Submesh> pSubmesh) = 0;
-
         virtual void RemoveSubmesh(std::uint8_t index) = 0;
 
         virtual void Attach(IMeshObserver* pIMeshObserver) = 0;
@@ -209,6 +209,7 @@ class Mesh : public BaseMesh {
     public:
         Mesh(std::string name = "", bool useStaticBuffers = false, bool visible = true) noexcept; 
 
+        void TransformVertices(DirectX::XMMATRIX& M) noexcept override;
         void ClearGeometry() noexcept override;
         void RebuildFromBuffers() noexcept override;
         
@@ -226,6 +227,7 @@ class SkinnedMesh : public BaseMesh {
     public:
         SkinnedMesh(std::string name = "", bool useStaticBuffers = false, bool visible = true) noexcept; 
 
+        void TransformVertices(DirectX::XMMATRIX& M) noexcept override;
         void ClearGeometry() noexcept override;
         void RebuildFromBuffers() noexcept override;
         
@@ -275,7 +277,9 @@ class Model : public Identifiable {
 
         // Sets every instance of every submesh of every mesh to the given matrix.
         // Should only be used on models that don't use GPU instancing.
-        void ApplyWorldTransform(DirectX::XMFLOAT3X4 W);
+        void ApplyWorldTransform(DirectX::XMFLOAT3X4 W) noexcept;
+        // Multiply every vertex in the model with the given matrix.
+        void TransformVertices(DirectX::XMMATRIX& M) noexcept;
 
         void Attach(IModelObserver* pIModelObserver);
         void Detach(IModelObserver* pIModelObserver) noexcept;

@@ -32,15 +32,15 @@ class Outline : public Identifiable {
         virtual ~Outline() = default;
 
     public:
-        DirectX::XMFLOAT4& GetColor() noexcept;
+        DirectX::XMFLOAT3& GetColor() noexcept;
         bool IsVisible() const noexcept;
         Type GetType() const noexcept;
 
         void SetVisible(bool visible) noexcept;
 
-    public:
+    protected:
         const Type m_type;
-        DirectX::XMFLOAT4 m_color;
+        DirectX::XMFLOAT3 m_color;
         bool m_visible;
 };
 

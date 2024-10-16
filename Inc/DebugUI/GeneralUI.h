@@ -13,4 +13,6 @@ namespace GeneralUI {
 
     void Error(bool show, const char* label);
     void SameLineError(bool show, const char* label);
+
+    float DragSpeedControls();
 }

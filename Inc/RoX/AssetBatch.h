@@ -7,6 +7,7 @@
 #include "Model.h"
 #include "Sprite.h"
 #include "Outline.h"
+#include "Identifiable.h"
 
 using Materials = std::unordered_map<std::uint64_t, std::shared_ptr<Material>>;
 using Models    = std::unordered_map<std::uint64_t, std::shared_ptr<Model>>;
@@ -33,7 +34,7 @@ class IAssetBatchObserver {
 };
 
 // Contains data that will be rendered to the display.
-class AssetBatch {
+class AssetBatch : public Identifiable {
     public:
         // Holds every type of asset that can be added and/or removed directly from an **AssetBatch**.
         // Primarily used to make the **Remove___** functions easier to use.
@@ -86,7 +87,6 @@ class AssetBatch {
         void AddUniqueTexture(std::wstring texture);
 
     public:
-        std::string GetName() const noexcept;
         bool IsVisible() const noexcept;
 
         std::uint8_t GetMaxNumUniqueTextures() const noexcept;
@@ -129,7 +129,6 @@ class AssetBatch {
         void SetVisible(bool visible);
 
     private:
-        const std::string m_name;
         bool m_visible;
 
         const std::uint8_t m_maxNumUniqueTextures;

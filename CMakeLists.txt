@@ -75,6 +75,7 @@ set(DEBUGUI_SOURCE
     Src/DebugUI/AssetBatchUI.cpp
     Src/DebugUI/BoneUI.cpp
     Src/DebugUI/CameraUI.cpp
+    Src/DebugUI/DebugUI.cpp
     Src/DebugUI/GeneralUI.cpp
     Src/DebugUI/IdentifiableUI.cpp
     Src/DebugUI/IMeshUI.cpp
@@ -88,6 +89,7 @@ set(DEBUGUI_SOURCE
     Src/DebugUI/SpriteUI.cpp
     Src/DebugUI/SubmeshUI.cpp
     Src/DebugUI/TextUI.cpp
+    Src/DebugUI/TimerUI.cpp
     Src/DebugUI/UpdateScheduler.cpp
     Src/DebugUI/Util.cpp
 )

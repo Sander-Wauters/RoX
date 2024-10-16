@@ -9,10 +9,10 @@ Outline::Outline(Type type, std::string name, DirectX::XMVECTOR color, bool visi
     m_type(type),
     m_visible(visible)
 {
-    DirectX::XMStoreFloat4(&m_color, color);
+    DirectX::XMStoreFloat3(&m_color, color);
 }
 
-DirectX::XMFLOAT4& Outline::GetColor() noexcept {
+DirectX::XMFLOAT3& Outline::GetColor() noexcept {
     return m_color;
 }
 

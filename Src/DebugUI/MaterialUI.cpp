@@ -7,6 +7,7 @@
 #include "DebugUI/Util.h"
 #include "DebugUI/GeneralUI.h"
 #include "DebugUI/IdentifiableUI.h"
+#include "DebugUI/MathUI.h"
 
 void MaterialUI::RenderFlagsPresets(std::uint32_t& renderFlags) {
     if (ImGui::Selectable("None", renderFlags == RenderFlags::None, ImGuiSelectableFlags_DontClosePopups))
@@ -242,36 +243,24 @@ void MaterialUI::Textures(Material& material) {
 }
 
 void MaterialUI::Colors(Material& material) {
-    float diffuse[4];
-    Util::StoreFloat4(material.GetDiffuseColor(), diffuse);
-    float emissive[4];
-    Util::StoreFloat4(material.GetEmissiveColor(), emissive);
-    float specular[4];
-    Util::StoreFloat4(material.GetSpecularColor(), specular);
-
-    if (ImGui::ColorEdit4(Util::GUIDLabel("Diffuse", material.GetGUID()).c_str(), diffuse))
-        Util::LoadFloat4(diffuse, material.GetDiffuseColor());
-    if (ImGui::ColorEdit4(Util::GUIDLabel("Emissive", material.GetGUID()).c_str(), emissive))
-        Util::LoadFloat4(emissive, material.GetEmissiveColor());
-    if (ImGui::ColorEdit4(Util::GUIDLabel("Specular", material.GetGUID()).c_str(), specular))
-        Util::LoadFloat4(specular, material.GetSpecularColor());
+    float speed = GeneralUI::DragSpeedControls();
+    MathUI::ColorVector(Util::GUIDLabel("Diffuse", material.GetGUID()), material.GetDiffuseColor(), speed);
+    MathUI::ColorVector(Util::GUIDLabel("Emissive", material.GetGUID()), material.GetEmissiveColor(), speed);
+    MathUI::ColorVector(Util::GUIDLabel("Specular", material.GetGUID()), material.GetSpecularColor(), speed);
 }
 
 void MaterialUI::Lights(Material& material) {
-    float ambient[3];
-    Util::StoreFloat3(material.GetAmbientLight(), ambient);
-
-    if (ImGui::ColorEdit3(Util::GUIDLabel("Ambient", material.GetGUID()).c_str(), ambient))
-        Util::LoadFloat3(ambient, material.GetAmbientLight());
-
+    float speed = GeneralUI::DragSpeedControls();
+    MathUI::ColorVector(Util::GUIDLabel("Ambient", material.GetGUID()), material.GetAmbientLight(), speed);
     ImGui::SeparatorText("Directional lights");
 
     if (ImGui::Button("Add new directional light##Lights"))
         material.GetDirectionalLights().push_back(std::make_shared<DirectionalLight>());
     
     for (std::uint8_t i = 0; i < material.GetNumDirectionalLights() && i < Material::MAX_DIRECTIONAL_LIGHTS; ++i) {
-        if (ImGui::TreeNode(Util::GUIDLabel(std::to_string(i), material.GetGUID()).c_str())) {
-            LightingUI::DirectionalLightMenu(*material.GetDirectionalLights()[i]);
+        DirectionalLight& dirLight = *material.GetDirectionalLights()[i];
+        if (ImGui::TreeNode(Util::GUIDLabel(dirLight.GetName(), dirLight.GetGUID()).c_str())) {
+            LightingUI::DirectionalLightMenu(dirLight);
             ImGui::TreePop();
         }
     }
