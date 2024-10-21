@@ -3,6 +3,7 @@
 #include "DebugUI/SceneUI.h"
 #include "DebugUI/UpdateScheduler.h"
 #include "DebugUI/TimerUI.h"
+#include "DebugUI/AnimationUI.h"
 
 #include "ImGui/imgui.h"
 
@@ -17,33 +18,68 @@ DebugUI::DebugUI(Timer& mainTimer, Renderer& renderer, std::shared_ptr<Scene> pS
 
 void DebugUI::Show() {
     const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
-    float width = 400.f;
 
-    ImGuiWindowFlags windowFlags = 0;
-    windowFlags |= ImGuiWindowFlags_NoMove;
-    windowFlags |= ImGuiWindowFlags_NoResize;
+    static bool currentSceneWindowOpen = true;
+    ImVec2 currentSceneWindowSize(400.f, mainViewport->WorkSize.y);
+    ImVec2 currentSceneWindowPos(mainViewport->WorkSize.x - currentSceneWindowSize.x, 0.f);
 
-    ImGui::SetNextWindowPos(ImVec2(mainViewport->WorkSize.x - width, 0.f));
-    ImGui::SetNextWindowSize(ImVec2(width, mainViewport->WorkSize.y));
-    SceneUI::Window(*m_scenes.at(m_currentSceneGUID), windowFlags);
+    static bool sceneSelectorWindowOpen = true;
+    ImVec2 sceneSelectorWindowSize(200.f, 100.f);
+    ImVec2 sceneSelectorWindowPos(currentSceneWindowPos.x - sceneSelectorWindowSize.x, 0.f);
+
+    static bool timerWindowOpen = true;
+    ImVec2 timerWindowSize(350.f, 250.f);
+    ImVec2 timerWindowPos(0.f, 0.f);
+
+    static bool animationInfoWindowOpen = true;
+    ImVec2 animationInfoWindowSize(350.f, mainViewport->WorkSize.y - timerWindowSize.y);
+    ImVec2 animationInfoWindowPos(0.f, timerWindowSize.y);
+
+    ImGuiWindowFlags windowFlags = 0
+        | ImGuiWindowFlags_NoMove
+        | ImGuiWindowFlags_NoResize
+        | ImGuiWindowFlags_NoFocusOnAppearing;
+
+    IMGUI_CHECKVERSION();
+
+    ImGui::SetNextWindowSize(currentSceneWindowSize);
+    ImGui::SetNextWindowPos(currentSceneWindowPos);
+    if (ImGui::Begin("Current scene", &currentSceneWindowOpen, windowFlags))
+        SceneUI::Menu(*m_scenes.at(m_currentSceneGUID));
+    ImGui::End();
 
     std::uint64_t previousSceneGUID = m_currentSceneGUID;
-    ImGui::SetNextWindowPos(ImVec2(mainViewport->WorkSize.x - width - 200.f, 0.f));
-    ImGui::SetNextWindowSize(ImVec2(200.f, 100.f));
-    SceneUI::SelectorWindow(m_currentSceneGUID, m_scenes, windowFlags);
+    ImGui::SetNextWindowSize(sceneSelectorWindowSize);
+    ImGui::SetNextWindowPos(sceneSelectorWindowPos);
+    if (ImGui::Begin("Scene selector", &sceneSelectorWindowOpen, windowFlags))
+        SceneUI::Selector(m_currentSceneGUID, m_scenes);
+    ImGui::End();
     if (previousSceneGUID != m_currentSceneGUID)
         UpdateScheduler::Get().Add([&]() { m_renderer.Load(*m_scenes.at(m_currentSceneGUID)); });
 
+    ImGui::SetNextWindowSize(timerWindowSize);
+    ImGui::SetNextWindowPos(timerWindowPos);
+    if (ImGui::Begin("Frame stats", &timerWindowOpen, windowFlags))
+        TimerUI::Menu(m_mainTimer);
+    ImGui::End();
+
+    ImGui::SetNextWindowSize(animationInfoWindowSize);
+    ImGui::SetNextWindowPos(animationInfoWindowPos);
+    if (ImGui::Begin("Animations", &animationInfoWindowOpen, windowFlags))
+        AnimationUI::Menu(m_animationInfo, *m_scenes.at(m_currentSceneGUID));
+    ImGui::End();
     
-    ImGui::SetNextWindowPos(ImVec2(0.f, 0.f));
-    ImGui::SetNextWindowSize(ImVec2(350.f, 250.f));
-    TimerUI::Window(m_mainTimer, windowFlags);
 }
 
 void DebugUI::Add(std::shared_ptr<Scene> pScene) {
     AddWorldGrid(*pScene->GetAssetBatch(m_debugAssetBatchIndex));
     AddWorldAxis(*pScene->GetAssetBatch(m_debugAssetBatchIndex));
     m_scenes[pScene->GetGUID()] = pScene;
+}
+
+void DebugUI::Add(Animation& animation) {
+    AnimationInfo animInfo(animation);
+    m_animationInfo[animation.GetGUID()] = std::make_shared<AnimationInfo>(animInfo);
 }
 
 void DebugUI::RemoveScene(std::uint64_t GUID) {

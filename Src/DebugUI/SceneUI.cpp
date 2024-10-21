@@ -5,6 +5,13 @@
 #include "DebugUI/CameraUI.h"
 #include "DebugUI/AssetBatchUI.h"
 
+void SceneUI::Selector(std::uint64_t& selectedSceneGUID, std::unordered_map<std::uint64_t, std::shared_ptr<Scene>>& scenes) {
+    for (auto& scenePair : scenes) {
+        if (ImGui::Selectable(scenePair.second->GetName().c_str(), selectedSceneGUID == scenePair.first))
+            selectedSceneGUID = scenePair.first;
+    } 
+}
+
 void SceneUI::Stats(Scene& scene) {
     ImGui::Text("Batches:                    %d"  , scene.GetNumAssetBatches());
 
@@ -44,36 +51,5 @@ void SceneUI::Menu(Scene& scene) {
         ImGui::Separator();
         ImGui::Spacing();
     }
-}
-
-void SceneUI::Selector(std::uint64_t& selectedSceneGUID, std::unordered_map<std::uint64_t, std::shared_ptr<Scene>>& scenes) {
-    for (auto& scenePair : scenes) {
-        if (ImGui::Selectable(scenePair.second->GetName().c_str(), selectedSceneGUID == scenePair.first))
-            selectedSceneGUID = scenePair.first;
-    } 
-}
-
-void SceneUI::Window(Scene& scene, int windowFlags) {
-    IMGUI_CHECKVERSION();
-
-    static bool open = true;
-    if (!ImGui::Begin(scene.GetName().c_str(), &open, windowFlags)) {
-        ImGui::End();
-        return;
-    }
-    Menu(scene);
-    ImGui::End();
-}
-
-void SceneUI::SelectorWindow(std::uint64_t& selectedSceneGUID, std::unordered_map<std::uint64_t, std::shared_ptr<Scene>>& scenes, int windowFlags) {
-    IMGUI_CHECKVERSION();
-
-    static bool open = true;
-    if (!ImGui::Begin("Scene selector", &open, windowFlags)) {
-        ImGui::End();
-        return;
-    }
-    Selector(selectedSceneGUID, scenes);
-    ImGui::End();
 }
 

@@ -3,6 +3,8 @@
 #include "RoX/Timer.h"
 #include "RoX/Renderer.h"
 
+#include "DebugUI/AnimationUI.h"
+
 class DebugUI {
     public:
         DebugUI(Timer& mainTimer, Renderer& renderer, std::shared_ptr<Scene> pScene, std::uint8_t debugAssetBatchIndex);
@@ -11,6 +13,8 @@ class DebugUI {
         void Show();
 
         void Add(std::shared_ptr<Scene> pScene);
+        void Add(Animation& animation);
+
         void RemoveScene(std::uint64_t GUID);
 
     private:
@@ -23,7 +27,9 @@ class DebugUI {
     private:
         Timer& m_mainTimer;
         Renderer& m_renderer;
+
         std::unordered_map<std::uint64_t, std::shared_ptr<Scene>> m_scenes;
+        std::unordered_map<std::uint64_t, std::shared_ptr<AnimationInfo>> m_animationInfo;
 
         std::uint8_t m_debugAssetBatchIndex;
         std::uint64_t m_currentSceneGUID;

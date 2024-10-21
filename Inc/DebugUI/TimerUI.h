@@ -8,7 +8,5 @@ namespace TimerUI {
     void Stats(Timer& timer);
 
     void Menu(Timer& timer);
-
-    void Window(Timer& timer, int windowFlags);
 }
 

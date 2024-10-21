@@ -80,25 +80,25 @@ TEST_F(AssetIOTest, ImportRoXAnim_WithValidAnimation_ExportedWithExportRoXAnim) 
     EXPECT_EQ(pImport->GetEndTime(), pAnimation->GetEndTime());
 
     for (std::uint32_t i = 0; i < pImport->GetNumBoneAnimations(); ++i) {
-        ASSERT_EQ(pImport->BoneAnimations[i].GetNumKeyframes(), pAnimation->BoneAnimations[i].GetNumKeyframes());
-        EXPECT_EQ(pImport->BoneAnimations[i].GetStartTime(), pAnimation->BoneAnimations[i].GetStartTime());
-        EXPECT_EQ(pImport->BoneAnimations[i].GetEndTime(), pAnimation->BoneAnimations[i].GetEndTime());
+        ASSERT_EQ(pImport->GetBoneAnimations()[i].GetNumKeyframes(), pAnimation->GetBoneAnimations()[i].GetNumKeyframes());
+        EXPECT_EQ(pImport->GetBoneAnimations()[i].GetStartTime(), pAnimation->GetBoneAnimations()[i].GetStartTime());
+        EXPECT_EQ(pImport->GetBoneAnimations()[i].GetEndTime(), pAnimation->GetBoneAnimations()[i].GetEndTime());
 
-        for (std::uint32_t j = 0; j < pImport->BoneAnimations[i].GetNumKeyframes(); ++j) {
-            EXPECT_EQ(pImport->BoneAnimations[i].Keyframes[j].TimePosition, pAnimation->BoneAnimations[i].Keyframes[j].TimePosition);
+        for (std::uint32_t j = 0; j < pImport->GetBoneAnimations()[i].GetNumKeyframes(); ++j) {
+            EXPECT_EQ(pImport->GetBoneAnimations()[i].Keyframes[j].TimePosition, pAnimation->GetBoneAnimations()[i].Keyframes[j].TimePosition);
 
-            EXPECT_EQ(pImport->BoneAnimations[i].Keyframes[j].Translation.x, pAnimation->BoneAnimations[i].Keyframes[j].Translation.x);
-            EXPECT_EQ(pImport->BoneAnimations[i].Keyframes[j].Translation.y, pAnimation->BoneAnimations[i].Keyframes[j].Translation.y);
-            EXPECT_EQ(pImport->BoneAnimations[i].Keyframes[j].Translation.z, pAnimation->BoneAnimations[i].Keyframes[j].Translation.z);
+            EXPECT_EQ(pImport->GetBoneAnimations()[i].Keyframes[j].Translation.x, pAnimation->GetBoneAnimations()[i].Keyframes[j].Translation.x);
+            EXPECT_EQ(pImport->GetBoneAnimations()[i].Keyframes[j].Translation.y, pAnimation->GetBoneAnimations()[i].Keyframes[j].Translation.y);
+            EXPECT_EQ(pImport->GetBoneAnimations()[i].Keyframes[j].Translation.z, pAnimation->GetBoneAnimations()[i].Keyframes[j].Translation.z);
 
-            EXPECT_EQ(pImport->BoneAnimations[i].Keyframes[j].Scale.x, pAnimation->BoneAnimations[i].Keyframes[j].Scale.x);
-            EXPECT_EQ(pImport->BoneAnimations[i].Keyframes[j].Scale.y, pAnimation->BoneAnimations[i].Keyframes[j].Scale.y);
-            EXPECT_EQ(pImport->BoneAnimations[i].Keyframes[j].Scale.z, pAnimation->BoneAnimations[i].Keyframes[j].Scale.z);
+            EXPECT_EQ(pImport->GetBoneAnimations()[i].Keyframes[j].Scale.x, pAnimation->GetBoneAnimations()[i].Keyframes[j].Scale.x);
+            EXPECT_EQ(pImport->GetBoneAnimations()[i].Keyframes[j].Scale.y, pAnimation->GetBoneAnimations()[i].Keyframes[j].Scale.y);
+            EXPECT_EQ(pImport->GetBoneAnimations()[i].Keyframes[j].Scale.z, pAnimation->GetBoneAnimations()[i].Keyframes[j].Scale.z);
 
-            EXPECT_EQ(pImport->BoneAnimations[i].Keyframes[j].RotationQuaternion.x, pAnimation->BoneAnimations[i].Keyframes[j].RotationQuaternion.x);
-            EXPECT_EQ(pImport->BoneAnimations[i].Keyframes[j].RotationQuaternion.y, pAnimation->BoneAnimations[i].Keyframes[j].RotationQuaternion.y);
-            EXPECT_EQ(pImport->BoneAnimations[i].Keyframes[j].RotationQuaternion.z, pAnimation->BoneAnimations[i].Keyframes[j].RotationQuaternion.z);
-            EXPECT_EQ(pImport->BoneAnimations[i].Keyframes[j].RotationQuaternion.w, pAnimation->BoneAnimations[i].Keyframes[j].RotationQuaternion.w);
+            EXPECT_EQ(pImport->GetBoneAnimations()[i].Keyframes[j].RotationQuaternion.x, pAnimation->GetBoneAnimations()[i].Keyframes[j].RotationQuaternion.x);
+            EXPECT_EQ(pImport->GetBoneAnimations()[i].Keyframes[j].RotationQuaternion.y, pAnimation->GetBoneAnimations()[i].Keyframes[j].RotationQuaternion.y);
+            EXPECT_EQ(pImport->GetBoneAnimations()[i].Keyframes[j].RotationQuaternion.z, pAnimation->GetBoneAnimations()[i].Keyframes[j].RotationQuaternion.z);
+            EXPECT_EQ(pImport->GetBoneAnimations()[i].Keyframes[j].RotationQuaternion.w, pAnimation->GetBoneAnimations()[i].Keyframes[j].RotationQuaternion.w);
         }
     }
 }

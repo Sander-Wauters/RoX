@@ -30,15 +30,3 @@ void TimerUI::Menu(Timer& timer) {
     Stats(timer);
 }
 
-void TimerUI::Window(Timer& timer, int windowFlags) {
-    IMGUI_CHECKVERSION();
-
-    static bool open = true;
-    if (!ImGui::Begin("Frame stats", &open, windowFlags)) {
-        ImGui::End();
-        return;
-    }
-    Menu(timer);
-    ImGui::End();
-}
-

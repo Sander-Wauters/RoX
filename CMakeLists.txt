@@ -72,6 +72,7 @@ set(SOURCE
 )
 
 set(DEBUGUI_SOURCE
+    Src/DebugUI/AnimationUI.cpp
     Src/DebugUI/AssetBatchUI.cpp
     Src/DebugUI/BoneUI.cpp
     Src/DebugUI/CameraUI.cpp

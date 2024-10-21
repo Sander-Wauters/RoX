@@ -1,5 +1,9 @@
 #include "RoX/Animation.h"
 
+// ---------------------------------------------------------------- //
+//                          Keyframe
+// ---------------------------------------------------------------- //
+
 Keyframe::Keyframe(float timePosition, DirectX::XMFLOAT3 translation, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT4 rotationQuaternion) 
     noexcept : TimePosition(timePosition),
     Translation(translation),
@@ -14,6 +18,10 @@ bool Keyframe::operator< (const Keyframe& other) const noexcept {
 bool Keyframe::operator> (const Keyframe& other) const noexcept {
     return TimePosition > other.TimePosition;
 }
+
+// ---------------------------------------------------------------- //
+//                          BoneAnimation
+// ---------------------------------------------------------------- //
 
 void BoneAnimation::Interpolate(float timePosition, DirectX::XMMATRIX& M) const {
     DirectX::XMVECTOR zero = DirectX::XMVectorSet(0.f, 0.f, 0.f, 1.f);
@@ -71,9 +79,19 @@ std::uint32_t BoneAnimation::GetNumKeyframes() const noexcept {
     return Keyframes.size();
 }
 
+// ---------------------------------------------------------------- //
+//                          Animation
+// ---------------------------------------------------------------- //
+
+Animation::Animation(std::string name) 
+    noexcept : Identifiable("animation", name)
+{
+
+}
+
 void Animation::Interpolate(float timePosition, Bone::TransformArray& boneTransforms) const {
-    for (std::uint32_t i = 0; i < BoneAnimations.size(); ++i) {
-        BoneAnimations[i].Interpolate(timePosition, boneTransforms[i]);
+    for (std::uint32_t i = 0; i < m_boneAnimations.size(); ++i) {
+        m_boneAnimations[i].Interpolate(timePosition, boneTransforms[i]);
     }
 }
 
@@ -101,13 +119,18 @@ void Animation::Apply(float timePosition, Model& model) const {
 }
 
 float Animation::GetStartTime() const {
-    return BoneAnimations.front().GetStartTime();
+    return m_boneAnimations.front().GetStartTime();
 }
 
 float Animation::GetEndTime() const {
-    return BoneAnimations.back().GetEndTime();
+    return m_boneAnimations.back().GetEndTime();
 }
 
 std::uint32_t Animation::GetNumBoneAnimations() const noexcept {
-    return BoneAnimations.size();
+    return m_boneAnimations.size();
 }
+
+std::vector<BoneAnimation>& Animation::GetBoneAnimations() noexcept {
+    return m_boneAnimations;
+}
+

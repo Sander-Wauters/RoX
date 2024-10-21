@@ -23,9 +23,9 @@ BoneAnimation ValidAnimation::NewBoneAnimation() const noexcept {
 }
 
 Animation ValidAnimation::NewAnimation() const noexcept {
-    Animation a;
-    a.BoneAnimations.push_back(NewBoneAnimation());
-    a.BoneAnimations.push_back(NewBoneAnimation());
+    Animation a("animation");
+    a.GetBoneAnimations().push_back(NewBoneAnimation());
+    a.GetBoneAnimations().push_back(NewBoneAnimation());
     return a;
 }
 

@@ -393,7 +393,7 @@ std::unordered_map<std::string, std::shared_ptr<Animation>> AssetIO::ImportAnima
 
         std::shared_ptr<Animation>& pAnimation = animations[pAiAnimation->mName.C_Str()];
         if (!pAnimation)
-            pAnimation = std::make_shared<Animation>();
+            pAnimation = std::make_shared<Animation>(pAiAnimation->mName.C_Str());
 
         std::vector<std::string> nodeAnimNames;
 
@@ -414,11 +414,11 @@ std::unordered_map<std::string, std::shared_ptr<Animation>> AssetIO::ImportAnima
                 key.TimePosition /= pAiAnimation->mTicksPerSecond == 0 ? 30 : pAiAnimation->mTicksPerSecond;
             }
 
-            pAnimation->BoneAnimations.push_back(std::move(boneAnimation));
+            pAnimation->GetBoneAnimations().push_back(std::move(boneAnimation));
         }
 
         std::uint32_t startIndex = 0;
-        FillMissingBoneAnimations(pScene->mRootNode, boneNameToAiBone, pAnimation->BoneAnimations, nodeAnimNames, startIndex);
+        FillMissingBoneAnimations(pScene->mRootNode, boneNameToAiBone, pAnimation->GetBoneAnimations(), nodeAnimNames, startIndex);
     }
 
     return animations;
@@ -640,15 +640,20 @@ std::shared_ptr<Animation> AssetIO::ImportRoXAnim(std::string filePath) {
     ROXANIM::ANIM_HEADER animHeader;
     fin.read(reinterpret_cast<char*>(&animHeader), sizeof(ROXANIM::ANIM_HEADER));
 
-    auto pAnim = std::make_shared<Animation>();
-    pAnim->BoneAnimations.resize(animHeader.NumBoneAnimations);
+    char* animName = new char[animHeader.NameSizeInBytes + 1];
+    fin.read(animName, animHeader.NameSizeInBytes);
+    animName[animHeader.NameSizeInBytes] = '\0';
+
+    auto pAnim = std::make_shared<Animation>(animName);
+    pAnim->GetBoneAnimations().resize(animHeader.NumBoneAnimations);
+    delete [] animName;
 
     for (std::uint32_t i = 0; i < animHeader.NumBoneAnimations; ++i) {
         ROXANIM::BONE_ANIM_HEADER boneAnimHeader;
         fin.read(reinterpret_cast<char*>(&boneAnimHeader), sizeof(ROXANIM::BONE_ANIM_HEADER));
 
-        pAnim->BoneAnimations[i].Keyframes.resize(boneAnimHeader.NumKeyframes);
-        fin.read(reinterpret_cast<char*>(pAnim->BoneAnimations[i].Keyframes.data()), boneAnimHeader.KeyframeSizeInBytes * boneAnimHeader.NumKeyframes);
+        pAnim->GetBoneAnimations()[i].Keyframes.resize(boneAnimHeader.NumKeyframes);
+        fin.read(reinterpret_cast<char*>(pAnim->GetBoneAnimations()[i].Keyframes.data()), boneAnimHeader.KeyframeSizeInBytes * boneAnimHeader.NumKeyframes);
     }
 
     fin.close();
@@ -663,16 +668,18 @@ void AssetIO::ExportRoXAnim(std::shared_ptr<Animation>& pAnim, std::string fileP
     fout.seekp(0);
 
     ROXANIM::ANIM_HEADER animHeader;
+    animHeader.NameSizeInBytes = pAnim->GetName().length();
     animHeader.NumBoneAnimations = pAnim->GetNumBoneAnimations();
     fout.write(reinterpret_cast<char*>(&animHeader), sizeof(ROXANIM::ANIM_HEADER));
+    fout.write(pAnim->GetName().c_str(), animHeader.NameSizeInBytes);
 
     for (std::uint32_t i = 0; i < animHeader.NumBoneAnimations; ++i) {
         ROXANIM::BONE_ANIM_HEADER boneAnimHeader;
-        boneAnimHeader.NumKeyframes = pAnim->BoneAnimations[i].GetNumKeyframes();
+        boneAnimHeader.NumKeyframes = pAnim->GetBoneAnimations()[i].GetNumKeyframes();
         boneAnimHeader.KeyframeSizeInBytes = sizeof(Keyframe);
 
         fout.write(reinterpret_cast<char*>(&boneAnimHeader), sizeof(ROXANIM::BONE_ANIM_HEADER));
-        fout.write(reinterpret_cast<char*>(pAnim->BoneAnimations[i].Keyframes.data()), boneAnimHeader.KeyframeSizeInBytes * boneAnimHeader.NumKeyframes);
+        fout.write(reinterpret_cast<char*>(pAnim->GetBoneAnimations()[i].Keyframes.data()), boneAnimHeader.KeyframeSizeInBytes * boneAnimHeader.NumKeyframes);
     }
 
     fout.close();

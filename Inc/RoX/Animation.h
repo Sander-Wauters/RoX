@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "Model.h"
+#include "Identifiable.h"
 
 #include <DirectXMath.h>
 
@@ -44,14 +45,23 @@ struct BoneAnimation {
 
 // Hold the animation data for a collection of bones.
 // Bone animations must be sorted in the same way as the bone hierarchy.
-struct Animation {
-    void Interpolate(float timePosition, Bone::TransformArray& boneTransforms) const;
-    void Apply(float timePosition, Model& model) const;
+class Animation : public Identifiable {
+    public:
+        Animation(std::string name = "") noexcept;
 
-    float GetStartTime() const;
-    float GetEndTime() const;
+    public:
+        void Interpolate(float timePosition, Bone::TransformArray& boneTransforms) const;
+        void Apply(float timePosition, Model& model) const;
 
-    std::uint32_t GetNumBoneAnimations() const noexcept;
+    public:
+        float GetStartTime() const;
+        float GetEndTime() const;
 
-    std::vector<BoneAnimation> BoneAnimations;
+        std::uint32_t GetNumBoneAnimations() const noexcept;
+
+        std::vector<BoneAnimation>& GetBoneAnimations() noexcept;
+
+    private:
+        std::vector<BoneAnimation> m_boneAnimations;
 };
+
